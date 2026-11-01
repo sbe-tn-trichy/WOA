@@ -10,6 +10,17 @@ business workflow catalog; INDEX.md owns SDK surface navigation. OKF concepts
 own detailed operational contracts. Keep detailed instructions in their owning
 concept and link to them from the starting pages instead of copying them.
 
+[Project analysis and finding register](../PROJECT_ANALYSIS.md) owns cross-project
+review findings, grouped into SDK, helper and apps. Reuse its finding IDs and
+record implementation and verification evidence when resolving or reopening an
+issue; operational concepts retain ownership of detailed behavior contracts.
+
+`AGENTS.md` is the single repository policy owner; `GEMINI.md` is a discovery
+pointer for Gemini. Generated Python caches and test scratch output are ignored,
+and local `config/statement-schedules.yaml` is provisioned per machine from its
+tracked example. Existing users keep their local configuration when untracking;
+new checkouts need to create it before running that workflow.
+
 ## Overlap and ownership
 
 | Area | Canonical owner | Why related modules remain separate |

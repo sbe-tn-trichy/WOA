@@ -14,46 +14,113 @@ status: active
 
 # Local Setup
 
-From the repository root, create and activate a virtual environment, then install the package with its test dependencies:
+Both primary machines exclusively use their own project `.venv`. Setup commands
+below are for explicitly requested provisioning or repair. Routine execution must
+not recreate the environment, switch Python or install/upgrade dependencies.
+If `.venv` fails, report the failure and wait for user instruction to repair it.
 
-```powershell
-python -m venv .venv
-& .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[workflows,test]"
+## Primary machines
+
+| Deployment target | Native architecture | Shell / workspace interpreter |
+|---|---|---|
+| Windows 11, AMD Ryzen 7600X | x64 | PowerShell / `.venv/Scripts/python.exe` |
+| macOS 26 or later, Apple M4 | arm64 | zsh / `.venv/bin/python` |
+
+Use native arm64 Python and native dependencies on the Mac; avoid mixing an
+Intel/Rosetta environment with the arm64 environment. Keep the same Git revision
+and deployment settings on both machines, with machine-specific credential/input
+paths configured locally. On macOS, Homebrew paths can differ from Windows tool
+paths; discover tools through PATH or explicit local configuration.
+
+CPython 3.14.4 is pinned in the root `.python-version` for both machines and CI.
+The pin guides provisioning; it does not change an existing `.venv`. Report a
+version mismatch and obtain user instruction before replacing its interpreter.
+The package's `requires-python` remains a library compatibility range, separate
+from this exact deployment pin.
+New macOS releases are intended targets, not
+automatically verified platforms: rerun dependency, import and workflow smoke
+checks after an OS, Python or native-tool upgrade before resuming live mutations.
+
+Create a separate virtual environment on every machine. Do not copy `.venv`:
+its interpreter paths and installed binaries belong to the local machine.
+Use the pinned CPython 3.14.4. Run from the repository root.
+With uv installed, these commands work on Windows, Linux and macOS:
+
+```text
+uv venv --python 3.14.4
+uv pip install --python .venv -e ".[workflows,test]"
 ```
 
-The shared `zoho_usable_functions` environment may also be used when it is available:
+Without uv, explicitly select an installed CPython 3.14.4 interpreter to bootstrap
+`.venv`, then use only its local interpreter. Windows PowerShell:
 
 ```powershell
-& "d:/workplace/zoho_usable_functions/.venv/Scripts/pytest.exe" `
-  "d:/workplace/zoho_sdk/tests" `
-  "d:/workplace/zoho_sdk/src/workflows"
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[workflows,test]"
 ```
+
+Linux/macOS:
+
+```bash
+python3.14 -m venv .venv
+.venv/bin/python -m pip install -e ".[workflows,test]"
+```
+
+The `py -3.14` and `python3.14` selectors identify a minor version only; confirm
+that the selected interpreter reports exactly 3.14.4 before provisioning, or
+use its explicit executable path. Verify the resulting workspace interpreter
+with `.venv/bin/python --version` (Windows: `.\.venv\Scripts\python.exe --version`).
+
+Do not borrow another checkout's environment. If the interpreter referenced by
+`.venv` is missing, recreate the environment with a compatible interpreter;
+never silently fall back to system Python. OCR needs the `ocr` extra as well.
+Native tools such as Tesseract and Poppler, and Node for JavaScript UI checks,
+need separate installation when required by the selected workflow.
+
+## Machine configuration and recovery state
+
+- Copy `zoho_config.example.json` to ignored `config/config.json` and adapt the
+  active profile. Follow the [configuration reference](configuration.md) for
+  mappings and credentials. Check process environment and home configuration:
+  they can change effective settings even with the same project files.
+- Explicitly configure organization, domain, account/location scope, worksheet
+  destinations and `TOKEN_URL`. Some existing defaults are tenant-specific;
+  successful imports do not establish that the correct tenant was selected.
+- A localhost token broker must run on the executing machine, or use an
+  explicitly configured reachable service. Never commit tokens, `.env` files,
+  broker secrets or local credential JSON. Ignore rules do not untrack files
+  already committed.
+- Provision inputs and cached Analytics metadata separately. Git does not move
+  ignored `output/` data, SQLite catalogs or checkpoints. Metadata refresh remains
+  an explicit manual operation; do not trigger it automatically during setup.
+- Before moving an unfinished mutation, securely transfer recovery state and
+  reconcile live IDs/status. Avoid overlapping mutation runs: local file locks
+  and atomic replacement do not coordinate different machines.
+- Review ownership of a specific checkout if Git reports dubious ownership.
+  Do not disable Git safety globally or configure a wildcard safe-directory.
 
 # Validation
 
-Run the complete suite before publishing changes:
-
-```powershell
-python -m pytest
+```text
+.venv/bin/python -m pip check
+.venv/bin/python -c "import zoho; import workflows.core.auth"
+.venv/bin/python -m pytest -q
 ```
 
-For environments without pytest, the low-level client suite can still be exercised directly:
+On Windows replace `.venv/bin/python` with `.\.venv\Scripts\python.exe`.
+For environments without pip, use `uv pip check --python .venv` for read-only
+dependency validation. If pytest is absent, report the missing dependency;
+installation requires explicit user instruction. Unittest discovery is not an
+equivalent replacement for the full suite.
 
-```powershell
-$env:PYTHONPATH = (Resolve-Path "src").Path
-python -m unittest discover -s tests
-```
-
-Confirm the SDK and standalone workflow packages import successfully:
-
-```powershell
-python -c "import zoho; import workflows"
-```
-
-The package targets Python 3.14. Modern Python features including PEP 604 unions,
-built-in collection generics, and standard library enhancements are supported;
-the CI validation matrix targets Python 3.14.
+CI is configured for Python 3.14.4 full-suite and base-install checks on Ubuntu,
+Windows Server 2025 x64 and macOS 26 arm64, with Node available for UI tests.
+These are hosted-runner proxies: Windows Server is not Windows 11, and the Mac
+runner is not the user's M4. Passing CI must be supplemented by local smoke
+checks on both primary machines. No passing result is implied by configuration.
+Record OS, architecture, interpreter version, revision and test outcomes when
+investigating machine-specific failures. Runner details are documented in the
+[GitHub runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 
 # Development Rules
 
@@ -84,7 +151,7 @@ Run the read-only export below to create an all-items catalog and a smaller
 review list for NeoSeal Inventory items that do not yet have an `alias_name`:
 
 ```bash
-PYTHONPATH=src .venv/bin/python apps/export_neoseal_items.py \
+uv run python apps/export_neoseal_items.py \
   --purchase-account-id "$NEOSEAL_PURCHASE_ACCOUNT_ID"
 ```
 

@@ -5,20 +5,21 @@ Cliq and Sheet, with reusable business workflows and local review applications.
 
 ## Start here
 
-From the repository root, install into the workspace virtual environment:
+Create a fresh environment on each machine; do not copy `.venv`. With uv
+installed, run from the repository root (Windows, Linux or macOS):
 
 ```bash
-uv venv --python 3.14
-.venv/bin/python -m pip install -e ".[workflows,test]"
+uv venv --python 3.14.4
+uv pip install --python .venv -e ".[workflows,test]"
 ```
 
-If your environment was created without pip, use
-`uv pip install --python .venv/bin/python -e ".[workflows,test]"`.
+Configure the machine's local profile and token broker using the
+[development runbook](okf/development-runbook.md) before live workflows.
 
 Open the local operations dashboard:
 
 ```bash
-.venv/bin/python apps/dashboard.py
+uv run python apps/dashboard.py
 ```
 
 Visit `http://127.0.0.1:8750` to browse common workflows and see their run output.
@@ -35,6 +36,7 @@ linked operational documentation.
 | Configure application clients and credentials | [Configuration](okf/configuration.md) |
 | Understand imports and module boundaries | [Architecture](okf/architecture.md) |
 | Understand overlapping entry points | [Project organization](okf/project-organization.md) |
+| Review SDK, helper and apps findings | [Project analysis and finding register](PROJECT_ANALYSIS.md) |
 | Develop and test | [Development runbook](okf/development-runbook.md) |
 | Find detailed operating contracts | [Knowledge index](okf/index.md) |
 
@@ -78,7 +80,7 @@ Workflow extras are optional when using only the low-level SDK.
 ## Validate changes
 
 ```bash
-.venv/bin/pytest -q
+uv run python -m pytest -q
 ```
 
 Tests include `tests/` and workflow-local suites under `src/workflows/`.

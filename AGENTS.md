@@ -79,13 +79,32 @@ correctness and data safety:
 
 ## Execution Environment & Fast-Path
 
-- **Immediate Execution**: When asked to run a script, test, app, or workflow, execute it immediately on the **first turn** without reading OKF files or performing pre-flight file exploration.
+- **Immediate Execution**: Attempt a requested execution first without unrelated exploration. This does not authorize live mutations or bypass explicit confirmation. If the interpreter/configuration is unavailable, report the failure and follow the setup runbook; never switch silently to another environment or tenant.
 - Always run Python commands and tests using the workspace virtual environment:
-  - Run scripts with `.venv/bin/python <script>` (or `uv run python <script>`).
-  - Run tests with `.venv/bin/pytest` (or `uv run pytest`).
-- Never invoke global/system `python` or bare `pytest`.
+  - Windows PowerShell: `.\.venv\Scripts\python.exe <script>` and `.\.venv\Scripts\python.exe -m pytest`.
+  - Linux/macOS: `.venv/bin/python <script>` and `.venv/bin/python -m pytest`.
+  - Use the explicit workspace interpreter above for routine execution. Do not use a runner that may automatically create or synchronize the environment.
+- Never invoke global/system `python` or bare `pytest` for project execution. An explicitly selected compatible interpreter may bootstrap `.venv` as described in the runbook.
+
+### Multiple machines
+
+- Primary deployment targets are Windows 11 x64 (Ryzen 7600X) and macOS 26+ arm64 (Apple M4). Use native x64 Python on Windows and native arm64 Python on the Mac. See the runbook for verification limits and OS-upgrade checks.
+- Both machines exclusively use their own project `.venv`. Do not switch environments, recreate `.venv`, change Python, or install/upgrade dependencies without explicit user instruction. If execution fails, report the failure and propose the needed repair; do not automatically alter the environment.
+
+- Discover the checkout root and host OS; do not assume a drive, username, shell, sibling checkout or installed tool path. Run from the repository root.
+- Both project environments must use CPython 3.14.4, pinned in `.python-version`. Create `.venv` separately when provisioning is requested; never copy or sync it. A pin does not modify or validate an existing environment. Version mismatches require reporting, not automatic replacement. Install declared extras only when explicitly instructed.
+- Keep credentials and deployment configuration local. Follow the [configuration hierarchy](okf/configuration.md); verify effective organization, domain and account/location scope before live work. Process environment and home configuration can differ across machines.
+- `localhost` refers to the executing machine. Provision its token broker or explicitly configure a reachable service.
+- Git does not transfer ignored reports, SQLite catalogs or recovery checkpoints. Securely transfer required recovery state and reconcile live records before resuming on another machine; a missing checkpoint does not prove nothing was posted. Avoid overlapping financial mutations without workflow-specific coordination.
+- Read [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) before reviews or related fixes. Reuse finding IDs and record implementation/test evidence before closure; unchanged open findings are not new regressions.
+- Follow the [development runbook](okf/development-runbook.md). Report actual tested platforms; written rules alone do not establish OS compatibility.
 
 ### Workflow Command Index
+
+The table uses Linux/macOS paths. On Windows replace `.venv/bin/python` with
+`.\.venv\Scripts\python.exe` and `.venv/bin/pytest` with
+`.\.venv\Scripts\python.exe -m pytest`, retaining script paths and arguments.
+
 | Workflow / Task | Direct Execution Command |
 |---|---|
 | **GSTR-2 Verification** | `.venv/bin/python apps/verify_gstr2.py` |

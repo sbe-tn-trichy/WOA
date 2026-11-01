@@ -1,5 +1,6 @@
 # Python cache
 __pycache__/
+__pycache__
 *.pyc
 *.pyo
 *.pyd
@@ -34,10 +35,15 @@ scripts/
 # Testing
 .pytest_cache/
 .pytest_tmp/
+/tests/.tmp/
+/tests/.tmp_output/
 .coverage
 htmlcov/
 
 # Local config & cache
+.env
+.env.*
+!.env.example
 zoho_config.json
 config.json
 /config/accounting-mapping.yaml

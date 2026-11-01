@@ -11,6 +11,8 @@ okf_version: "0.2"
 
 * [Project Organization](project-organization.md) - Navigation ownership and overlapping command boundaries.
 
+* [Project Analysis and Finding Register](../PROJECT_ANALYSIS.md) - SDK, helper and apps review ownership, finding status and verification criteria.
+
 ## Reference
 
 * [Creator Payment Image OCR](creator-payment-ocr.md) - Read-only image download, local Tesseract extraction, and comparison against Creator payments.

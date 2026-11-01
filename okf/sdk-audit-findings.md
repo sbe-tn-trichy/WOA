@@ -14,6 +14,11 @@ status: active
 
 # Zoho SDK Audit & Defensive Hardening
 
+This concept records implemented hardening and transport contracts. Outstanding
+cross-project findings and their verification status are owned by the
+[project analysis and finding register](../PROJECT_ANALYSIS.md). A completed
+improvement here does not imply closure of related failure paths in that register.
+
 ## Overview
 
 A comprehensive code audit across all `zoho_sdk` service clients identified key areas for defensive security improvements, performance optimizations, and usability fixes.

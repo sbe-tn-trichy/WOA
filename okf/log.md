@@ -1,5 +1,21 @@
 # Knowledge Change Log
 
+## 2026-11-01
+
+- Removed tracked cache links and test scratch output because they were generated/machine-specific; untracked statement-schedule configuration while retaining the local file and example. Added ignore rules to prevent recurrence and reduced `GEMINI.md` to the canonical policy pointer to avoid conflicting execution rules. Runtime tests remain blocked by the missing workspace interpreter.
+
+- Recorded tracked generated artifacts and duplicated agent policy in the [finding register](../PROJECT_ANALYSIS.md), separating cleanup candidates from required compatibility files and Analytics state.
+
+- Pinned project deployment Python to CPython 3.14.4 in `.python-version` and CI; documented explicit version validation without automatic environment replacement.
+
+- Clarified exclusive use of each machine's project `.venv`; environment recreation, interpreter changes and dependency installation require explicit user instruction.
+
+- Recorded Windows 11 x64 and macOS 26+ Apple Silicon as [primary machines](development-runbook.md#primary-machines); configured Windows/macOS CI alongside Ubuntu and documented hosted-runner verification limits.
+
+- Standardized [machine setup](development-runbook.md) and repository rules for OS-specific interpreters, local configuration, token services and recovery-state handoff; linked reviews to the finding register.
+
+- Established the [project analysis and finding register](../PROJECT_ANALYSIS.md), with SDK/helper/apps ownership, stable finding IDs and evidence required for closure or reopening.
+
 ## 2026-10-27
 
 - Added [repeatable Analytics customer sync](customer-local-store.md#four-table-normalization-workspace), a dedicated CLI/dashboard entry, complete-export checks, atomic four-table reconciliation, recovery backups and persistent local-edit conflicts.
