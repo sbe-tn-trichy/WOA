@@ -107,7 +107,7 @@ was unavailable during this review.
 
 ### APPS-002 — Workspace test environment cannot start
 
-- **Priority / status:** Medium / Open environment issue; observed 2026-11-01.
+- **Priority / status:** Medium / Fixed, awaiting commit evidence; runtime verified 2026-11-01.
 - **Evidence:** `.venv/Scripts/python.exe -m pytest -q` exits before collection
   because the Python 3.14 executable referenced by the environment is missing.
   This is not evidence of failing product tests or a CI failure.
@@ -116,6 +116,15 @@ was unavailable during this review.
 - **Close when:** Workspace Python starts, declared dependencies install, and
   relevant tests plus the full suite execute with recorded outcomes. Keep
   unrelated failures distinct from findings addressed by a change.
+- **Resolution / verification:** User restored the CPython 3.14.4 interpreter.
+  Added `tzdata` to workflow dependencies and installed it in the existing
+  `.venv`; made the HDFC BOM fixture explicitly UTF-8. Redirected pytest cache
+  to `output/pytest-cache` because legacy cache directories reject writes.
+  `.venv/Scripts/python.exe -m pytest -q` outside the restricted sandbox:
+  **1750 passed, 1 skipped, 4 subtests passed**, no warnings, in 17.27 seconds.
+  Direct `ZoneInfo('Asia/Kolkata')` lookup succeeds with tzdata 2026.6. The
+  sandbox-only attempt failed to create temporary test directories; that is
+  distinct from application/test assertion failures. No Mac execution was done.
 
 ## Prevent repeated fixes and repeated findings
 

@@ -28,7 +28,7 @@ def analytics_row(**changes):
 
 def test_hdfc_reader_preserves_reference_and_reads_quoted_narration(tmp_path):
     path = tmp_path / 'bank.csv'
-    path.write_text('\ufeff' + HEADER + '01/04/26,"name, customer",000123,01/04/26,,100.00,200.00\n')
+    path.write_text('\ufeff' + HEADER + '01/04/26,"name, customer",000123,01/04/26,,100.00,200.00\n', encoding='utf-8')
     rows = read_hdfc_csv(path)
     assert rows == [line('2', '000123', 'name, customer')]
 

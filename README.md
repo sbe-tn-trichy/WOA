@@ -37,6 +37,7 @@ linked operational documentation.
 | Understand imports and module boundaries | [Architecture](okf/architecture.md) |
 | Understand overlapping entry points | [Project organization](okf/project-organization.md) |
 | Review SDK, helper and apps findings | [Project analysis and finding register](PROJECT_ANALYSIS.md) |
+| See what changed, why and how it was checked | [Project changelog](CHANGELOG.md) |
 | Develop and test | [Development runbook](okf/development-runbook.md) |
 | Find detailed operating contracts | [Knowledge index](okf/index.md) |
 

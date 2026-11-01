@@ -2,6 +2,12 @@
 
 ## 2026-11-01
 
+- Added per-change annual rollover and concise-entry rules; see the [project changelog](../CHANGELOG.md#keep-changelog-history-concise-with-annual-archives).
+
+- Established root [CHANGELOG.md](../CHANGELOG.md#require-a-project-changelog-for-every-change) as the mandatory project history; OKF maintains its narrower knowledge log and links to project entries.
+
+- Fixed Windows timezone failures by declaring/installing workflow `tzdata`; fixed CP1252 BOM-fixture failure with explicit UTF-8; moved pytest cache to ignored `output/pytest-cache` to avoid legacy permissions. Full existing-venv suite outside the sandbox: 1750 passed, 1 skipped, 4 subtests passed, no warnings. [Setup guidance](development-runbook.md) records the portable behavior.
+
 - Removed tracked cache links and test scratch output because they were generated/machine-specific; untracked statement-schedule configuration while retaining the local file and example. Added ignore rules to prevent recurrence and reduced `GEMINI.md` to the canonical policy pointer to avoid conflicting execution rules. Runtime tests remain blocked by the missing workspace interpreter.
 
 - Recorded tracked generated artifacts and duplicated agent policy in the [finding register](../PROJECT_ANALYSIS.md), separating cleanup candidates from required compatibility files and Analytics state.

@@ -77,6 +77,14 @@ never silently fall back to system Python. OCR needs the `ocr` extra as well.
 Native tools such as Tesseract and Poppler, and Node for JavaScript UI checks,
 need separate installation when required by the selected workflow.
 
+The `workflows` extra includes `tzdata` so `zoneinfo` can resolve IANA names such
+as `Asia/Kolkata` on Windows without a system timezone database. Text fixtures
+containing a BOM or other Unicode characters must specify UTF-8 explicitly.
+Pytest stores its cache under ignored `output/pytest-cache`, avoiding legacy
+root cache directories that may retain permissions from another installation.
+Pytest temporary test directories are separate from this cache; sandbox access
+restrictions must be reported separately from product failures.
+
 ## Machine configuration and recovery state
 
 - Copy `zoho_config.example.json` to ignored `config/config.json` and adapt the

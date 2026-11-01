@@ -31,7 +31,18 @@ The bundle root `index.md` contains only the `okf_version` frontmatter key. `log
 
 # Change Log
 
-Record concise, newest-first entries in `log.md` beneath an ISO `YYYY-MM-DD` heading. Describe durable architectural, configuration, compatibility, or operational changes rather than reproducing the commit diff.
+Root [CHANGELOG.md](../CHANGELOG.md) owns project-wide history. Follow the
+[mandatory changelog rule](../AGENTS.md#mandatory-project-changelog) for every
+logical project change, including documentation-only edits. Each entry records
+why, what and actual verification under an ISO date and descriptive title.
+The same rule requires an annual rollover check with each logical change:
+current-year entries stay in the root file and older entries move intact into
+linked `changelog/YYYY.md` archives. Preserve and repair links when moving entries.
+
+Record concise, newest-first knowledge-bundle entries in `log.md` beneath an ISO
+`YYYY-MM-DD` heading. Link to the project changelog entry for shared details
+instead of duplicating them. Concept updates remain conditional on durable
+knowledge changes; the project changelog requirement applies more broadly.
 
 # Review Checklist
 

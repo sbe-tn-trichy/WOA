@@ -15,6 +15,8 @@ okf_version: "0.2"
 
 ## Reference
 
+* [Project Changelog](../CHANGELOG.md) - Reasons, changes and verification for each logical project change.
+
 * [Creator Payment Image OCR](creator-payment-ocr.md) - Read-only image download, local Tesseract extraction, and comparison against Creator payments.
 
 * [Unearned Revenue Review](unearned-revenue.md) - Analytics unused payment balances, account accrual totals and association limits.

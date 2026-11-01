@@ -146,6 +146,16 @@ The table uses Linux/macOS paths. On Windows replace `.venv/bin/python` with
 
 ## OKF Maintenance
 
+### Mandatory project changelog
+
+- Update root [CHANGELOG.md](CHANGELOG.md) in the same change for every logical project change: code, tests, dependencies, CI, configuration behavior, rules, documentation, refactoring, cleanup and reversions. Do this before reporting completion, even when no commit is requested.
+- Every entry must explain **Why**, **What**, and **Verification** (actual checks/results or why not run and remaining limitations). Group related edits into one logical entry; update that entry during the same task instead of logging each file save.
+- Use a newest-first ISO date in Asia/Kolkata and a descriptive change title. Date alone is insufficient. Add related finding IDs and implementation commit references when available; timestamps are optional and must include a timezone if used.
+- Describe local/environment changes without secrets, credentials, customer data or machine-private paths. Routine read-only inspections and generated test/cache output do not require entries unless they lead to a project or environment change. Editing the changelog itself does not require a recursive extra entry.
+- `CHANGELOG.md` owns project change history. `okf/log.md` records knowledge-bundle changes and links to the project entry when applicable; it does not replace the mandatory project entry.
+- On every logical change, check annual rollover using the current Asia/Kolkata year. Keep only current-year entries in root `CHANGELOG.md`; move older entries intact to `changelog/YYYY.md` for their original year, creating an archive only when needed. Merge without duplicating existing entries, retain newest-first ordering and link each archive from the root file. Repair affected relative links and inbound entry links when moving content; never discard history.
+- Keep each entry concise: one logical change, a short reason, resulting behavior and verification. Link to commits, findings and owning documentation for detail instead of copying diffs or logging individual file edits. This rollover check is part of each change, not a separate recurring task.
+
 When a change creates durable knowledge about architecture, configuration,
 operations, public APIs, compatibility, or known limitations:
 
