@@ -1,0 +1,12 @@
+from decimal import Decimal
+from workflows.payment_renumbering import CustomerId, RenumberResult, RenumberStatus
+from workflows.stock_transfer import TransferLine
+
+result = RenumberResult(payment_id=CustomerId("customer"), status="planned", updated_at=None, error=None)
+line = TransferLine(
+    item_id="item", sku="sku", name="name", quantity=1.5, rate=Decimal("10"),
+    source_stock=Decimal("2"), destination_stock=Decimal("-1"),
+    tax_id="tax", tax_percentage=Decimal("18"), sales_account_id="sales",
+    inventory_account_id="inventory", hsn_or_sac="1234", unit="NOS",
+)
+status: RenumberStatus = "successful"

@@ -1,7 +1,8 @@
 """Pure, bounded analysis of document number series."""
 
 from collections import Counter, defaultdict
-from typing import Any, Mapping, Sequence, TypedDict
+from datetime import date
+from typing import Mapping, Sequence, TypedDict
 
 from zoho.helpers.sequences import parse_doc_number
 from .matching import parse_date
@@ -24,13 +25,13 @@ class NumberSeries(TypedDict):
 
 
 def analyze_number_series(
-    records: Sequence[Mapping[str, Any]], number_field: str, date_field: str,
+    records: Sequence[Mapping[str, object]], number_field: str, date_field: str,
     *, max_intervals: int = 100,
 ) -> list[NumberSeries]:
     """Group by raw prefix and report holes without enumerating suffix ranges."""
     if max_intervals < 0:
         raise ValueError("max_intervals cannot be negative")
-    groups = defaultdict(list)
+    groups: dict[tuple[str, str], list[tuple[str, int, int, date | None]]] = defaultdict(list)
     for record in records:
         raw = str(record.get(number_field) or "").strip()
         prefix, suffix, width = parse_doc_number(raw)
@@ -40,7 +41,7 @@ def analyze_number_series(
     for (prefix, kind), items in sorted(groups.items(), key=lambda pair: (-len(pair[1]), pair[0])):
         counts = Counter(suffix for _, suffix, width, _ in items if width)
         numbers = sorted(counts)
-        intervals = []
+        intervals: list[tuple[int, int]] = []
         missing = 0
         total_intervals = 0
         for left, right in zip(numbers, numbers[1:]):

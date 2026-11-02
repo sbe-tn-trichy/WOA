@@ -41,7 +41,8 @@ that every neighboring failure path is covered.
 
 ### SDK-002 — Pagination can conceal incomplete reads
 
-- **Priority / status:** Medium / Open; supported by static code inspection.
+- **Priority / status:** Medium / Fixed, awaiting verification; implementation
+  applied locally, commit and hosted-platform evidence pending.
 - **Evidence:** [BaseResource.list_iter](src/zoho/base_resource.py) defaults a
   missing resource key to `[]` and exits before checking pagination when records
   are empty. It does not validate record or pagination field types.
@@ -53,6 +54,14 @@ that every neighboring failure path is covered.
   an empty page claiming more results, valid empty results and multiple pages.
   Inconsistent responses must fail with endpoint/page context, without silently
   returning partial success or looping indefinitely.
+- **Implementation / local evidence:** `BaseResource.list_iter` validates the
+  resource list/records, page context, boolean continuation flag and echoed page
+  number before yielding a page; rejects empty pages claiming continuation.
+  `tests/test_resource_validation.py` covers malformed and valid empty responses,
+  second-page failure, custom keys, multiple pages and request parameters.
+  Raw CRUD/binary responses remain untouched. Full Windows suite results are in
+  the [type-safety implementation entry](CHANGELOG.md#implement-incremental-python-type-safety).
+  No live calls or Mac checks were performed; no implementation commit exists yet.
 
 ## Helper
 

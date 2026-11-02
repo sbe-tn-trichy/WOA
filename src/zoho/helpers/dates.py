@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import calendar
 from datetime import date, datetime, timedelta
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
 
-def parse_date(value: Any) -> Optional[date]:
+def parse_date(value: object) -> Optional[date]:
     """Safely parse a date from ISO string, datetime, date object, or other common formats."""
     if value is None:
         return None

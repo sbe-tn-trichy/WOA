@@ -132,6 +132,35 @@ investigating machine-specific failures. Runner details are documented in the
 
 # Development Rules
 
+## Type checking
+
+The optional `typing` extra pins mypy and requests stubs for development; it is
+not a runtime dependency. Install it in the existing project environment only
+when dependency installation is explicitly authorized. Do not synchronize or
+replace the environment to run a check.
+
+Run the blocking scope from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m mypy
+.\.venv\Scripts\python.exe -m pytest -q tests/test_type_safety.py tests/test_resource_validation.py
+```
+
+On macOS/Linux use `.venv/bin/python` for both commands. `tool.mypy.files` in
+`pyproject.toml` owns the growing checked scope; imported legacy modules are
+followed normally but are not all strict targets. A passing check does not mean
+the entire repository is typed. Explicit Any and Any from missing imports are
+rejected in checked targets; do not fix diagnostics using blanket ignores or
+casts of external data. Positive/negative contract tests run the same pinned
+checker, including actual SDK clients and a typed fake. They skip only when the
+optional checker is absent; the type-check CI job installs it before running them.
+
+The CI gate is configured on all three existing runner platforms. Actual hosted
+results and primary-machine smoke results remain required. See the
+[migration plan](type-safety-plan.md) for implementation status and remaining work.
+
+## Source and workflow rules
+
 - Keep generic HTTP and service-client behavior below `workflows`.
 - Inject low-level clients into workflows instead of importing workflow code from client packages.
 - Mock retry sleeps at their transport call site and set mock backfill fixtures to `books_request_interval_seconds=0.0`; retain assertions for retry counts and requested backoff durations. Production rate limiting and pacing remain enabled.
@@ -159,7 +188,7 @@ Run the read-only export below to create an all-items catalog and a smaller
 review list for NeoSeal Inventory items that do not yet have an `alias_name`:
 
 ```bash
-uv run python apps/export_neoseal_items.py \
+.venv/bin/python apps/export_neoseal_items.py \
   --purchase-account-id "$NEOSEAL_PURCHASE_ACCOUNT_ID"
 ```
 

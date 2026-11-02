@@ -9,7 +9,11 @@ from .analytics import ZohoAnalyticsAPI, ZohoAnalyticsError
 from .auth import ZohoOAuth2Manager, CatalystAuth, HttpTokenProvider
 from .exceptions import ZohoError, ZohoAuthError, ZohoCliqError, ZohoSheetError
 from .security import sanitize_filename, resolve_output_path, mask_sensitive_value, sanitize_log_params
+from .validation import require_record, require_records, require_text
+from .identifiers import PaymentId, InvoiceId, CustomerId, AccountId, LocationId
 __all__ = [
+    'require_record', 'require_records', 'require_text',
+    'PaymentId', 'InvoiceId', 'CustomerId', 'AccountId', 'LocationId',
     'ZohoBooksAPI',
     'ZohoBooksError',
     'ZohoCliqAPI',

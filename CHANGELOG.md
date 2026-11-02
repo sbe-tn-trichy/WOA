@@ -7,6 +7,42 @@ available; never invent a commit or claim checks that were not run.
 This file keeps the current year's entries; older years are archived under
 `changelog/YYYY.md` and linked here when created. Check rollover with each change.
 
+## 2026-11-03
+
+### Implement incremental Python type safety
+
+- **Why:** Dynamic clients, financial dictionaries and unchecked recovery data
+  allowed interface errors and malformed records to reach financial workflows.
+- **What:** Added an authorized pinned development checker and three-platform CI
+  gate; migrated payment renumbering/CLI, shared helpers, stock planning, offset
+  reports/contracts and collection allocation/index records into the strict scope.
+  Added validated external records and nominal IDs, retained schema-1 recovery
+  and wire formats, and rejected malformed pagination (SDK-002). Documented
+  remaining transport, execution-service and application migration work; no
+  repository-wide completion or HELPER-001 recovery fix is claimed.
+- **Verification:** Windows x64 CPython 3.14.4: strict mypy passes 24 files;
+  checker fixtures reject swapped IDs, float quantities and invalid status values.
+  Full mocked suite outside the sandbox: 1824 passed, 1 skipped (optional OCR),
+  4 subtests passed in 16.79 seconds. Dependency consistency, CLI help,
+  documentation links and whitespace checks pass. Sandbox-only temporary-directory
+  permission failures are distinct from product failures. Hosted CI and macOS
+  remain unverified. No live API changes. Annual rollover checked: all
+  dated project entries belong to 2026.
+
+## 2026-11-02
+
+### Plan incremental Python type safety
+
+- **Why:** Financial workflows accept dynamic clients and records without a
+  static-checking gate, weakening internal interface guarantees.
+- **What:** Added a phased plan for mypy adoption, validated records, typed client
+  contracts and workflow migration, starting with payment renumbering. Linked
+  existing correctness findings without claiming they are resolved.
+- **Verification:** Compared targets with source, configuration, CI and finding
+  register; documentation links and whitespace checked. Documentation only;
+  no dependencies installed, checker/tests run, or live changes made. Annual
+  rollover checked: existing dated project entries are all in 2026.
+
 ## 2026-11-01
 
 ### Keep changelog history concise with annual archives

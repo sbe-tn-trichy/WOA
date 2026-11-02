@@ -1,19 +1,36 @@
 """Review or resume FY 2025-26 customer-payment renumbering; dry-run by default."""
 import argparse
+import importlib
 import json
 import os
 from datetime import datetime
 from pathlib import Path
 
-try:
+if __package__:
     from . import _bootstrap
-except ImportError:
-    import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.core.auth import get_analytics_client, get_books_client
 from workflows.core.checkpoint import write_atomic_json
 from workflows.core.dates import get_fy_date_range
-from workflows.payment_renumbering import build_renumber_plan, execute_renumbering, get_target_payments
+from workflows.payment_renumbering import (
+    RenumberResult, build_renumber_plan, execute_renumbering, get_target_payments,
+    parse_renumber_plan, parse_renumber_results,
+)
+from workflows.payment_renumbering.models import record, records
+
+
+class Arguments(argparse.Namespace):
+    execute: bool
+    resume: Path | None
+    fy: str
+    source_prefix: str
+    destination_prefix: str
+    width: int
+    starting_sequence: int | None
+    workspace_id: str
+    output_dir: Path
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -27,19 +44,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--starting-sequence", type=int)
     parser.add_argument("--workspace-id", default=os.environ.get("ZOHO_ANALYTICS_WORKSPACE_ID", "264324000000002043"))
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).resolve().parents[1] / "output")
-    args = parser.parse_args(argv)
-    books = get_books_client()
+    args = parser.parse_args(argv, namespace=Arguments())
+    audit: dict[str, object]
+    previous: list[RenumberResult]
     if args.resume:
         audit_file = args.resume.resolve()
-        audit = json.loads(audit_file.read_text(encoding="utf-8"))
-        if audit.get("schema_version") != 1:
+        audit = record(json.loads(audit_file.read_text(encoding="utf-8")), "Renumber audit")
+        if type(audit.get("schema_version")) is not int or audit.get("schema_version") != 1:
             raise ValueError("Unsupported audit schema; legacy one-off reports cannot be resumed")
-        plan = audit["plan"]
-        previous = audit.get("results", [])
+        plan = parse_renumber_plan(audit.get("plan"))
+        previous = parse_renumber_results(audit.get("results", []))
+        records(audit.get("attempts", []), "Audit attempts")
+        books = get_books_client()
     else:
+        books = get_books_client()
         start, end, fy = get_fy_date_range(args.fy)
-        records = get_target_payments(get_analytics_client(), args.workspace_id)
-        plan = build_renumber_plan(books, records, source_prefix=args.source_prefix,
+        discovery = get_target_payments(get_analytics_client(), args.workspace_id)
+        plan = build_renumber_plan(books, discovery, source_prefix=args.source_prefix,
                                   destination_prefix=args.destination_prefix, start_date=start,
                                   end_date=end, width=args.width, starting_sequence=args.starting_sequence)
         args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -48,12 +69,14 @@ def main(argv: list[str] | None = None) -> int:
                  "financial_year": fy, "plan": plan, "results": []}
         previous = []
     # Keep prior recovery evidence while replacing the current attempt's outcomes.
-    audit.setdefault("attempts", []).append({"started_at": datetime.now().isoformat(),
-                                             "mode": "execute" if args.execute else "dry-run",
-                                             "prior_results": previous})
+    attempts = records(audit.get("attempts", []), "Audit attempts")
+    attempts.append({"started_at": datetime.now().isoformat(),
+                     "mode": "execute" if args.execute else "dry-run",
+                     "prior_results": previous})
+    audit["attempts"] = attempts
     audit["mode"] = "execute" if args.execute else "dry-run"
 
-    def checkpoint(results):
+    def checkpoint(results: list[RenumberResult]) -> None:
         audit["results"] = results
         write_atomic_json(audit_file, audit)
 

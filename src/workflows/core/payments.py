@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Any, Callable, Mapping, Sequence
+from typing import Callable, Mapping, Sequence
+
+from zoho.validation import require_record, require_records
 
 from .matching import normalize_payment_reference, parse_currency_amount, parse_date, to_decimal, to_text
 
@@ -30,7 +32,7 @@ class PaymentState:
 
 
 def payment_state_matches(
-    payment: Mapping[str, Any] | None, expected: PaymentState, *, bank_account_key: str,
+    payment: Mapping[str, object] | None, expected: PaymentState, *, bank_account_key: str,
 ) -> bool:
     """Verify read-back without hiding missing records or invalid amount failures."""
     return (
@@ -44,8 +46,8 @@ def payment_state_matches(
 
 
 def payment_evidence_matches(
-    payment: Mapping[str, Any], evidence: PaymentEvidence, *,
-    customer_key: str, normalize_customer: Callable[[Any], str] = to_text,
+    payment: Mapping[str, object], evidence: PaymentEvidence, *,
+    customer_key: str, normalize_customer: Callable[[object], str] = to_text,
 ) -> bool:
     """Compare date, absolute amount, reference and explicit customer evidence."""
     amount = to_decimal(payment.get("amount"))
@@ -59,11 +61,11 @@ def payment_evidence_matches(
 
 
 def build_payment_indexes(
-    payments: Sequence[Mapping[str, Any]], *, id_keys: tuple[str, ...] = ("payment_id", "id"),
-) -> tuple[dict[str, Mapping[str, Any]], dict[str, list[Mapping[str, Any]]]]:
+    payments: Sequence[Mapping[str, object]], *, id_keys: tuple[str, ...] = ("payment_id", "id"),
+) -> tuple[dict[str, Mapping[str, object]], dict[str, list[Mapping[str, object]]]]:
     """Index native identifiers and normalized numbers without discarding ambiguity."""
-    by_id: dict[str, Mapping[str, Any]] = {}
-    by_number: dict[str, list[Mapping[str, Any]]] = {}
+    by_id: dict[str, Mapping[str, object]] = {}
+    by_number: dict[str, list[Mapping[str, object]]] = {}
     for payment in payments:
         payment_id = next((to_text(payment.get(key)) for key in id_keys if payment.get(key)), "")
         number = normalize_payment_reference(payment.get("payment_number"))
@@ -74,19 +76,19 @@ def build_payment_indexes(
     return by_id, by_number
 
 
-def payment_series_params(prefix: str, *, per_page: int = 1) -> dict[str, Any]:
+def payment_series_params(prefix: str, *, per_page: int = 1) -> dict[str, object]:
     """Build the established descending first-page lookup for a payment series."""
     return {"payment_number_startswith": prefix, "sort_column": "payment_number",
             "sort_order": "D", "page": 1, "per_page": per_page}
 
 
 def payment_series_records(
-    response: Mapping[str, Any], prefix: str, *, response_keys: tuple[str, ...],
+    response: Mapping[str, object], prefix: str, *, response_keys: tuple[str, ...],
     error_message: str,
-) -> list[Mapping[str, Any]]:
+) -> list[dict[str, object]]:
     """Reject responses that do not confirm the requested filter and sort."""
-    context = response.get("page_context") or {}
-    criteria = context.get("search_criteria") or []
+    context = require_record(response.get("page_context") or {}, "Payment series page_context")
+    criteria = require_records(context.get("search_criteria") or [], "Payment series search_criteria")
     if (context.get("sort_column") != "payment_number" or context.get("sort_order") != "D"
             or not any(item.get("column_name") == "payment_number"
                        and item.get("search_text") == prefix
@@ -97,7 +99,7 @@ def payment_series_records(
             records = response[key]
             if not isinstance(records, list):
                 raise ValueError("Books returned an invalid payment series page")
-            return records
+            return require_records(records, "Payment series records")
     return []
 
 

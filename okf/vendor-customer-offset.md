@@ -5,6 +5,14 @@ description: GSTIN-safe clearing of linked customer receivables and vendor payab
 
 # Vendor-Customer Offset
 
+The public workflow accepts the structural `OffsetBooksClient` protocol and
+returns `OffsetReport`, with typed plans, posted/failed rows, summary counts,
+allocations and dated Decimal tranches. Basic response shapes are validated;
+the existing financial conversion and compensation policies remain unchanged.
+This typing does not resolve uncertain remote completion (HELPER-001 in the
+[finding register](../PROJECT_ANALYSIS.md)); recovery safety and complete input
+validation remain outstanding in the [type-safety plan](type-safety-plan.md).
+
 `workflows.vendor_customer_offset.run_vendor_customer_offset()` offsets balances
 for contacts that exist once as a customer and once as a vendor under the same
 valid GSTIN. A GSTIN is skipped when either contact type occurs more than once.

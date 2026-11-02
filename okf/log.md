@@ -1,5 +1,14 @@
 # Knowledge Change Log
 
+## 2026-11-03
+
+- Recorded the implemented strict-checking scope, validated financial records,
+  recovery compatibility and remaining migration work in the [type-safety plan](type-safety-plan.md) and owning workflow concepts. Added checker commands to the runbook and SDK-002 implementation evidence to the finding register. See the [project entry](../CHANGELOG.md#implement-incremental-python-type-safety).
+
+## 2026-11-02
+
+- Added the [Python type-safety implementation plan](type-safety-plan.md), with incremental checking gates, validated financial boundaries and compatibility criteria. See the [project entry](../CHANGELOG.md#plan-incremental-python-type-safety).
+
 ## 2026-11-01
 
 - Added per-change annual rollover and concise-entry rules; see the [project changelog](../CHANGELOG.md#keep-changelog-history-concise-with-annual-archives).

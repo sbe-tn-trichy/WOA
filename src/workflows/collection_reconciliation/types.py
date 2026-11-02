@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, TypedDict, NotRequired
+from typing import Dict, List, Optional, TypedDict, NotRequired, Required
 
 
 class InvoiceAllocation(TypedDict, total=False):
     """Allocation of a customer payment to a specific invoice."""
 
-    invoice_id: str
+    invoice_id: Required[str]
     invoice_number: str
-    amount_applied: Decimal
-    balance: Decimal
+    amount_applied: Required[float]
+    balance: float
     due_date: str
+    date: str
 
 
 class ChequeDetail(TypedDict, total=False):
@@ -46,8 +47,8 @@ class PaymentProposal(TypedDict, total=False):
     id: str
     fingerprint: str
     payment_type: str
-    creator: Dict[str, Any]
-    bank: Optional[Dict[str, Any]]
+    creator: Dict[str, object]
+    bank: Optional[Dict[str, object]]
     bank_name: str
     bank_account_id: str
     ambiguous_candidates: List[BankMatchCandidate]

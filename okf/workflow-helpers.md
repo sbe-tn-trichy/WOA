@@ -103,6 +103,18 @@ across attempts and can exceed wall time when requests overlap.
 
 ## Payment applications
 
+Payment renumbering now exports nominal IDs, `PaymentSnapshot`,
+`AllocationSnapshot`, typed client protocols, `RenumberStatus`, and the
+`parse_renumber_plan`/`parse_renumber_results` validators. IDs are defined in
+`zoho.identifiers` and re-exported for workflow users; they do not validate tenant
+scope. Discovery/payment envelopes, allocation rows, amounts, dates and loaded
+audit records are validated before use. Malformed values raise `RenumberingError`
+instead of leaking arbitrary dictionaries into execution. Schema-1 JSON shapes,
+dry-run behavior, checkpoint ordering and live financial read-back remain intact.
+The CLI rejects invalid recovery structures before constructing a client or
+overwriting the audit. Strict checking coverage is tracked in the
+[type-safety plan](type-safety-plan.md).
+
 `workflows.payment_inspection` accepts an Analytics client and workspace ID,
 fetches customer-payment records, filters calendar dates, and builds the existing
 CLI summary fields with additive gap/duplicate/width metadata. Maximum observed

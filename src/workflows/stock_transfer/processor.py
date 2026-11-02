@@ -1,12 +1,38 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import re
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Dict, List, Mapping, NotRequired, Optional, Sequence, TypedDict
 
 from workflows.core.matching import to_decimal
+from zoho.validation import require_record, require_records, require_text
+
+
+class StorageAllocation(TypedDict):
+    storage_id: str
+    out_quantity: float
+
+
+class TransferPayload(TypedDict):
+    date: str
+    reference_number: str
+    is_inclusive_tax: bool
+    gst_treatment: str
+    notes: str
+    location_id: str
+    tax_settings_id: str
+    gst_no: str
+    line_items: list[dict[str, object]]
+    customer_id: NotRequired[str]
+    place_of_supply: NotRequired[str]
+    send: NotRequired[bool]
+    vendor_id: NotRequired[str]
+    is_draft: NotRequired[bool]
+    bill_number: NotRequired[str]
+    source_of_supply: NotRequired[str]
+    destination_of_supply: NotRequired[str]
 
 
 @dataclass(frozen=True)
@@ -24,18 +50,18 @@ class TransferLine:
     inventory_account_id: str
     hsn_or_sac: str
     unit: str
-    storages: List[Dict[str, Any]] = field(default_factory=list)
+    storages: list[StorageAllocation] = field(default_factory=list)
 
 
-def number(value: Any) -> Decimal:
+def number(value: object) -> Decimal:
     result = to_decimal(value)
     if result is None or not result.is_finite():
         raise ValueError('Missing or invalid numeric stock/rate')
     return result
 
 
-def stocks(item: Mapping[str, Any], source: str, destination: str):
-    locations = {str(row['location_id']): row for row in item['locations']}
+def stocks(item: Mapping[str, object], source: str, destination: str) -> tuple[Decimal, Decimal, Decimal]:
+    locations = {str(row['location_id']): row for row in require_records(item.get('locations'), 'Item locations')}
     s, d = locations[source], locations[destination]
     on_hand = number(s['location_stock_on_hand'])
     # Protect accounting stock, physical stock, and both commitment balances.
@@ -48,7 +74,7 @@ def stocks(item: Mapping[str, Any], source: str, destination: str):
 
 
 def build_plan(
-    items: Sequence[Mapping[str, Any]], source: str, destination: str,
+    items: Sequence[Mapping[str, object]], source: str, destination: str,
     purchase_account_ids: Sequence[str], markup_percentage: Decimal = Decimal('1'),
 ) -> List[TransferLine]:
     """Match exact item IDs and cap shortage quantities at uncommitted source stock."""
@@ -71,10 +97,10 @@ def build_plan(
         quantity = min(cap, max(Decimal(0), -destination_stock))
         if quantity <= 0:
             continue
-        source_location = next(loc for loc in item['locations'] if str(loc['location_id']) == source)
-        allocations = []
+        source_location = next(loc for loc in require_records(item.get('locations'), 'Item locations') if str(loc['location_id']) == source)
+        allocations: list[StorageAllocation] = []
         if source_location.get('is_storage_location_enabled'):
-            bins = item['transfer_bins']
+            bins = require_records(item['transfer_bins'], 'Item transfer bins')
             if any(str(row['location_id']) != source for row in bins):
                 raise ValueError('Bin belongs to another location')
             if len({row['storage_id'] for row in bins}) != len(bins):
@@ -85,7 +111,7 @@ def build_plan(
             for row in sorted(eligible_bins, key=lambda row: str(row['storage_id'])):
                 take = min(remaining, number(row['balance_quantity']))
                 if take > 0:
-                    allocations.append({'storage_id': row['storage_id'], 'out_quantity': float(take)})
+                    allocations.append(StorageAllocation(storage_id=require_text(row.get('storage_id'), 'Storage ID'), out_quantity=float(take)))
                     remaining -= take
             if quantity <= 0:
                 continue
@@ -95,16 +121,16 @@ def build_plan(
         rate = (cost * (Decimal('1') + markup_percentage / Decimal('100'))).quantize(
             Decimal('0.01'), rounding=ROUND_HALF_UP
         )
-        taxes = [t for t in item.get('item_tax_preferences', []) if t.get('tax_specification') == 'intra']
+        taxes = [t for t in require_records(item.get('item_tax_preferences', []), 'Item tax preferences') if t.get('tax_specification') == 'intra']
         if cost <= 0 or rate <= 0 or len(taxes) != 1:
             raise ValueError('Positive rate and one intra-state item tax required')
         fields = ['account_id', 'inventory_account_id', 'hsn_or_sac', 'unit']
         if any(not item.get(key) for key in fields):
             raise ValueError('Missing accounting or item metadata')
-        result.append(TransferLine(item_id, item.get('sku', ''), item['name'], quantity, rate,
-                                   source_stock, destination_stock, taxes[0]['tax_id'],
-                                   number(taxes[0]['tax_percentage']), item['account_id'],
-                                   item['inventory_account_id'], str(item['hsn_or_sac']), item['unit'], allocations))
+        result.append(TransferLine(item_id, require_text(item.get('sku', ''), 'Item SKU', allow_empty=True), require_text(item.get('name'), 'Item name'), quantity, rate,
+                                   source_stock, destination_stock, require_text(taxes[0].get('tax_id'), 'Item tax ID'),
+                                   number(taxes[0]['tax_percentage']), require_text(item.get('account_id'), 'Sales account ID'),
+                                   require_text(item.get('inventory_account_id'), 'Inventory account ID'), str(item['hsn_or_sac']), require_text(item.get('unit'), 'Item unit'), allocations))
     return result
 
 
@@ -134,7 +160,7 @@ def invoice_numbers(starting_number: str, prefix: str, count: int) -> List[str]:
 
 
 def validate_series_start_date(
-    starting_date: date, invoices: Sequence[Mapping[str, Any]], invoice_number_prefix: str,
+    starting_date: date, invoices: Sequence[Mapping[str, object]], invoice_number_prefix: str,
 ) -> Optional[date]:
     """Require a transfer start date on or after the latest invoice in a series."""
     if not invoice_number_prefix:
@@ -186,7 +212,7 @@ def split_plan(lines: Sequence[TransferLine], maximum_invoice_total: Decimal) ->
                 documents.append(current)
                 current, current_total = [], Decimal('0')
                 continue
-            storages = []
+            storages: list[StorageAllocation] = []
             allocation_remaining = fit
             already_used = original.quantity - remaining
             skip = already_used
@@ -197,9 +223,9 @@ def split_plan(lines: Sequence[TransferLine], maximum_invoice_total: Decimal) ->
                 available -= skipped
                 take = min(allocation_remaining, available)
                 if take > 0:
-                    storages.append({'storage_id': storage['storage_id'], 'out_quantity': float(take)})
+                    storages.append(StorageAllocation(storage_id=storage['storage_id'], out_quantity=float(take)))
                     allocation_remaining -= take
-            part = TransferLine(**{**original.__dict__, 'quantity': fit, 'storages': storages})
+            part = replace(original, quantity=fit, storages=storages)
             current.append(part)
             current_total += line_total(part)
             remaining -= fit
@@ -211,7 +237,7 @@ def split_plan(lines: Sequence[TransferLine], maximum_invoice_total: Decimal) ->
     return documents
 
 
-def validate_stock(lines: Sequence[TransferLine], items: Sequence[Mapping[str, Any]], source: str, destination: str) -> None:
+def validate_stock(lines: Sequence[TransferLine], items: Sequence[Mapping[str, object]], source: str, destination: str) -> None:
     """Fail closed when a prepared quantity is no longer supported by live stock."""
     by_id = {str(i['item_id']): i for i in items}
     if len(by_id) != len(items):
@@ -221,7 +247,7 @@ def validate_stock(lines: Sequence[TransferLine], items: Sequence[Mapping[str, A
         if line.quantity <= 0 or line.quantity > cap or line.quantity > -shortage:
             raise ValueError(f'Stock changed or insufficient for {line.sku}; rebuild plan')
         if line.storages:
-            bins = {row['storage_id']: row for row in by_id[line.item_id]['transfer_bins']}
+            bins = {row['storage_id']: row for row in require_records(by_id[line.item_id].get('transfer_bins'), 'Live transfer bins')}
             for allocation in line.storages:
                 row = bins[allocation['storage_id']]
                 if str(row['location_id']) != source or row.get('status') != 1 or number(row['balance_quantity']) < number(allocation['out_quantity']):
@@ -229,39 +255,54 @@ def validate_stock(lines: Sequence[TransferLine], items: Sequence[Mapping[str, A
 
 
 def build_payloads(
-    lines: Sequence[TransferLine], source: Mapping[str, Any], destination: Mapping[str, Any],
-    customer: Mapping[str, Any], vendor: Mapping[str, Any], transaction_date: date, reference: str,
-) -> Dict[str, Dict[str, Any]]:
+    lines: Sequence[TransferLine], source: Mapping[str, object], destination: Mapping[str, object],
+    customer: Mapping[str, object], vendor: Mapping[str, object], transaction_date: date, reference: str,
+) -> dict[str, TransferPayload]:
     """Create matching draft payloads for two same-state GST registrations."""
     if not lines or not reference.strip():
         raise ValueError('Nonempty lines and reference required')
     if source['location_id'] == destination['location_id']:
         raise ValueError('Locations must differ')
+    source_gstin = require_text(source.get('tax_reg_no'), 'Source GSTIN')
+    destination_gstin = require_text(destination.get('tax_reg_no'), 'Destination GSTIN')
     if (not source.get('tax_reg_no') or not destination.get('tax_reg_no') or
         source['tax_reg_no'] == destination['tax_reg_no'] or
-        source['tax_reg_no'][:2] != destination['tax_reg_no'][:2]):
+        source_gstin[:2] != destination_gstin[:2]):
         raise ValueError('This workflow requires distinct same-state GST registrations')
     for contact, location, kind in [(customer, destination, 'customer'), (vendor, source, 'vendor')]:
         if contact.get('gst_no') != location['tax_reg_no'] or contact.get('contact_type') != kind or contact.get('status') != 'active':
             raise ValueError(f'{kind} GSTIN/type/status does not match its location')
-    common = dict(date=transaction_date.isoformat(), reference_number=reference,
-                  is_inclusive_tax=False, gst_treatment='business_gst',
-                  notes=f'Stock replenishment: {source["location_name"]} to {destination["location_name"]}. {reference}')
-    result = {}
+    result: dict[str, TransferPayload] = {}
     for kind, loc, contact in [('invoice', source, customer), ('bill', destination, vendor)]:
-        payload = dict(common, location_id=loc['location_id'], tax_settings_id=loc['tax_settings_id'],
-                       gst_no=contact['gst_no'], line_items=[])
+        location_id = require_text(loc.get('location_id'), 'Location ID')
+        payload = TransferPayload(
+            date=transaction_date.isoformat(), reference_number=reference,
+            is_inclusive_tax=False, gst_treatment='business_gst',
+            notes=f'Stock replenishment: {source["location_name"]} to {destination["location_name"]}. {reference}',
+            location_id=location_id,
+            tax_settings_id=require_text(loc.get('tax_settings_id'), 'Tax settings ID'),
+            gst_no=require_text(contact.get('gst_no'), 'Contact GSTIN'), line_items=[],
+        )
         for line in lines:
             payload['line_items'].append(dict(item_id=line.item_id, name=line.name, quantity=float(line.quantity),
                 rate=float(line.rate), tax_id=line.tax_id, hsn_or_sac=line.hsn_or_sac, unit=line.unit,
-                location_id=loc['location_id'], account_id=line.sales_account_id if kind == 'invoice' else line.inventory_account_id,
+                location_id=location_id, account_id=line.sales_account_id if kind == 'invoice' else line.inventory_account_id,
                 description='Replenish negative destination stock; source stock capped'))
             if kind == 'invoice' and line.storages:
                 payload['line_items'][-1]['storages'] = [dict(row) for row in line.storages]
+        contact_id = require_text(contact.get('contact_id'), 'Contact ID')
+        destination_address = require_record(destination.get('address'), 'Destination address')
+        destination_state = require_text(destination_address.get('state_code'), 'Destination state')
         if kind == 'invoice':
-            payload.update(customer_id=contact['contact_id'], place_of_supply=destination['address']['state_code'], send=False)
+            payload['customer_id'] = contact_id
+            payload['place_of_supply'] = destination_state
+            payload['send'] = False
         else:
-            payload.update(vendor_id=contact['contact_id'], is_draft=True, bill_number=reference,
-                           source_of_supply=source['address']['state_code'], destination_of_supply=destination['address']['state_code'])
+            source_address = require_record(source.get('address'), 'Source address')
+            payload['vendor_id'] = contact_id
+            payload['is_draft'] = True
+            payload['bill_number'] = reference
+            payload['source_of_supply'] = require_text(source_address.get('state_code'), 'Source state')
+            payload['destination_of_supply'] = destination_state
         result[kind] = payload
     return result

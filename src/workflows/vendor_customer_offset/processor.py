@@ -7,7 +7,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from math import isfinite
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from zoho.helpers import (
     GSTIN_PATTERN,
@@ -19,6 +20,11 @@ from zoho.helpers import (
     normalize_gstin,
 )
 from ..core.matching import to_decimal
+from zoho.validation import require_record, require_records, require_text
+from .contracts import (
+    AmbiguousPair, BillAllocation, InvoiceAllocation, OffsetBooksClient,
+    OffsetReport, OffsetTranche, PairSummary, SkippedOffset, FailedOffset,
+)
 
 
 
@@ -45,7 +51,7 @@ class VendorCustomerOffsetConfig:
             raise ValueError("payment_mode is required.")
 
 
-def _decimal(value: Any) -> Decimal:
+def _decimal(value: object) -> Decimal:
     return to_decimal(value) or Decimal("0")
 
 
@@ -53,24 +59,31 @@ def _money(value: Decimal) -> Decimal:
     return value.quantize(Decimal("0.01"))
 
 
-def _contact_type(contact: Mapping[str, Any]) -> str:
+def _allocated_amount(value: object) -> float:
+    """Narrow the shared allocator's existing wire amount without re-rounding it."""
+    if not isinstance(value, float) or not isfinite(value):
+        raise VendorCustomerOffsetError("Document allocation amount is invalid.")
+    return value
+
+
+def _contact_type(contact: Mapping[str, object]) -> str:
     return str(contact.get("contact_type") or "").strip().lower()
 
 
 def _unique_gstin_pairs(
-    contacts: Iterable[Mapping[str, Any]],
+    contacts: Iterable[Mapping[str, object]],
 ) -> Tuple[
-    List[Tuple[str, Mapping[str, Any], Mapping[str, Any]]],
-    List[Dict[str, Any]],
+    List[Tuple[str, Mapping[str, object], Mapping[str, object]]],
+    List[AmbiguousPair],
 ]:
-    grouped: Dict[str, List[Mapping[str, Any]]] = defaultdict(list)
+    grouped: Dict[str, List[Mapping[str, object]]] = defaultdict(list)
     for contact in contacts:
         gstin = normalize_gstin(contact.get("gst_no"))
         if gstin:
             grouped[gstin].append(contact)
 
-    pairs: List[Tuple[str, Mapping[str, Any], Mapping[str, Any]]] = []
-    skipped: List[Dict[str, Any]] = []
+    pairs: List[Tuple[str, Mapping[str, object], Mapping[str, object]]] = []
+    skipped: List[AmbiguousPair] = []
     for gstin, matches in grouped.items():
         customers = [item for item in matches if _contact_type(item) == "customer"]
         vendors = [item for item in matches if _contact_type(item) == "vendor"]
@@ -95,7 +108,7 @@ def _unique_gstin_pairs(
     return pairs, skipped
 
 
-def _resolve_bank_account_id(books_client: Any, config: VendorCustomerOffsetConfig) -> str:
+def _resolve_bank_account_id(books_client: OffsetBooksClient, config: VendorCustomerOffsetConfig) -> str:
     if config.bank_account_id:
         return config.bank_account_id
 
@@ -110,7 +123,7 @@ def _resolve_bank_account_id(books_client: Any, config: VendorCustomerOffsetConf
     return account_id
 
 
-def _document_sort_key(document: Mapping[str, Any]) -> Tuple[str, str, str]:
+def _document_sort_key(document: Mapping[str, object]) -> Tuple[str, str, str]:
     return (
         str(document.get("due_date") or "9999-12-31"),
         str(document.get("date") or "9999-12-31"),
@@ -119,20 +132,21 @@ def _document_sort_key(document: Mapping[str, Any]) -> Tuple[str, str, str]:
 
 
 def _allocate_documents(
-    documents: Sequence[Mapping[str, Any]],
+    documents: Sequence[Mapping[str, object]],
     amount: Decimal,
     id_key: str,
-) -> Tuple[List[Dict[str, Any]], Decimal]:
+) -> Tuple[List[Dict[str, object]], Decimal]:
     if amount <= 0:
         return [], Decimal("0")
-    return allocate_documents_fifo(amount, documents, id_key=id_key)
+    allocations, remaining = allocate_documents_fifo(amount, documents, id_key=id_key)
+    return require_records(allocations, "Document allocations"), remaining
 
 
 def _build_bill_payment_tranches(
-    invoices: Sequence[Mapping[str, Any]],
-    bills: Sequence[Mapping[str, Any]],
+    invoices: Sequence[Mapping[str, object]],
+    bills: Sequence[Mapping[str, object]],
     amount: Decimal,
-) -> Tuple[List[Dict[str, Any]], Decimal, str]:
+) -> Tuple[List[OffsetTranche], Decimal, str]:
     """Split an offset into one same-dated payment pair per vendor bill."""
     invoice_allocations, invoice_remaining = _allocate_documents(
         invoices, amount, "invoice_id"
@@ -141,15 +155,23 @@ def _build_bill_payment_tranches(
     if invoice_remaining or bill_remaining:
         return [], max(invoice_remaining, bill_remaining), "insufficient_open_documents"
 
+    typed_bills = [BillAllocation(
+        bill_id=require_text(row.get("bill_id"), "Allocated bill ID"),
+        amount_applied=_allocated_amount(row.get("amount_applied")),
+    ) for row in bill_allocations]
+    typed_invoices = [InvoiceAllocation(
+        invoice_id=require_text(row.get("invoice_id"), "Allocated invoice ID"),
+        amount_applied=_allocated_amount(row.get("amount_applied")),
+    ) for row in invoice_allocations]
     bill_by_id = {str(item.get("bill_id") or ""): item for item in bills}
     invoice_index = 0
     invoice_available = (
-        _money(_decimal(invoice_allocations[0]["amount_applied"]))
-        if invoice_allocations
+        _money(_decimal(typed_invoices[0]["amount_applied"]))
+        if typed_invoices
         else Decimal("0")
     )
-    tranches: List[Dict[str, Any]] = []
-    for bill_allocation in bill_allocations:
+    tranches: List[OffsetTranche] = []
+    for bill_allocation in typed_bills:
         bill_id = str(bill_allocation["bill_id"])
         bill = bill_by_id[bill_id]
         try:
@@ -159,12 +181,12 @@ def _build_bill_payment_tranches(
 
         tranche_amount = _money(_decimal(bill_allocation["amount_applied"]))
         tranche_remaining = tranche_amount
-        tranche_invoices: List[Dict[str, Any]] = []
-        while tranche_remaining > 0 and invoice_index < len(invoice_allocations):
+        tranche_invoices: List[InvoiceAllocation] = []
+        while tranche_remaining > 0 and invoice_index < len(typed_invoices):
             applied = min(invoice_available, tranche_remaining)
             tranche_invoices.append(
                 {
-                    "invoice_id": invoice_allocations[invoice_index]["invoice_id"],
+                    "invoice_id": typed_invoices[invoice_index]["invoice_id"],
                     "amount_applied": float(applied),
                 }
             )
@@ -172,9 +194,9 @@ def _build_bill_payment_tranches(
             invoice_available = _money(invoice_available - applied)
             if invoice_available == 0:
                 invoice_index += 1
-                if invoice_index < len(invoice_allocations):
+                if invoice_index < len(typed_invoices):
                     invoice_available = _money(
-                        _decimal(invoice_allocations[invoice_index]["amount_applied"])
+                        _decimal(typed_invoices[invoice_index]["amount_applied"])
                     )
 
         if tranche_remaining:
@@ -190,14 +212,14 @@ def _build_bill_payment_tranches(
     return tranches, Decimal("0"), ""
 
 
-def _open_documents(books_client: Any, customer_id: str, vendor_id: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+def _open_documents(books_client: OffsetBooksClient, customer_id: str, vendor_id: str) -> Tuple[List[Dict[str, object]], List[Dict[str, object]]]:
     return (
-        fetch_open_invoices(books_client, customer_id),
-        fetch_open_bills(books_client, vendor_id),
+        require_records(fetch_open_invoices(books_client, customer_id), "Open invoices"),
+        require_records(fetch_open_bills(books_client, vendor_id), "Open bills"),
     )
 
 
-def _ensure_linked(books_client: Any, customer_id: str, vendor_id: str) -> str:
+def _ensure_linked(books_client: OffsetBooksClient, customer_id: str, vendor_id: str) -> str:
     """Ensure the pair is linked using the Books web-client endpoint.
 
     Zoho's public OpenAPI does not publish this operation. The live Books client
@@ -217,6 +239,7 @@ def _ensure_linked(books_client: Any, customer_id: str, vendor_id: str) -> str:
         raise VendorCustomerOffsetError(
             f"Could not verify the customer/vendor link: {message}"
         ) from exc
+    response = require_record(response, "Customer/vendor link response")
     if response.get("code") == 0:
         return "linked"
     raise VendorCustomerOffsetError(
@@ -224,8 +247,9 @@ def _ensure_linked(books_client: Any, customer_id: str, vendor_id: str) -> str:
     )
 
 
-def _payment_id(response: Mapping[str, Any], container: str) -> str:
-    payment = response.get(container) or response.get("payment") or {}
+def _payment_id(response: object, container: str) -> str:
+    envelope = require_record(response, "Payment response")
+    payment = require_record(envelope.get(container) or envelope.get("payment") or {}, "Created payment")
     return str(payment.get("payment_id") or payment.get("vendorpayment_id") or "")
 
 
@@ -235,9 +259,9 @@ def _reference_number(prefix: str, bill_id: str) -> str:
 
 
 def run_vendor_customer_offset(
-    books_client: Any,
+    books_client: OffsetBooksClient,
     config: Optional[VendorCustomerOffsetConfig] = None,
-) -> Dict[str, Any]:
+) -> OffsetReport:
     """Create paired, fully-applied payments for linked customer/vendor contacts.
 
     Contacts are paired only when a valid GSTIN occurs exactly once as a customer
@@ -247,7 +271,7 @@ def run_vendor_customer_offset(
     """
     config = config or VendorCustomerOffsetConfig()
     bank_account_id = _resolve_bank_account_id(books_client, config)
-    contacts = books_client.contacts.list_all(params={"filter_by": "Status.Active"})
+    contacts = require_records(books_client.contacts.list_all(params={"filter_by": "Status.Active"}), "Offset contacts")
     pairs, skipped = _unique_gstin_pairs(contacts)
     if config.vendor_id:
         pairs = [
@@ -255,14 +279,17 @@ def run_vendor_customer_offset(
             for pair in pairs
             if str(pair[2].get("contact_id") or "") == config.vendor_id
         ]
-    results: Dict[str, Any] = {
+    results: OffsetReport = {
         "dry_run": config.dry_run,
         "bank_account_id": bank_account_id,
         "candidate_pairs": len(pairs),
         "planned": [],
         "posted": [],
-        "skipped": skipped,
+        "skipped": list(skipped),
         "failed": [],
+        "summary": {"planned": 0, "posted": 0, "planned_customer_payments": 0,
+                    "planned_vendor_payments": 0, "posted_customer_payments": 0,
+                    "posted_vendor_payments": 0, "skipped": 0, "failed": 0},
     }
 
     for gstin, customer, vendor in pairs:
@@ -273,7 +300,7 @@ def run_vendor_customer_offset(
         receivable = _money(_decimal(customer.get("outstanding_receivable_amount")))
         payable = _money(_decimal(vendor.get("outstanding_payable_amount")))
         amount = min(receivable, payable)
-        pair_summary = {
+        pair_summary: PairSummary = {
             "gstin": gstin,
             "customer_id": customer_id,
             "vendor_id": vendor_id,
@@ -281,13 +308,13 @@ def run_vendor_customer_offset(
         }
 
         if not customer_id or not vendor_id:
-            results["skipped"].append({**pair_summary, "reason": "missing_contact_id"})
+            results["skipped"].append(SkippedOffset(gstin=gstin, customer_id=customer_id, vendor_id=vendor_id, amount=float(amount), reason="missing_contact_id"))
             continue
         if customer_currency != vendor_currency:
-            results["skipped"].append({**pair_summary, "reason": "currency_mismatch"})
+            results["skipped"].append(SkippedOffset(gstin=gstin, customer_id=customer_id, vendor_id=vendor_id, amount=float(amount), reason="currency_mismatch"))
             continue
         if amount <= 0:
-            results["skipped"].append({**pair_summary, "reason": "no_mutual_outstanding"})
+            results["skipped"].append(SkippedOffset(gstin=gstin, customer_id=customer_id, vendor_id=vendor_id, amount=float(amount), reason="no_mutual_outstanding"))
             continue
 
         invoices, bills = _open_documents(books_client, customer_id, vendor_id)
@@ -326,7 +353,7 @@ def run_vendor_customer_offset(
             )
         except Exception as exc:
             results["failed"].append(
-                {**pair_summary, "error": str(exc), "rollback": "not_required"}
+                FailedOffset(gstin=gstin, customer_id=customer_id, vendor_id=vendor_id, amount=float(amount), error=str(exc), rollback="not_required")
             )
             continue
 
@@ -335,7 +362,7 @@ def run_vendor_customer_offset(
             tranche_amount = tranche["amount"]
             bill_id = tranche["bill_allocations"][0]["bill_id"]
             reference = _reference_number(config.reference_prefix, bill_id)
-            customer_payload = {
+            customer_payload: dict[str, object] = {
                 "customer_id": customer_id,
                 "payment_mode": config.payment_mode,
                 "amount": float(tranche_amount),
@@ -345,7 +372,7 @@ def run_vendor_customer_offset(
                 "description": "Offset against linked vendor payable",
                 "invoices": tranche["invoice_allocations"],
             }
-            vendor_payload = {
+            vendor_payload: dict[str, object] = {
                 "vendor_id": vendor_id,
                 "payment_mode": config.payment_mode,
                 "amount": float(tranche_amount),

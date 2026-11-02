@@ -27,6 +27,40 @@ workflows = [
 ]
 ocr = ["pytesseract>=0.3.13", "Pillow>=11.0.0"]
 test = ["pytest>=8.0.0"]
+typing = ["mypy==2.4.1", "types-requests==2.32.4.20250913"]
+
+[tool.mypy]
+python_version = "3.14"
+mypy_path = "$MYPY_CONFIG_FILE_DIR/src"
+cache_dir = "output/mypy-cache"
+files = [
+    "src/workflows/core/sequences.py",
+    "src/workflows/core/dates.py",
+    "src/workflows/core/checkpoint.py",
+    "src/workflows/core/payments.py",
+    "src/workflows/collection_reconciliation/allocator.py",
+    "src/workflows/collection_reconciliation/types.py",
+    "src/workflows/collection_reconciliation/identifiers.py",
+    "src/workflows/collection_reconciliation/transaction_index.py",
+    "src/workflows/stock_transfer",
+    "src/zoho/helpers/sequences.py",
+    "src/zoho/helpers/dates.py",
+    "src/zoho/validation.py",
+    "src/zoho/identifiers.py",
+    "src/zoho/base_resource.py",
+    "src/workflows/payment_renumbering",
+    "src/workflows/vendor_customer_offset/__init__.py",
+    "src/workflows/vendor_customer_offset/contracts.py",
+    "src/workflows/vendor_customer_offset/processor.py",
+    "apps/renumber_sbe2627_payments.py",
+    "tests/typecheck/renumber_contracts.py",
+]
+strict = true
+follow_imports = "normal"
+disallow_any_explicit = true
+disallow_any_unimported = true
+warn_unused_ignores = true
+show_error_codes = true
 
 [tool.setuptools.packages.find]
 where = ["src"]

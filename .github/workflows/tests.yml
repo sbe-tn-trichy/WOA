@@ -5,6 +5,22 @@ on:
   pull_request:
 
 jobs:
+  type-check:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2025, macos-26]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+      - run: python -m pip install -e ".[workflows,test,typing]"
+      - run: python -m mypy
+      - run: python -m pytest -q tests/test_type_safety.py
+
   full-suite:
     runs-on: ${{ matrix.os }}
     strategy:

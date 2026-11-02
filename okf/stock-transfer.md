@@ -4,6 +4,14 @@ type: reference
 
 # Paired Books stock replenishment
 
+Planning now exports typed `StorageAllocation` and `TransferPayload` records in
+addition to `TransferLine`. Nested location, bin, tax and address records are
+narrowed from untrusted objects before use; plan splitting uses dataclass
+replacement instead of unpacking an untyped instance dictionary. Existing
+payload amounts and transfer rules are preserved. Planning is in the strict
+checker scope; the execution CLI/journal is a remaining migration target in the
+[type-safety plan](type-safety-plan.md).
+
 `apps/transfer_stock.py` prepares and posts a Books invoice at a source location
 and a matching bill at a destination location. Select explicit item IDs through
 an `item_id` CSV column, purchase accounts, contact IDs, locations, transaction

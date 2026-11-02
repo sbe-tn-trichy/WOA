@@ -14,6 +14,16 @@ status: active
 
 # Bank Statement Categorization Workflow
 
+Allocation, proposal record definitions, nested ID extraction and transaction
+index helpers are in the strict type-checking scope. `InvoiceAllocation` now
+requires invoice identity and applied amount and describes the shared allocator's
+existing float wire values accurately. Allocation rejects nonfinite payment
+amounts and invalid invoice balances instead of silently dropping them. Domain
+calculations retain Decimal and existing FIFO ordering and metadata are preserved.
+The larger review/reconciler/repair services and their entry points still need
+migration; typed proposal dictionaries do not imply complete state validation.
+See the [type-safety plan](type-safety-plan.md) for the exact boundary.
+
 `workflows.collection_reconciliation` reconciles pending collection records in
 Zoho Creator against uncategorized incoming bank lines in Zoho Books. It is a
 high-level workflow and receives Creator, Books, and optional Analytics clients

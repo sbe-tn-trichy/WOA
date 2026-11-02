@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Any, Mapping, Sequence
+from typing import Mapping, Sequence
 
 from ..core.exceptions import ReconciliationError
 from ..core.matching import get_bank_reference, parse_date, to_decimal
@@ -14,7 +14,7 @@ from .identifiers import identifier
 
 @dataclass(frozen=True)
 class BankCandidate:
-    row: Mapping[str, Any]
+    row: Mapping[str, object]
     transaction_id: str
     amount: Decimal
     reference: str
@@ -24,7 +24,7 @@ class BankCandidate:
 class TransactionIndex:
     """Normalize once, then search occupied dates and sorted absolute amounts."""
 
-    def __init__(self, transactions: Sequence[Mapping[str, Any]], bank_account_id: str):
+    def __init__(self, transactions: Sequence[Mapping[str, object]], bank_account_id: str) -> None:
         by_day: dict[int, list[BankCandidate]] = defaultdict(list)
         for row in transactions:
             transaction_id = identifier(row, ("transaction_id", "id"))

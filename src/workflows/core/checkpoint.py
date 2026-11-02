@@ -8,15 +8,15 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Iterator, Optional, TextIO
+from typing import Callable, IO, Iterator, Optional
 
 
 def write_atomic_json(
     path: Path | str,
-    payload: Any,
+    payload: object,
     *,
     indent: int | None = 2,
-    default: Optional[Callable[[Any], Any]] = str,
+    default: Optional[Callable[[object], object]] = str,
     max_retries: int = 5,
     retry_delay: float = 0.1,
     sort_keys: bool = False,
@@ -37,7 +37,7 @@ def write_atomic_json(
 def atomic_text_writer(
     path: Path | str, *, encoding: str = "utf-8", newline: str | None = None,
     max_retries: int = 5, retry_delay: float = 0.1,
-) -> Iterator[TextIO]:
+) -> Iterator[IO[str]]:
     """Stage a text/CSV file uniquely, replacing the target only on success."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -48,7 +48,7 @@ def atomic_text_writer(
             prefix=target.name + ".", suffix=".tmp", delete=False,
         ) as staged:
             temporary = Path(staged.name)
-            yield staged
+            yield staged.file
 
         attempts = max(1, max_retries)
         for attempt in range(attempts):

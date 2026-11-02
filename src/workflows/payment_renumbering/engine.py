@@ -2,90 +2,62 @@
 
 from copy import deepcopy
 from datetime import date, datetime
-from typing import Any, Callable, Mapping, Sequence, TypedDict
+from typing import Callable, Mapping, Sequence
 
-from workflows.core.matching import parse_date, to_finite_decimal
-
-
-class RenumberPlan(TypedDict):
-    payment_id: str
-    current_payment_number: str
-    new_payment_number: str
-    prefix: str
-    suffix: str
-    expected: dict[str, Any]
+from workflows.core.matching import parse_date
+from .contracts import RenumberAnalyticsClient, RenumberBooksClient
+from .models import (
+    DiscoveryRecord, PaymentId, RenumberPlan, RenumberResult, RenumberingError,
+    identifier, parse_renumber_plan, parse_renumber_results, record, records,
+    snapshot as _snapshot, text,
+)
 
 
-class RenumberResult(TypedDict):
-    payment_id: str
-    status: str
-    updated_at: str | None
-    error: str | None
-
-
-class RenumberingError(ValueError):
-    """A plan, live payment, or destination series is unsafe to apply."""
-
-
-def get_target_payments(analytics: Any, workspace_id: str) -> list[dict[str, Any]]:
+def get_target_payments(analytics: RenumberAnalyticsClient, workspace_id: str) -> list[DiscoveryRecord]:
     """Fetch discovery records; the planner rechecks every selected Books payment."""
-    return analytics.queries.execute(workspace_id=workspace_id, sql_query='''
+    response = analytics.queries.execute(workspace_id=workspace_id, sql_query='''
         SELECT "Payment ID", "Payment Number", "Payment Date"
         FROM "Customer Payments (Zoho Books)"
     ''', max_attempts=30, poll_interval=2.0)
 
-
-def _snapshot(payment: Mapping[str, Any]) -> dict[str, Any]:
-    fields = ("date", "amount", "account_id", "location_id", "customer_id")
-    if not all(payment.get(key) is not None and payment.get(key) != "" for key in fields):
-        raise RenumberingError("Payment is missing financial identity fields")
-    amount = to_finite_decimal(payment["amount"], allow_commas=True)
-    if amount is None:
-        raise RenumberingError("Payment amount is invalid")
-    allocations = payment.get("invoices")
-    if not isinstance(allocations, list):
-        raise RenumberingError("Payment invoice allocations are missing")
-    normalized = []
-    for row in allocations:
-        if not row.get("invoice_id"):
-            raise RenumberingError("Invoice allocation is missing its identity")
-        applied = to_finite_decimal(row.get("amount_applied"), allow_commas=True)
-        if applied is None:
-            raise RenumberingError("Invoice allocation amount is invalid")
-        normalized.append({"invoice_id": str(row["invoice_id"]),
-                           "amount_applied": str(applied.normalize()),
-                           "date": str(row.get("date") or "")})
-    return {**{key: str(payment[key]) for key in fields},
-            "amount": str(amount.normalize()),
-            "invoices": sorted(normalized, key=lambda row: (row["invoice_id"], row["date"], row["amount_applied"]))}
+    result: list[DiscoveryRecord] = []
+    for row in records(response, "Analytics discovery"):
+        result.append(DiscoveryRecord({
+            "Payment ID": PaymentId(identifier(row.get("Payment ID"), "Discovery payment ID")),
+            "Payment Number": text(row.get("Payment Number"), "Discovery payment number"),
+            "Payment Date": text(row.get("Payment Date"), "Discovery payment date"),
+        }))
+    return result
 
 
-def _get(books: Any, payment_id: str) -> dict[str, Any]:
-    response = books.customer_payments.get(payment_id)
-    payment = response.get("payment") or {}
-    if response.get("code", 0) != 0 or str(payment.get("payment_id")) != payment_id:
+def _get(books: RenumberBooksClient, payment_id: str) -> dict[str, object]:
+    response = record(books.customer_payments.get(payment_id), "Books payment response")
+    payment = record(response.get("payment"), "Books payment")
+    code = response.get("code", 0)
+    if type(code) is not int or code != 0 or identifier(payment.get("payment_id"), "Books payment ID") != payment_id:
         raise RenumberingError(f"Books did not return the requested payment: {payment_id}")
+    text(payment.get("payment_number"), "Books payment number")
     return payment
 
 
-def _occupied(books: Any, prefix: str) -> dict[str, str]:
+def _occupied(books: RenumberBooksClient, prefix: str) -> dict[str, str]:
     # Read all pages; validate prefixes locally rather than trusting search filters.
-    payments = books.customer_payments.list_all()
+    payments = records(books.customer_payments.list_all(), "Books payment list")
     occupied = {}
     for row in payments:
-        number = str(row.get("payment_number") or "").strip()
+        number = text(row.get("payment_number"), "Listed payment number").strip()
         if not number.startswith(prefix):
             continue
         if not number[len(prefix):].isdigit() or not row.get("payment_id"):
             raise RenumberingError(f"Malformed destination series entry: {number}")
         if number in occupied:
             raise RenumberingError(f"Duplicate destination number: {number}")
-        occupied[number] = str(row["payment_id"])
+        occupied[number] = identifier(row["payment_id"], "Listed payment ID")
     return occupied
 
 
 def build_renumber_plan(
-    books: Any, records: Sequence[Mapping[str, Any]], *, source_prefix: str,
+    books: RenumberBooksClient, records: Sequence[Mapping[str, object]], *, source_prefix: str,
     destination_prefix: str, start_date: date, end_date: date,
     width: int = 5, starting_sequence: int | None = None,
 ) -> list[RenumberPlan]:
@@ -97,7 +69,7 @@ def build_renumber_plan(
     selected = []
     seen = set()
     for row in records:
-        number = str(row.get("Payment Number") or "").strip()
+        number = text(row.get("Payment Number"), "Discovery payment number").strip()
         if not number.startswith(source_prefix):
             continue
         day = parse_date(row.get("Payment Date"))
@@ -105,7 +77,7 @@ def build_renumber_plan(
             raise RenumberingError(f"Invalid discovery date for {number}")
         if not start_date <= day <= end_date:
             continue
-        payment_id = str(row.get("Payment ID") or "").strip()
+        payment_id = PaymentId(identifier(row.get("Payment ID"), "Discovery payment ID").strip())
         suffix = number[len(source_prefix):]
         if not payment_id or payment_id in seen or not suffix.isdigit():
             raise RenumberingError("Missing/duplicate payment identity or invalid source number")
@@ -133,7 +105,7 @@ def build_renumber_plan(
 
 
 def execute_renumbering(
-    books: Any, plan: Sequence[RenumberPlan], *, execute: bool = False,
+    books: RenumberBooksClient, plan: Sequence[RenumberPlan], *, execute: bool = False,
     previous_results: Sequence[RenumberResult] = (),
     checkpoint: Callable[[list[RenumberResult]], None] | None = None,
 ) -> list[RenumberResult]:
@@ -144,6 +116,8 @@ def execute_renumbering(
     """
     if execute and checkpoint is None:
         raise RenumberingError("Execution requires a durable checkpoint callback")
+    plan = parse_renumber_plan(list(plan))
+    previous_results = parse_renumber_results(list(previous_results))
     ids = [row["payment_id"] for row in plan]
     numbers = [row["new_payment_number"] for row in plan]
     if len(ids) != len(set(ids)) or len(numbers) != len(set(numbers)):
@@ -195,24 +169,27 @@ def execute_renumbering(
             if checkpoint:
                 checkpoint(deepcopy(results))
             continue
+        assert checkpoint is not None  # Narrowed after dry-run/completed rows above.
         try:
             before = _get(books, payment_id)
             if _snapshot(before) != row["expected"] or str(before.get("payment_number")) != row["current_payment_number"]:
                 raise RenumberingError(f"Payment changed before submission: {payment_id}")
             result["status"] = "submitted"
             checkpoint(deepcopy(results))
-            response = books.customer_payments.update_with_number_series(payment_id, {
+            response = record(books.customer_payments.update_with_number_series(payment_id, {
                 "location_id": row["expected"]["location_id"],
                 "payment_number_prefix": prefix, "payment_number_suffix": row["suffix"],
-            })
-            if response.get("code") != 0:
+            }), "Books update response")
+            if type(response.get("code")) is not int or response.get("code") != 0:
                 raise RenumberingError(f"Books rejected payment update: {response.get('message')}")
             after = _get(books, payment_id)
             if str(after.get("payment_number")) != row["new_payment_number"] or _snapshot(after) != row["expected"]:
                 raise RenumberingError(f"Read-back mismatch: {payment_id}; inspect Books before resuming")
-            result.update(status="verified", updated_at=datetime.now().isoformat())
+            result["status"] = "verified"
+            result["updated_at"] = datetime.now().isoformat()
         except Exception as exc:
-            result.update(status="failed", error=str(exc))
+            result["status"] = "failed"
+            result["error"] = str(exc)
             checkpoint(deepcopy(results))
             break
         checkpoint(deepcopy(results))

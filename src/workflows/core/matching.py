@@ -2,7 +2,7 @@ import logging
 import re
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable, Dict, List, Optional, Sequence, Set
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Set
 
 from .config import Config
 
@@ -15,7 +15,7 @@ _ICICI_NEFT_REFERENCE = re.compile(
 )
 
 
-def to_decimal(value: Any) -> Optional[Decimal]:
+def to_decimal(value: object) -> Optional[Decimal]:
     """Safely coerce an arbitrary value or numeric string to a Decimal."""
     if value is None or value == "":
         return None
@@ -27,7 +27,7 @@ def to_decimal(value: Any) -> Optional[Decimal]:
         return None
 
 
-def to_finite_decimal(value: Any, *, allow_commas: bool = False) -> Optional[Decimal]:
+def to_finite_decimal(value: object, *, allow_commas: bool = False) -> Optional[Decimal]:
     """Parse a finite Decimal, optionally accepting grouped numeric strings."""
     if allow_commas:
         amount = to_decimal(value)
@@ -39,12 +39,12 @@ def to_finite_decimal(value: Any, *, allow_commas: bool = False) -> Optional[Dec
     return amount if amount is not None and amount.is_finite() else None
 
 
-def to_text(value: Any) -> str:
+def to_text(value: object) -> str:
     """Return a clean, stripped string representation of any value."""
     return "" if value is None else str(value).strip()
 
 
-def parse_currency_amount(value: Any, *, currency: str = "INR") -> Decimal:
+def parse_currency_amount(value: object, *, currency: str = "INR") -> Decimal:
     """Parse the strict currency/grouping format used by reviewed payment moves.
 
     Keeps Decimal's invalid-input exceptions and numeric semantics; callers retain
@@ -60,12 +60,12 @@ def references_intersect(left: Sequence[Any], right: Sequence[Any]) -> bool:
     return bool(left_refs & right_refs)
 
 
-def normalize_payment_reference(value: Any) -> str:
+def normalize_payment_reference(value: object) -> str:
     """Normalize a payment or transaction reference: strip whitespace, remove punctuation/non-alphanumerics, casefold."""
     return "".join(character for character in to_text(value).casefold() if character.isalnum())
 
 
-def parse_date(date_str: Any) -> Optional[date]:
+def parse_date(date_str: object) -> Optional[date]:
     """Safely parse various date formats into a datetime.date object."""
     if not date_str:
         return None
@@ -93,7 +93,7 @@ def get_abs_amount(tx: Dict[str, Any]) -> float:
         return 0.0
 
 
-def get_bank_reference(tx: Dict[str, Any], bank_account_id: str) -> Any:
+def get_bank_reference(tx: Mapping[str, object], bank_account_id: str) -> object:
     """Return the reconciliation reference for a Books bank transaction.
 
     ICICI statement imports expose a short statement reference in

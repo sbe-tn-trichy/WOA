@@ -9,6 +9,17 @@ description: Public resource access patterns for the Zoho Books client.
 Resources inherit standard CRUD operations and the paginated `list_all()` helper
 from `BaseResource`.
 
+Shared Books/Inventory pagination validates the resource list, each record and
+pagination field types before yielding a page. Missing resource keys, malformed
+page metadata, wrong echoed page numbers and empty pages claiming more results
+raise the resource's SDK exception with endpoint/page context (SDK-002).
+Omitted page context or `has_more_page` retains the existing single-page default.
+Streaming consumers may already have consumed earlier valid pages when a later
+page fails; `list_all()` raises instead of returning a partial list.
+Raw CRUD/action results are annotated as `object` because endpoints can return
+different shapes or binary content. Their runtime responses are preserved;
+consumers must validate/narrow them. See the [type-safety plan](type-safety-plan.md).
+
 `fixed_assets` exposes Books fixed assets through `BaseResource`, with
 `history(fixed_asset_id)` returning all valuation-history pages and rejecting
 duplicate or missing valuation IDs. This requires `ZohoBooks.fixedasset.READ`.
