@@ -9,6 +9,21 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-03
 
+### Record payment guidance, Analytics snapshot and Metabase removal
+
+- **Why:** Local operational knowledge and the cached Analytics snapshot were
+  missing from project history.
+- **What:** Documented [payment-linked deposits](okf/zoho-books.md#payment-linked-deposits),
+  the bank-line identifier in [Payment Customer Finder](okf/collection-reconciliation.md),
+  and [Metabase removal](okf/metabase-local.md), including preservation of source
+  SQLite files. Updated the cached Analytics snapshot and reports: 200 views,
+  2,214 columns, and the additional Payment Customer Finder column.
+- **Verification:** Reviewed the local documentation/report diffs and checked
+  whitespace. The snapshot records its last successful metadata sync as
+  2026-10-29T11:38:50Z; no metadata refresh or live verification was performed
+  during this history update. Runtime tests were not run for this documentation
+  change. Annual rollover checked: all dated project entries belong to 2026.
+
 ### Implement incremental Python type safety
 
 - **Why:** Dynamic clients, financial dictionaries and unchecked recovery data

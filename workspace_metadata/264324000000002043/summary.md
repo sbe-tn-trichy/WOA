@@ -1,12 +1,12 @@
 # Zoho Analytics Workspace Metadata
 
 - Workspace: `W` (264324000000002043)
-- Last successful metadata sync (UTC): 2026-10-27T17:03:36Z
-- Updated: 2026-10-27T17:03:36Z
-- Views: 201
-- Tables/query tables: 115
-- Columns: 2222
-- Relationships: 11667
+- Last successful metadata sync (UTC): 2026-10-29T11:38:50Z
+- Updated: 2026-10-29T11:38:50Z
+- Views: 200
+- Tables/query tables: 114
+- Columns: 2214
+- Relationships: 11647
 - Errors: 0
 - Query definitions: 23
 - Workflow references: 46
@@ -15,7 +15,7 @@
 
 | Type | Count |
 |---|---:|
-| Table | 92 |
+| Table | 91 |
 | Pivot | 58 |
 | AnalysisView | 27 |
 | QueryTable | 23 |
@@ -25,14 +25,14 @@
 
 | Type | Count |
 |---|---:|
-| view_uses_view | 8665 |
-| view_contains_column | 2222 |
-| column_looks_up_column | 417 |
-| folder_contains_view | 201 |
+| view_uses_view | 8656 |
+| view_contains_column | 2214 |
+| column_looks_up_column | 416 |
+| folder_contains_view | 200 |
 | view_parent | 85 |
 | formula_defines_column | 58 |
 | workspace_contains_folder | 17 |
-| datasource_feeds_view | 2 |
+| datasource_feeds_view | 1 |
 
 ## Tables
 
@@ -102,7 +102,7 @@
 | Outstanding Beat Wise | `264324000007311288` | QueryTable | 9 |
 | Package Items (Zoho Books) | `264324000006019205` | Table | 8 |
 | Packages (Zoho Books) | `264324000006019173` | Table | 13 |
-| Payment Customer Finder | `264324000006111037` | QueryTable | 8 |
+| Payment Customer Finder | `264324000006111037` | QueryTable | 9 |
 | Payment Days Calculation Query | `264324000005210204` | QueryTable | 11 |
 | Payment Form (Zoho Creator) | `264324000007294579` | Table | 21 |
 | Payment Refunds (Zoho Books) | `264324000001766673` | Table | 14 |
@@ -152,4 +152,3 @@
 | Warehouses (Zoho Books) | `264324000001765996` | Table | 12 |
 | Zone (Zoho Books) | `264324000005867472` | Table | 9 |
 | customer_payment_analysis | `264324000007181002` | QueryTable | 7 |
-| customer_wise_sales_books | `264324000002170389` | Table | 9 |

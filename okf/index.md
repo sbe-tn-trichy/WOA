@@ -68,7 +68,7 @@ okf_version: "0.2"
 
 ## Operations
 
-* [Local Metabase](metabase-local.md) - Colima Docker app, persistent settings and read-only SQLite mounts.
+* [Local Metabase](metabase-local.md) - App, image and settings volume removed.
 
 * [Development Runbook](development-runbook.md) - Local virtual environment setup, pytest runner execution, and safe workflow development guidelines.
 * [Project Operations Dashboard](project-dashboard.md) - Loopback-only numbered launcher for common safe-default workflows.

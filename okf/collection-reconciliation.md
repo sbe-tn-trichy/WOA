@@ -266,7 +266,7 @@ proposed.
 Only a unique date, amount, and reference match is eligible for acceptance.
 The production review queue also validates the Creator customer name against
 historical categorized records in Analytics `Payment Customer Finder` view
-`264324000006111037` in workspace `264324000000002043`. The workflow extracts
+`264324000006111037` in workspace `264324000000002043`. The query exposes the source bank record’s `Statement Line ID` so a supplied ID can identify the bank line when reviewing a Creator payment. This is a bank-line identifier, not a Creator payment ID; joined transaction rows may repeat it. The workflow extracts
 remitter identifiers (UPI VPA, phone numbers, remitter names) from the bank line
 narration and executes targeted SQL queries against the Finder view rather than
 downloading the full table. If historical records identify exactly one customer, that customer must confirm

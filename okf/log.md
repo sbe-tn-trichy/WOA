@@ -2,6 +2,9 @@
 
 ## 2026-11-03
 
+- Linked the local payment guidance, Analytics snapshot and Metabase removal to
+  their [project history entry](../CHANGELOG.md#record-payment-guidance-analytics-snapshot-and-metabase-removal).
+
 - Recorded the implemented strict-checking scope, validated financial records,
   recovery compatibility and remaining migration work in the [type-safety plan](type-safety-plan.md) and owning workflow concepts. Added checker commands to the runbook and SDK-002 implementation evidence to the finding register. See the [project entry](../CHANGELOG.md#implement-incremental-python-type-safety).
 
@@ -31,7 +34,17 @@
 
 - Established the [project analysis and finding register](../PROJECT_ANALYSIS.md), with SDK/helper/apps ownership, stable finding IDs and evidence required for closure or reopening.
 
+## 2026-10-29
+
+- Documented [payment-linked deposit API semantics](zoho-books.md#payment-linked-deposits), including additional-funds amount handling and banking transaction ID verification.
+
+- Exposed the source `Statement Line ID` in [Payment Customer Finder](collection-reconciliation.md) for bank-line identification during Creator payment matching; verified the saved query by targeted read-back.
+
 ## 2026-10-27
+
+- Deleted the remaining [Metabase settings volume](metabase-local.md) at the user's request and verified its absence.
+
+- Removed the [local Metabase container and image](metabase-local.md), preserving its settings volume and source SQLite files.
 
 - Added [repeatable Analytics customer sync](customer-local-store.md#four-table-normalization-workspace), a dedicated CLI/dashboard entry, complete-export checks, atomic four-table reconciliation, recovery backups and persistent local-edit conflicts.
 

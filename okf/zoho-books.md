@@ -281,6 +281,22 @@ NeoSeal solvent SKUs use the uppercase, hyphen-separated structure
 The SKU is the stable item identity; display-name normalization must not remove
 or merge attributes represented by this structure.
 
+## Payment-linked deposits
+
+Record grouped deposits through `bank_transactions.create()` with
+`transaction_type="deposit"`, the source cash account, destination account,
+date, location, and `line_items`. Each customer-payment line uses its
+`payment_id` as `transaction_id`, `transaction_type="invoice_payment"`,
+customer ID, source account, and payment amount. The top-level `amount`
+represents additional manual funds: use zero when depositing only the linked
+payments, otherwise Books adds it to their sum.
+
+The banking transaction ID can differ from the entity ID shown in the account
+register. Obtain the banking ID from `bank_transactions.list()` or the creation
+response before using `bank_transactions.get()`. Checkpoint writes before
+read-back, and verify the total, source/destination, exact linked payment IDs,
+and each payment's `deposit_details` before reporting completion.
+
 ## Domain workflow migration
 
 Customer validation and invoice-YAML imports have moved out of the Books SDK.

@@ -1,6 +1,6 @@
 # Analytics metadata analysis
 
-Last successful metadata sync (UTC): 2026-10-27T17:03:36Z
+Last successful metadata sync (UTC): 2026-10-29T11:38:50Z
 
 Source: cached SQLite. Refresh manually with `apps/analytics_metadata.py --sync`.
 
@@ -206,4 +206,3 @@ Source: cached SQLite. Refresh manually with `apps/analytics_metadata.py --sync`
 | Zeiss_Outstanding_day_wise | Pivot |  |
 | Zone (Zoho Books) | Table |  |
 | customer_payment_analysis | QueryTable |  |
-| customer_wise_sales_books | Table |  |
