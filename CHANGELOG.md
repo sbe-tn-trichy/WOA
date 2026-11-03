@@ -9,6 +9,21 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-03
 
+### Add ERP SDK from local OpenAPI definitions
+
+- **Why:** The supplied ERP API definitions needed a usable Python client in
+  the existing SDK.
+- **What:** Added 81 resources with 899 named operations, preserving ERP v1/v3
+  routes; reused shared OAuth/HTTP transport, added ERP errors and an auth factory,
+  organization isolation, YAML regeneration and source-hash provenance. Added
+  [usage and limitations](okf/zoho-erp.md) and mocked coverage.
+- **Verification:** Windows x64 CPython 3.14.4: 912 ERP tests passed; full suite
+  2736 passed, 1 skipped, 4 subtests passed. Initial sandbox temp-directory
+  permission failures cleared with process-local temp storage under `output/`.
+  All 81 source hashes match; whitespace checks pass. No live ERP calls or
+  mutations. macOS and live permissions remain unverified.
+  Annual rollover checked: all root dated entries belong to 2026.
+
 ### Record payment guidance, Analytics snapshot and Metabase removal
 
 - **Why:** Local operational knowledge and the cached Analytics snapshot were

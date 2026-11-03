@@ -2,6 +2,10 @@
 
 ## 2026-11-03
 
+- Added the [ERP SDK reference](zoho-erp.md) for generated OpenAPI coverage,
+  version routing, ERP token ownership and regeneration. See the
+  [project entry](../CHANGELOG.md#add-erp-sdk-from-local-openapi-definitions).
+
 - Linked the local payment guidance, Analytics snapshot and Metabase removal to
   their [project history entry](../CHANGELOG.md#record-payment-guidance-analytics-snapshot-and-metabase-removal).
 

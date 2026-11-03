@@ -1,4 +1,5 @@
 from .books import ZohoBooksAPI, ZohoBooksError
+from .erp import ZohoERPAPI, ZohoERPError
 from .cliq import ZohoCliqAPI
 from .mail import ZohoMailAPI, ZohoMailError
 from .sheet import ZohoSheetAPI
@@ -12,6 +13,7 @@ from .security import sanitize_filename, resolve_output_path, mask_sensitive_val
 from .validation import require_record, require_records, require_text
 from .identifiers import PaymentId, InvoiceId, CustomerId, AccountId, LocationId
 __all__ = [
+    'ZohoERPAPI', 'ZohoERPError',
     'require_record', 'require_records', 'require_text',
     'PaymentId', 'InvoiceId', 'CustomerId', 'AccountId', 'LocationId',
     'ZohoBooksAPI',

@@ -22,6 +22,10 @@ class ZohoError(Exception):
         self.retry_after = retry_after
 
 
+class ZohoERPError(ZohoError):
+    """Zoho ERP API failure."""
+
+
 class ZohoAuthError(ZohoError):
     """Authentication or token-provider failure."""
     pass

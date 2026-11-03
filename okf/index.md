@@ -37,6 +37,7 @@ okf_version: "0.2"
 * [Google Sheets SDK](google-sheets-sdk.md) - Client, authentication helpers, and range operations for Google Sheets API v4.
 * [Zoho Inventory Client](zoho-inventory.md) - Item and inventory API routing, purchase-account scoping, and migration requirements.
 * [Zoho Books Client](zoho-books.md) - Books resource access, pagination, and customer-only contact retrieval.
+* [Zoho ERP SDK](zoho-erp.md) - Generated ERP v1/v3 resources, authentication and YAML regeneration.
 * [Books Financial Statement Sheet](books-statement-sheet.md) - Reviewed Books report mappings into the linked FY 2025–26 Google Sheets template.
 * [NCE document Preparation](statement-schedules.md) - Two-year Schedule III notes, Google statement links, and current-year fixed-asset depreciation verification.
 * [Financial Statement Comparison](financial-statement-comparison.md) - Exact Google Sheet cells versus OAuth Books P&L and balance-sheet schedules.

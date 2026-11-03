@@ -22,6 +22,7 @@ Supported services:
 6. **Zoho Creator** — Low-code app data: CRUD records, bulk operations
 7. **Zoho Inventory** — Inventory management: items, orders, warehouses, batches
 8. **Zoho Analytics** — View exports, dynamic SQL data retrieval, and resumable workspace metadata snapshots
+9. **Zoho ERP** — [81 generated resources and 899 ERP v1/v3 operations](okf/zoho-erp.md)
 
 ---
 

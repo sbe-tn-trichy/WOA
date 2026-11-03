@@ -1,6 +1,6 @@
 # Zoho SDK
 
-Python 3.14 clients for Books, Inventory, Creator, Analytics, WorkDrive, Mail,
+Python 3.14 clients for ERP, Books, Inventory, Creator, Analytics, WorkDrive, Mail,
 Cliq and Sheet, with reusable business workflows and local review applications.
 
 ## Start here
@@ -58,6 +58,8 @@ Imports flow `zoho <- workflows <- apps`. Shared workflow mechanics live in
 item/catalog operations, including item lookups needed for Books transactions.
 
 ## Use the library
+
+For the generated ERP client, see [ERP SDK usage and regeneration](okf/zoho-erp.md).
 
 Low-level SDK constructors take credentials explicitly. Application runners load
 configuration and construct clients through `workflows.core.auth`. Keep tokens

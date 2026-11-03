@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 from zoho.logging import configure_logger
 from zoho.security import sanitize_log_params
 from zoho.exceptions import (
+    ZohoERPError,
     ZohoError,
     ZohoAuthError,
     ZohoBooksError,
@@ -21,6 +22,7 @@ from zoho.exceptions import (
 )
 
 _ERROR_MAP = {
+    "erp": ZohoERPError,
     "books": ZohoBooksError,
     "inventory": ZohoInventoryError,
     "wd": ZohoWorkdriveError,

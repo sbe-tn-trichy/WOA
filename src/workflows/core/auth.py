@@ -11,12 +11,27 @@ from zoho.books import ZohoBooksAPI
 from zoho.creator import ZohoCreatorAPI
 from zoho.wd import ZohoWorkdriveAPI
 from zoho.inventory import ZohoInventoryAPI
+from zoho.erp import ZohoERPAPI
 from zoho.sheet import ZohoSheetAPI
 
 from .config import Config
 from .exceptions import ZohoAuthError
 
 logger = logging.getLogger(__name__)
+
+
+def get_erp_client(
+    token: Optional[str] = None,
+    org_id: str = Config.ORG_ID,
+    domain: str = Config.DOMAIN,
+    token_url: str = Config.TOKEN_URL,
+    token_refresh_callback: Optional[Callable[[], str]] = None,
+) -> ZohoERPAPI:
+    """Construct ERP with an ERP-scoped token; never substitute Books tokens."""
+    refresh = token_refresh_callback or (
+        lambda: get_token_for("erp", "zoho_erp_conn", token_url=token_url)
+    )
+    return ZohoERPAPI(token or refresh(), org_id, domain=domain, token_refresh_callback=refresh)
 
 
 def get_inventory_client(
