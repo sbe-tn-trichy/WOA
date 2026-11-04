@@ -5,6 +5,38 @@ owns cross-project review findings; operational contracts remain in their OKF
 concepts. The review sampled shared infrastructure and representative financial
 workflows and applications; it is not an exhaustive audit.
 
+## Baseline and verification record
+
+| Field | Evidence / limitation |
+|---|---|
+| Original review date | 2026-11-01 |
+| Original reviewed commit | Not recorded; do not infer it from the current HEAD |
+| Original scope | Shared SDK infrastructure and representative financial workflows/apps; findings below |
+| Exclusions | Exhaustive module coverage, live financial state, and Mac execution were not established |
+| Tooling inspection date / revision | 2026-11-04 / `f7ac514e696d4b2b6bee632ecd18000c2e9b4a6c` plus the local analysis-tool changes |
+| Tooling inspection scope | Static import boundaries, explicit typing targets, navigation links and Git change inventory; not a new whole-project safety audit |
+| Reproduction and results | See the [implementation changelog](CHANGELOG.md#add-offline-project-analysis-and-incremental-review) for commands, actual checks and platform limitations |
+
+For the next substantive review, record its exact commit and local changes,
+scope/exclusions, platform, commands/results, and unresolved limitations here.
+Use `--since` with an explicitly selected commit until an original review commit
+is established. An inspection report does not advance the substantive review baseline.
+
+## Finding summary
+
+Implementation and verification are separate; the detailed evidence below owns
+closure criteria. No findings are closed by adding inspection tooling.
+
+| ID | Priority | Correction owner | Implementation | Verification |
+|---|---|---|---|---|
+| SDK-001 | High | SDK transport | Open | Regression coverage required |
+| SDK-002 | Medium | SDK pagination | Fixed locally | Commit and hosted-platform evidence pending |
+| HELPER-001 | High | Vendor/customer offset | Open | Recovery failure-path coverage required |
+| APPS-001 | Medium | Local review servers | Open | Host-validation coverage required |
+| APPS-002 | Medium | Workspace environment | Fixed locally | Runtime verified 2026-11-01; commit evidence pending |
+| APPS-004 | Medium | Repository tracking | Fixed locally | Verification / commit evidence pending |
+| APPS-005 | Medium | Agent policy | Fixed locally | Verification / commit evidence pending |
+
 ## Categories and ownership
 
 | Category | Scope | Responsibility |

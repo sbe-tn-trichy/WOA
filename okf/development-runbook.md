@@ -109,6 +109,76 @@ restrictions must be reported separately from product failures.
 
 # Validation
 
+## Default parallel tests
+
+Run the suite with the workspace interpreter:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+On macOS use `.venv/bin/python`. `pyproject.toml` owns the default: four
+pytest-xdist worker processes, `--dist=loadfile`, and no automatic worker restart.
+The `test` extra includes pinned `pytest-xdist==3.8.0`; the earlier preparation-only
+`test-parallel` extra has been replaced by the standard `test` extra. Provision
+new test environments using the existing setup commands. Existing environments
+need the updated test dependencies installed only when explicitly authorized;
+missing xdist is an actionable setup error, not a reason to switch interpreters.
+
+Use `-n 0` for serial debugging or comparison and `-n 2` to use fewer workers:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q -n 0
+.\.venv\Scripts\python.exe -m pytest -q -n 2
+```
+
+File scheduling keeps tests from the same file on one worker. It does not isolate
+filesystem paths or serialize resources shared across files. Use temporary paths,
+dynamic ports and mocked remote calls. Session fixtures execute per worker, not
+once for the entire run. See the [xdist distribution contract](https://pytest-xdist.readthedocs.io/en/stable/distribution.html)
+and [fixture guidance](https://pytest-xdist.readthedocs.io/en/stable/how-to.html#making-session-scoped-fixtures-execute-only-once).
+For genuinely shared resources, fix the owning fixture or explicitly coordinate
+access; avoid grouping or suppressing flaky tests merely to obtain a passing run.
+Compiler contract tests already use temporary mypy caches and API-generation tests
+write generated files to temporary destinations.
+
+Push and pull-request CI jobs use the configured default, including type-check
+regression tests. Manual **Run workflow → test_workers** defaults to 4 and allows
+0 (serial) or 2. The ordinary test extra supplies xdist in all test jobs; base
+runtime installation remains independent of the test extra.
+
+When changing workers or distribution, record OS/architecture, interpreter/plugin
+versions, revision/local changes and comparable serial/parallel wall times. Repeat
+parallel full-suite runs and compare collected/passed/skipped counts. Worker crashes
+fail the run instead of restarting and concealing an intermittent failure. Verify
+on both primary machines and the hosted matrix; local Windows success does not
+establish macOS or hosted-runner compatibility. Actual results belong in the
+[project changelog](../CHANGELOG.md#make-parallel-pytest-the-default).
+Use fresh sandbox temporary directories as described below when required.
+
+## Offline project analysis
+
+From the repository root on Windows:
+
+```powershell
+.\.venv\Scripts\python.exe apps/analyze_project.py
+.\.venv\Scripts\python.exe apps/analyze_project.py --since HEAD --verify
+.\.venv\Scripts\python.exe -m pytest -q tests/test_project_analysis.py tests/test_api_reference_generator.py
+```
+
+On macOS use `.venv/bin/python` for the same arguments. Select a known reviewed
+commit instead of HEAD for a substantive incremental review. Reports overwrite
+`output/project-analysis/report.json` and `report.md`; preserve them separately
+when needed as evidence. Exit codes and review limitations are owned by
+[project organization](project-organization.md#repeatable-project-analysis).
+The full suite remains `.\.venv\Scripts\python.exe -m pytest -q` on Windows.
+If sandbox access blocks pytest's default temporary directory, supply a fresh
+`--basetemp=output/pytest-<unique-run-name>`; pytest clears a supplied existing
+base directory, so never select a directory containing useful artifacts.
+Tests using standard-library `tempfile` may additionally need process-local
+`TEMP` and `TMP` pointing at a fresh ignored `output/` subdirectory. This does
+not require changing the virtual environment or machine configuration.
+
 ```text
 .venv/bin/python -m pip check
 .venv/bin/python -c "import zoho; import workflows.core.auth"

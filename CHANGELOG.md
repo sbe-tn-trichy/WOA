@@ -9,6 +9,69 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-04
 
+### Make parallel pytest the default
+
+- **Why:** Default testing should use multiple workers rather than require a
+  separate opt-in command after preparation.
+- **What:** Moved pinned pytest-xdist into the standard `test` extra, installed
+  it and its execnet dependency in the existing workspace environment, and set
+  pytest defaults to four worker processes with file scheduling and no automatic
+  worker restart. CI test jobs use the same defaults; manual runs retain 0/2/4
+  worker selection. Updated the [runbook](okf/development-runbook.md#default-parallel-tests)
+  with serial debugging (`-n 0`), fixture boundaries and platform limits.
+- **Verification:** Windows x64 / workspace CPython 3.14.4, pytest 9.1.1,
+  xdist 3.8.0: complete suite passed twice with two workers (17.08s / 17.02s),
+  twice with four workers (13.32s / 13.68s; final run used the default command),
+  and serially with `-n 0` (26.98s). Every run: 2756 passed, 1 skipped,
+  4 subtests passed; no worker restarts. Used fresh ignored workspace temporary
+  directories for sandbox access. TOML/YAML/default checks, `pip check`,
+  analysis `--verify` (mypy/API reference), and `git diff --check` passed.
+  macOS and hosted CI remain unverified. Annual rollover checked: root history
+  contains only 2026 entries; no archive needed. No live services were changed.
+
+### Prepare optional parallel pytest execution
+
+- **Why:** The serial suite has no configured worker runner or measured parallel
+  baseline; preparation must preserve repeatability and the existing environment.
+- **What:** Declared a pinned optional `test-parallel` extra using pytest-xdist,
+  added manual CI selection of 0/2/4 worker processes with file scheduling, and
+  documented fixture review, serial comparison, repeat runs and cross-platform
+  acceptance in the [runbook](okf/development-runbook.md#default-parallel-tests).
+  Ordinary local/push/PR commands remain serial. No local packages were installed.
+- **Verification:** Windows x64 / workspace CPython 3.14.4: serial full suite
+  with `--durations=15` passed (2756 passed, 1 skipped, 4 subtests passed in
+  26.14s), using fresh workspace temporary directories for sandbox access.
+  Parsed TOML/YAML and checked worker choices/defaults; `pip check`, offline
+  analysis with verification (including mypy and API-reference check), and
+  `git diff --check` passed. Parallel execution/performance, macOS and hosted
+  paths remain unverified: the optional local plugin is absent and installation
+  was not requested. Annual rollover checked: root entries remain in 2026;
+  no archive needed.
+
+### Add offline project analysis and incremental review
+
+- **Why:** Repeated reviews had no reproducible inventory or recorded commit
+  baseline, requiring repeated navigation and manual checks of unchanged areas.
+- **What:** Added `apps/analyze_project.py` with static import-layer and navigation
+  checks, explicit mypy scope, Git changes/renames, direct-dependent review
+  candidates, optional existing verification commands, and JSON/Markdown reports.
+  Added fixture tests, strict typing and a CI inspection step. Expanded the
+  workflow catalog with entry points, remote operation profiles and contract
+  links; recorded existing finding summaries and baseline limitations without
+  closing findings. Review procedure is owned by
+  [project organization](okf/project-organization.md#repeatable-project-analysis).
+- **Verification:** Windows x64 / workspace CPython 3.14.4: focused analysis
+  and API-generator tests passed (20); configured mypy passed (25 source files);
+  API-reference `--check`, analysis `--since HEAD --verify`, and `git diff --check`
+  passed. Fast inspection took 0.94 seconds and combined analysis/verification
+  about 1.7 seconds; these are local measurements, not performance guarantees.
+  Full suite via workspace `python -m pytest -q` passed: 2756 passed, 1 skipped,
+  4 subtests passed. Sandbox temporary-directory access failures were
+  resolved by using ignored workspace test directories and process-local TEMP/TMP.
+  macOS and hosted CI were not run locally. Annual rollover checked: root history
+  contains only 2026 entries, so no archive was needed. No live services, metadata
+  sync, dependency installs or environment replacement were performed.
+
 ### Add generated Sphinx and Markdown API reference
 
 - **Why:** While `INDEX.md` provides high-level SDK navigation, detailed module

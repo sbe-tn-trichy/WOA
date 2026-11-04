@@ -2,6 +2,22 @@
 
 ## 2026-11-04
 
+- Made four-worker pytest execution the default and documented dependency setup,
+  serial debugging and shared-fixture boundaries in the
+  [runbook](development-runbook.md#default-parallel-tests). See the
+  [project entry](../CHANGELOG.md#make-parallel-pytest-the-default).
+
+- Added optional parallel pytest preparation and its validation/benchmark gate
+  to the [runbook](development-runbook.md#default-parallel-tests), including
+  manual hosted worker selection. See the
+  [project entry](../CHANGELOG.md#prepare-optional-parallel-pytest-execution).
+
+- Documented offline and incremental project analysis in
+  [project organization](project-organization.md#repeatable-project-analysis)
+  and the [runbook](development-runbook.md#offline-project-analysis); expanded
+  workflow navigation and baseline/finding evidence. See the
+  [project entry](../CHANGELOG.md#add-offline-project-analysis-and-incremental-review).
+
 - Added the generated Sphinx/Markdown API reference documentation in `docs/api/` and
   generator `apps/generate_api_reference.py`, with navigation updates in
   [project organization](project-organization.md) and [INDEX.md](../INDEX.md).
