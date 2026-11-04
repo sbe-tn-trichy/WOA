@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "read_file(./**)",
+      "command(pwd)",
+      "command(rg *)",
+      "command(file *)",
+      "command(stat *)",
+      "command(du *)",
+      "command(diff *)",
+      "command(git status)",
+      "command(git status *)",
+      "command(git diff)",
+      "command(git diff *)",
+      "command(git log)",
+      "command(git log *)",
+      "command(git show)",
+      "command(git show *)",
+      "command(git ls-files)",
+      "command(git ls-files *)",
+      "command(git ls-tree *)",
+      "command(git rev-parse *)",
+      "command(git check-ignore *)",
+      "command(ls*)",
+      "command(ls *)",
+      "command(cat*)",
+      "command(cat *)",
+      "command(head*)",
+      "command(head *)",
+      "command(tail*)",
+      "command(tail *)",
+      "command(grep*)",
+      "command(grep *)",
+      "command(find*)",
+      "command(find *)",
+      "command(wc*)",
+      "command(wc *)",
+      "command(.venv/bin/python -m pytest*)",
+      "command(.venv/bin/python -m pytest *)",
+      "command(.venv/bin/python -c*)"
+    ]
+  }
+}

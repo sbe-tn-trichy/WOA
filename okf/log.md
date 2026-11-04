@@ -1,5 +1,12 @@
 # Knowledge Change Log
 
+## 2026-11-04
+
+- Added the generated Sphinx/Markdown API reference documentation in `docs/api/` and
+  generator `apps/generate_api_reference.py`, with navigation updates in
+  [project organization](project-organization.md) and [INDEX.md](../INDEX.md).
+  See the [project entry](../CHANGELOG.md#add-generated-sphinx-and-markdown-api-reference).
+
 ## 2026-11-03
 
 - Added the [ERP SDK reference](zoho-erp.md) for generated OpenAPI coverage,

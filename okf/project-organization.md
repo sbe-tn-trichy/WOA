@@ -6,9 +6,11 @@ description: Navigation ownership, overlapping commands, and consolidation bound
 # Project organization
 
 The README is the starting page for setup and navigation. WORKFLOWS.md owns the
-business workflow catalog; INDEX.md owns SDK surface navigation. OKF concepts
-own detailed operational contracts. Keep detailed instructions in their owning
-concept and link to them from the starting pages instead of copying them.
+business workflow catalog; INDEX.md owns SDK surface navigation. Detailed generated
+Sphinx/Markdown API references live in [docs/api/](../docs/api/README.md) and are built by
+[apps/generate_api_reference.py](../apps/generate_api_reference.py). OKF concepts own detailed operational contracts.
+Keep detailed instructions in their owning concept and link to them from the starting
+pages instead of copying them.
 
 [Project analysis and finding register](../PROJECT_ANALYSIS.md) owns cross-project
 review findings, grouped into SDK, helper and apps. Reuse its finding IDs and

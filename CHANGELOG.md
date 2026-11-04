@@ -7,6 +7,37 @@ available; never invent a commit or claim checks that were not run.
 This file keeps the current year's entries; older years are archived under
 `changelog/YYYY.md` and linked here when created. Check rollover with each change.
 
+## 2026-11-04
+
+### Add generated Sphinx and Markdown API reference
+
+- **Why:** While `INDEX.md` provides high-level SDK navigation, detailed module
+  documentation, parameter types, class attributes, and mixin capabilities lived
+  only in source comments and docstrings.
+- **What:** Implemented `apps/generate_api_reference.py` to inspect AST signatures,
+  type annotations, docstrings, class attributes, and inline module comments across
+  all SDK modules. Generated comprehensive Sphinx and GitHub-flavored Markdown
+  reference pages under `docs/` and `docs/api/` (`core.md`, `books.md`,
+  `inventory.md`, `analytics.md`, `erp.md`, `creator.md`, `mail.md`, `wd.md`,
+  `sheet.md`, `cliq.md`, `helpers.md`, `google_sheets.md`, `README.md`, `conf.py`,
+  `index.rst`, `index.md`). Added `--check` verification mode and comprehensive
+  tests in `tests/test_api_reference_generator.py`. Linked generated documentation
+  from `INDEX.md`, `AGENTS.md`, and `okf/project-organization.md`.
+- **Verification:** Ran `.venv/bin/pytest tests/test_api_reference_generator.py` (7 passed)
+  and full test suite `.venv/bin/pytest -q` (2743 passed, 1 skipped, 4 subtests passed).
+  Verified generator with `.venv/bin/python apps/generate_api_reference.py --check`.
+  Annual rollover checked: all root entries belong to 2026.
+
+### Extend Gemini read-command permissions
+
+- **Why:** The workspace allowlist omitted common read-only inspection commands.
+- **What:** Added working-directory, ripgrep, file metadata, disk usage, diff and
+  specific Git inspection commands to `.gemini/settings.json`, preserving existing
+  permissions.
+- **Verification:** Parsed the JSON and checked the added entries and whitespace
+  on macOS. No application tests needed for this permission-list change.
+  Annual rollover checked: all root dated entries belong to 2026.
+
 ## 2026-11-03
 
 ### Add ERP SDK from local OpenAPI definitions

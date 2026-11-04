@@ -119,6 +119,7 @@ The table uses Linux/macOS paths. On Windows replace `.venv/bin/python` with
 | **Creator Beat Sync** | `.venv/bin/python apps/sync_creator_beats.py` |
 | **Stock Transfer** | `.venv/bin/python apps/transfer_stock.py` |
 | **Project Dashboard** | `.venv/bin/python apps/dashboard.py` |
+| **Generate API Reference** | `.venv/bin/python apps/generate_api_reference.py` |
 | **Run All Tests** | `.venv/bin/pytest -q` |
 
 

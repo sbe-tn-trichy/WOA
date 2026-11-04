@@ -1,8 +1,9 @@
 # zoho_sdk — Code Index
 
-> **Navigation reference:** This index summarizes the public SDK surface. Code
-> and tests are authoritative; see `AGENTS.md` and `okf/index.md` for current
-> repository policy and architecture.
+> **Navigation reference:** This index summarizes the public SDK surface. For detailed
+> generated API reference documentation of modules, classes, methods, and comments, see
+> [docs/api/README.md](docs/api/README.md). Code and tests are authoritative; see
+> `AGENTS.md` and `okf/index.md` for current repository policy and architecture.
 
 ---
 
