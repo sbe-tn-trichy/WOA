@@ -7,6 +7,49 @@ available; never invent a commit or claim checks that were not run.
 This file keeps the current year's entries; older years are archived under
 `changelog/YYYY.md` and linked here when created. Check rollover with each change.
 
+## 2026-11-05
+
+### Expand offline project analysis and update finding register
+
+- **Why:** `apps/analyze_project.py` only reported 1-hop static import dependents,
+  omitted affected test mapping, OKF frontmatter checks, and cross-file Markdown
+  heading anchor validation, and missed `HELPER-002`/`APPS-003` because their
+  finding headings were not standardized in `PROJECT_ANALYSIS.md`. In addition,
+  `PROJECT_ANALYSIS.md` still listed `SDK-002`, `APPS-002`, `APPS-004`, and
+  `APPS-005` as uncommitted with no macOS verification.
+- **What:** Extended `apps/analyze_project.py` to compute multi-hop
+  `transitive_dependents` and `affected_tests` in `review_candidates`, validate
+  cross-file Markdown heading anchors and local links across `AGENTS.md`,
+  `GEMINI.md`, `CHANGELOG.md`, and `okf/*.md`, and enforce OKF frontmatter rules
+  (`type:` on concept files; no frontmatter on `okf/log.md`). Standardized
+  `HELPER-002` and `APPS-003` headings and summary rows in `PROJECT_ANALYSIS.md`
+  (all 9 finding IDs now extracted), recorded implementation commits
+  (`3491064612175fd875a3eb5fda7d4ef9cb0a96d4`,
+  `731fe01875699833065e933caf429acf9e0047e6`,
+  `d0e00672976c6bfd3ae5b2c5db450f2fcbfbaf2e`,
+  `7a059766774718b707cf434588276cfdc35e9e8b`) and macOS 26.6.2 arm64 verification
+  outcomes, and marked `APPS-004` and `APPS-005` Verified. Updated
+  [project organization](okf/project-organization.md#repeatable-project-analysis),
+  the [runbook](okf/development-runbook.md#default-parallel-tests), and
+  [AGENTS.md](AGENTS.md#workflow-command-index), and added fixture tests in
+  `tests/test_project_analysis.py`.
+- **Verification:** macOS 26.6.2 (`Darwin 25.6.0 arm64`) with workspace
+  `.venv/bin/python` (CPython 3.14.10, pytest 9.1.0, xdist 3.8.0, mypy 2.4.1):
+  installed user-authorized `.[workflows,test,typing]` in `.venv` (`pip check`
+  clean). `.venv/bin/python apps/analyze_project.py --since HEAD --verify`
+  passed with exit code 0 (0 diagnostics, 0 inspection errors, all 9 finding IDs
+  extracted, `tests/test_project_analysis.py` identified in `affected_tests`,
+  `generate_api_reference.py --check` passed, and configured `mypy` passed on all
+  25 source files). Focused tests (`tests/test_type_safety.py`,
+  `tests/test_project_analysis.py`, `tests/test_api_reference_generator.py`,
+  `tests/test_resource_validation.py`: 95 passed) and full-suite runs passed
+  with 4 workers twice (3.94s / 4.00s), 2 workers (`-n 2`: 4.98s), and serially
+  (`-n 0`: 7.67s): **2758 passed, 0 skipped, 4 subtests passed**, 0 worker
+  restarts; `git diff --check` passed. Hosted CI and Mac `.venv` patch-pin
+  alignment (`3.14.10` vs pinned `3.14.4`) remain tracked under `APPS-003`.
+  Annual rollover checked: root history contains only 2026 entries; no archive
+  needed. No live services were modified.
+
 ## 2026-11-04
 
 ### Make parallel pytest the default

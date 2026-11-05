@@ -13,9 +13,9 @@ workflows and applications; it is not an exhaustive audit.
 | Original reviewed commit | Not recorded; do not infer it from the current HEAD |
 | Original scope | Shared SDK infrastructure and representative financial workflows/apps; findings below |
 | Exclusions | Exhaustive module coverage, live financial state, and Mac execution were not established |
-| Tooling inspection date / revision | 2026-11-04 / `f7ac514e696d4b2b6bee632ecd18000c2e9b4a6c` plus the local analysis-tool changes |
-| Tooling inspection scope | Static import boundaries, explicit typing targets, navigation links and Git change inventory; not a new whole-project safety audit |
-| Reproduction and results | See the [implementation changelog](CHANGELOG.md#add-offline-project-analysis-and-incremental-review) for commands, actual checks and platform limitations |
+| Tooling inspection date / revision | 2026-11-05 / `7a059766774718b707cf434588276cfdc35e9e8b` plus the local analysis and finding-register updates |
+| Tooling inspection scope | Static import boundaries, explicit typing targets, navigation/OKF links and anchors, OKF frontmatter, transitive dependents, affected tests, and Git change inventory; not a new whole-project safety audit |
+| Reproduction and results | See the [implementation changelog](CHANGELOG.md#add-offline-project-analysis-and-incremental-review) and [2026-11-05 verification](CHANGELOG.md#expand-offline-project-analysis-and-update-finding-register) for commands, actual checks and platform limitations |
 
 For the next substantive review, record its exact commit and local changes,
 scope/exclusions, platform, commands/results, and unresolved limitations here.
@@ -25,17 +25,19 @@ is established. An inspection report does not advance the substantive review bas
 ## Finding summary
 
 Implementation and verification are separate; the detailed evidence below owns
-closure criteria. No findings are closed by adding inspection tooling.
+closure criteria. No findings are closed by adding inspection tooling alone.
 
 | ID | Priority | Correction owner | Implementation | Verification |
 |---|---|---|---|---|
 | SDK-001 | High | SDK transport | Open | Regression coverage required |
-| SDK-002 | Medium | SDK pagination | Fixed locally | Commit and hosted-platform evidence pending |
+| SDK-002 | Medium | SDK pagination | Committed (`d0e0067`) | Verified on Windows x64 and macOS arm64; hosted CI evidence pending |
 | HELPER-001 | High | Vendor/customer offset | Open | Recovery failure-path coverage required |
+| HELPER-002 | Medium | Workflow configuration | Open | Explicit deployment config guard and migration tests required |
 | APPS-001 | Medium | Local review servers | Open | Host-validation coverage required |
-| APPS-002 | Medium | Workspace environment | Fixed locally | Runtime verified 2026-11-01; commit evidence pending |
-| APPS-004 | Medium | Repository tracking | Fixed locally | Verification / commit evidence pending |
-| APPS-005 | Medium | Agent policy | Fixed locally | Verification / commit evidence pending |
+| APPS-002 | Medium | Workspace environment | Committed (`731fe01`, `7a05976`) | Windows x64 and macOS arm64 parallel/serial suites pass; Mac `.venv` patch pin (`3.14.10` vs `3.14.4`) pending |
+| APPS-003 | Medium | Cross-platform & dependencies | Open | Hosted CI results, Mac `.venv` 3.14.4 patch pin, and lock/constraint policy pending |
+| APPS-004 | Medium | Repository tracking | Committed (`3491064`, `731fe01`) | Verified on Windows x64 and macOS 26.6.2 arm64 |
+| APPS-005 | Medium | Agent policy | Committed (`731fe01`) | Verified on Windows x64 and macOS 26.6.2 arm64 |
 
 ## Categories and ownership
 
@@ -73,8 +75,9 @@ that every neighboring failure path is covered.
 
 ### SDK-002 — Pagination can conceal incomplete reads
 
-- **Priority / status:** Medium / Fixed, awaiting verification; implementation
-  applied locally, commit and hosted-platform evidence pending.
+- **Priority / status:** Medium / Fixed, awaiting verification; committed in
+  `d0e00672976c6bfd3ae5b2c5db450f2fcbfbaf2e`, verified locally on Windows x64
+  and macOS 26.6.2 arm64; hosted CI evidence pending.
 - **Evidence:** [BaseResource.list_iter](src/zoho/base_resource.py) defaults a
   missing resource key to `[]` and exits before checking pagination when records
   are empty. It does not validate record or pagination field types.
@@ -86,14 +89,18 @@ that every neighboring failure path is covered.
   an empty page claiming more results, valid empty results and multiple pages.
   Inconsistent responses must fail with endpoint/page context, without silently
   returning partial success or looping indefinitely.
-- **Implementation / local evidence:** `BaseResource.list_iter` validates the
-  resource list/records, page context, boolean continuation flag and echoed page
-  number before yielding a page; rejects empty pages claiming continuation.
+- **Implementation / local evidence:** Committed in
+  `d0e00672976c6bfd3ae5b2c5db450f2fcbfbaf2e`. `BaseResource.list_iter` validates
+  the resource list/records, page context, boolean continuation flag and echoed
+  page number before yielding a page; rejects empty pages claiming continuation.
   `tests/test_resource_validation.py` covers malformed and valid empty responses,
   second-page failure, custom keys, multiple pages and request parameters.
   Raw CRUD/binary responses remain untouched. Full Windows suite results are in
-  the [type-safety implementation entry](CHANGELOG.md#implement-incremental-python-type-safety).
-  No live calls or Mac checks were performed; no implementation commit exists yet.
+  the [type-safety implementation entry](CHANGELOG.md#implement-incremental-python-type-safety);
+  macOS 26.6.2 arm64 passed `tests/test_resource_validation.py`, `mypy`, and the
+  full parallel/serial suites (2758 passed, 4 subtests passed in 3.94s / 4.00s
+  with 4 workers) on 2026-11-05.
+  No live calls or hosted CI runs were performed.
 
 ## Helper
 
@@ -148,7 +155,10 @@ was unavailable during this review.
 
 ### APPS-002 — Workspace test environment cannot start
 
-- **Priority / status:** Medium / Fixed, awaiting commit evidence; runtime verified 2026-11-01.
+- **Priority / status:** Medium / Fixed, awaiting verification; committed in
+  `731fe01875699833065e933caf429acf9e0047e6` and
+  `7a059766774718b707cf434588276cfdc35e9e8b`, runtime verified on Windows x64
+  (2026-11-01/04) and macOS 26.6.2 arm64 (2026-11-05).
 - **Evidence:** `.venv/Scripts/python.exe -m pytest -q` exits before collection
   because the Python 3.14 executable referenced by the environment is missing.
   This is not evidence of failing product tests or a CI failure.
@@ -157,21 +167,30 @@ was unavailable during this review.
 - **Close when:** Workspace Python starts, declared dependencies install, and
   relevant tests plus the full suite execute with recorded outcomes. Keep
   unrelated failures distinct from findings addressed by a change.
-- **Resolution / verification:** User restored the CPython 3.14.4 interpreter.
-  Added `tzdata` to workflow dependencies and installed it in the existing
-  `.venv`; made the HDFC BOM fixture explicitly UTF-8. Redirected pytest cache
-  to `output/pytest-cache` because legacy cache directories reject writes.
-  `.venv/Scripts/python.exe -m pytest -q` outside the restricted sandbox:
-  **1750 passed, 1 skipped, 4 subtests passed**, no warnings, in 17.27 seconds.
-  Direct `ZoneInfo('Asia/Kolkata')` lookup succeeds with tzdata 2026.6. The
-  sandbox-only attempt failed to create temporary test directories; that is
-  distinct from application/test assertion failures. No Mac execution was done.
+- **Resolution / verification:** Committed in
+  `731fe01875699833065e933caf429acf9e0047e6` and
+  `7a059766774718b707cf434588276cfdc35e9e8b`. User restored the CPython 3.14.4
+  interpreter on Windows. Added `tzdata` to workflow dependencies and installed it
+  in the existing `.venv`; made the HDFC BOM fixture explicitly UTF-8. Redirected
+  pytest cache to `output/pytest-cache` because legacy cache directories reject
+  writes. Windows x64 full suite passed serially and in parallel (2756 passed,
+  1 skipped, 4 subtests passed). On macOS 26.6.2 arm64 (2026-11-05), user-authorized
+  `.venv/bin/python -m pip install -e ".[workflows,test,typing]"` installed
+  `pytest-xdist==3.8.0`, `mypy==2.4.1`, `types-requests==2.32.4.20250913`,
+  `tzdata==2026.6`, and `python-dotenv==1.2.4` (`pip check` clean). Default 4-worker
+  parallel pytest passed twice (**2758 passed, 4 subtests passed** in 3.94s and
+  4.00s), 2-worker passed in 4.98s, and serial (`-n 0`) passed in 7.67s;
+  `analyze_project.py --since HEAD --verify` also passed cleanly. The local Mac
+  `.venv` uses `Python 3.14.10` rather than pinned `3.14.4` (tracked under APPS-003).
 
 ## Prevent repeated fixes and repeated findings
 
 ### APPS-004 — Tracked local/generated artifacts
 
-- **Priority / status:** Medium / Fixed, awaiting verification; cleanup applied 2026-11-01, not committed.
+- **Priority / status:** Medium / Verified; committed in
+  `3491064612175fd875a3eb5fda7d4ef9cb0a96d4` and
+  `731fe01875699833065e933caf429acf9e0047e6`, verified on Windows x64 and
+  macOS 26.6.2 arm64.
 - **Evidence:** Eight tracked `src/zoho/**/__pycache__` symlinks include absolute
   targets in an old Mac checkout. Git also tracks nine files in `tests/.tmp/`
   and five in `tests/.tmp_output/`. Four timestamped snapshot JSON files in the
@@ -186,56 +205,68 @@ was unavailable during this review.
   deployment configuration, local configuration remains intact, and relevant
   tests pass.
 - **Implementation / checks:** Untracked all eight cache links, fourteen test
-  scratch files and the local schedule configuration; removed the generated
-  files present locally. Added cache-file and test-scratch ignore rules. Git
-  listing confirms no affected paths remain tracked; ignore checks pass.
-  SHA-256 comparison confirms local configuration contents are unchanged.
-  `.venv/Scripts/python.exe -m pytest -q` cannot start because its interpreter
-  is missing, so runtime verification remains pending (APPS-002).
+  scratch files and the local schedule configuration in
+  `3491064612175fd875a3eb5fda7d4ef9cb0a96d4`; added cache-file and test-scratch
+  ignore rules in `731fe01875699833065e933caf429acf9e0047e6`. Git listing
+  confirms no affected paths remain tracked; ignore checks and SHA-256 comparison
+  of local configuration pass. Full test suite verified on Windows x64 and
+  macOS 26.6.2 arm64 (2756 passed, 1 skipped, 4 subtests passed).
 
 ### APPS-005 — Agent policy duplicated in GEMINI.md
 
-- **Priority / status:** Medium / Fixed, awaiting verification; applied 2026-11-01, not committed.
+- **Priority / status:** Medium / Verified; committed in
+  `731fe01875699833065e933caf429acf9e0047e6`, verified on Windows x64 and
+  macOS 26.6.2 arm64.
 - **Evidence:** `GEMINI.md` links to canonical `AGENTS.md` but repeats Unix-only
   execution commands and permits `uv run`, conflicting with the newer explicit
   interpreter/environment-preservation rules.
 - **Close when:** Keep one policy owner in `AGENTS.md`; make `GEMINI.md` a thin
   pointer, retaining only genuinely tool-specific guidance if necessary.
 - **Implementation / checks:** Replaced duplicated policy with a five-line
-  pointer to `AGENTS.md`; documentation diff checked. Commit evidence remains
-  pending; no application behavior changed.
+  pointer to `AGENTS.md` in `731fe01875699833065e933caf429acf9e0047e6`; link and
+  documentation checks pass via `apps/analyze_project.py`.
 
 Exact-content comparison found no nonempty duplicate source modules among
 readable tracked regular files. Empty package markers and documented/tested
 compatibility adapters are not removal candidates solely because they are small.
 
-### Cross-machine follow-up
+## Cross-machine follow-up
 
 Portable setup rules now live in [AGENTS.md](AGENTS.md) and the
 [development runbook](okf/development-runbook.md). Fresh local environments,
 explicit deployment configuration and checkpoint handoff remain necessary.
 Documentation changes do not close APPS-002 or prove platform compatibility.
 
-**HELPER-002 — Tenant-specific configuration defaults**: Medium / Open.
-[Config](src/workflows/core/config.py) includes deployment-specific defaults for
-Analytics organization, payment accounts and a stock-count worksheet. A fresh
-machine can inherit these when settings are omitted. Close when affected
-workflows require explicit deployment values and fail before network mutations
-when values are absent, with tests and documented compatibility migration.
-Until then, configure those values explicitly on every deployment.
+### HELPER-002 — Tenant-specific configuration defaults
 
-**APPS-003 — Cross-platform and dependency reproducibility unverified**:
-Medium / Open. CI now includes Ubuntu, Windows x64 and macOS 26 arm64 jobs;
-passing results and local Windows 11/M4 smoke checks remain unverified.
-Dependency ranges are open-ended
-and `uv.lock` is ignored. Identical source revisions can resolve different
-dependency versions. Close when supported operating systems have recorded
-passing validation and a deliberate dependency constraint/lock policy provides
-repeatable application installs. Python package compatibility ranges and app
-deployment pins have different purposes; do not blindly pin library consumers.
+- **Priority / status:** Medium / Open.
+- **Evidence:** [Config](src/workflows/core/config.py) includes deployment-specific
+  defaults for Analytics organization, payment accounts and a stock-count worksheet.
+  A fresh machine can inherit these when settings are omitted.
+- **Close when:** Affected workflows require explicit deployment values and fail
+  before network mutations when values are absent, with tests and documented
+  compatibility migration. Until then, configure those values explicitly on every
+  deployment.
 
-The two reviews in this chat inspected the same unresolved code paths. They did
-not implement fixes, so recurrence in their reports is not proof of regression.
+### APPS-003 — Cross-platform and dependency reproducibility unverified
+
+- **Priority / status:** Medium / Open.
+- **Evidence:** CI now includes Ubuntu, Windows x64 and macOS 26 arm64 jobs;
+  hosted CI results remain unverified. Local macOS 26.6.2 arm64 passed `mypy`,
+  `analyze_project.py --verify`, and the full test suite on 2026-11-05 (2758 passed,
+  4 subtests passed in 3.94s / 4.00s with 4 workers, 4.98s with 2 workers, and
+  7.67s serially), after user-authorized installation of `.[workflows,test,typing]`.
+  However, the Mac `.venv` uses CPython 3.14.10 instead of pinned 3.14.4, and
+  dependency ranges in base/workflow extras are open-ended while `uv.lock` is
+  ignored, so identical source revisions can resolve different dependency versions.
+- **Close when:** Supported operating systems have recorded passing validation
+  with aligned `.venv` pins/extras and a deliberate dependency constraint/lock
+  policy provides repeatable application installs. Python package compatibility
+  ranges and app deployment pins have different purposes; do not blindly pin
+  library consumers.
+
+The two initial reviews inspected the same unresolved code paths without
+implementing fixes, so recurrence in their reports was not proof of regression.
 Historical hardening documentation describes completed improvements but has not
 served as a cross-project register of remaining gaps.
 
@@ -257,6 +288,8 @@ Use this register for subsequent reviews:
    Unchanged Open findings may be summarized by ID without presenting them as
    newly discovered defects.
 
-Recommended work order: APPS-002 to restore verification, HELPER-001 for financial
-recovery safety, SDK-001, SDK-002, then APPS-001. This review changed documentation
-only; no finding has been implemented or marked Verified.
+Recommended work order for remaining open/pending items: HELPER-001 for financial
+recovery safety, SDK-001 for upload retry safety, APPS-001 for local server Host
+validation, HELPER-002 for explicit deployment configuration guards, and APPS-003
+(including Mac `.venv` pin/extra alignment and hosted CI verification to close
+SDK-002 and APPS-002). APPS-004 and APPS-005 are Verified.

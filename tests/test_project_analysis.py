@@ -95,6 +95,37 @@ def test_missing_navigation_document_is_incomplete(repo):
     assert audit.inspect(root)["errors"] == [{"file": "INDEX.md", "message": "Required navigation document is missing"}]
 
 
+def test_transitive_dependents_affected_tests_and_okf_rules(repo):
+    root, run = repo
+    test_file = root / "tests/test_one.py"
+    test_file.parent.mkdir(parents=True, exist_ok=True)
+    test_file.write_text("import apps.one\n", encoding="utf-8")
+    valid_concept = root / "okf/concept.md"
+    valid_concept.write_text("---\ntype: reference\n---\n\n# Valid Concept\n\n## Details\n", encoding="utf-8")
+    run("add", ".")
+    run("commit", "-m", "Add transitive test and concept")
+    baseline = audit.git(root, "rev-parse", "HEAD")
+
+    (root / "src/workflows/core/one.py").write_text("VALUE = 2\n", encoding="utf-8")
+    (root / "okf/bad_concept.md").write_text("# Missing Frontmatter\n", encoding="utf-8")
+    (root / "okf/log.md").write_text("---\ntype: log\n---\n", encoding="utf-8")
+    (root / "README.md").write_text(
+        "[good](okf/concept.md#details)\n[bad](okf/concept.md#nonexistent)\n",
+        encoding="utf-8",
+    )
+    report = audit.inspect(root, baseline)
+    assert report["review_candidates"]["direct_dependents"] == ["src/workflows/use.py"]
+    assert report["review_candidates"]["transitive_dependents"] == ["apps/one.py", "tests/test_one.py"]
+    assert report["review_candidates"]["affected_tests"] == ["tests/test_one.py"]
+    assert {
+        (d["file"], d.get("rule"), d["message"]) for d in report["diagnostics"]
+    } == {
+        ("README.md", "local-link", "Missing anchor: okf/concept.md#nonexistent"),
+        ("okf/bad_concept.md", "okf-frontmatter", "Missing required YAML frontmatter with non-empty type"),
+        ("okf/log.md", "okf-frontmatter", "okf/log.md must not have YAML frontmatter"),
+    }
+
+
 def test_verification_failures(monkeypatch, tmp_path):
     results = iter([
         subprocess.CompletedProcess([], 1, "out of sync", ""),

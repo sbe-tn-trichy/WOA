@@ -115,6 +115,21 @@ def imports(tree: ast.AST, module: str, package: bool) -> list[tuple[int, str]]:
     return found
 
 
+def heading_slug(heading: str) -> str:
+    text = re.sub(r"`([^`]*)`", r"\1", heading.strip().lower())
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"[^\w\s-]", "", text)
+    return re.sub(r"\s+", "-", text).strip("-")
+
+
+def markdown_headings(path: Path, cache: dict[Path, set[str]]) -> set[str]:
+    resolved = path.resolve()
+    if resolved not in cache:
+        content = resolved.read_text(encoding="utf-8", errors="replace")
+        cache[resolved] = {heading_slug(h) for h in re.findall(r"^#{1,6}\s+(.+)$", content, re.MULTILINE)}
+    return cache[resolved]
+
+
 def inspect(root: Path, since: str | None = None) -> Snapshot:
     revision = git(root, "rev-parse", "HEAD")
     changes: dict[str, list[ChangeRecord]] = {
@@ -131,7 +146,7 @@ def inspect(root: Path, since: str | None = None) -> Snapshot:
     files = sorted(p for p in candidates if p.endswith(".py") and p.startswith(("src/", "apps/", "tests/")) and (root / p).is_file())
     diagnostics: list[Diagnostic] = []
     errors: list[Diagnostic] = []
-    graph = {}
+    graph: dict[str, list[str]] = {}
     for path in files:
         try:
             tree = ast.parse((root / path).read_text(encoding="utf-8-sig"), filename=path)
@@ -153,33 +168,72 @@ def inspect(root: Path, since: str | None = None) -> Snapshot:
     config = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     targets = config.get("tool", {}).get("mypy", {}).get("files", [])
     covered = [p for p in files if any(p == t.rstrip("/") or p.startswith(t.rstrip("/") + "/") for t in targets)]
-    for doc in DOCUMENTS:
+    optional_docs = [p for p in ("AGENTS.md", "GEMINI.md", "CHANGELOG.md") if (root / p).is_file()]
+    okf_docs = sorted(p.relative_to(root).as_posix() for p in (root / "okf").glob("*.md") if p.is_file()) if (root / "okf").is_dir() else []
+    checked_docs = list(dict.fromkeys([*DOCUMENTS, *optional_docs, *okf_docs]))
+    heading_cache: dict[Path, set[str]] = {}
+    for doc in checked_docs:
         document = root / doc
         if not document.is_file():
-            errors.append({"file": doc, "message": "Required navigation document is missing"})
+            if doc in DOCUMENTS:
+                errors.append({"file": doc, "message": "Required navigation document is missing"})
             continue
-        for line, text in enumerate(document.read_text(encoding="utf-8").splitlines(), 1):
-            for target in re.findall(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", text):
-                target = target.strip("<>").split("#", 1)[0]
+        content = document.read_text(encoding="utf-8")
+        if doc == "okf/log.md" and content.startswith("---\n"):
+            diagnostics.append({"file": doc, "line": 1, "rule": "okf-frontmatter", "message": "okf/log.md must not have YAML frontmatter"})
+        elif doc.startswith("okf/") and doc not in {"okf/index.md", "okf/log.md"}:
+            frontmatter = re.match(r"^---\r?\n(.*?)\r?\n---\r?\n", content, re.DOTALL)
+            if not frontmatter or not re.search(r"^type:\s*\S+", frontmatter.group(1), re.MULTILINE):
+                diagnostics.append({"file": doc, "line": 1, "rule": "okf-frontmatter", "message": "Missing required YAML frontmatter with non-empty type"})
+        for line, text in enumerate(content.splitlines(), 1):
+            for raw_target in re.findall(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", text):
+                cleaned = raw_target.strip("<>")
+                target, _, anchor = cleaned.partition("#")
                 if not target or re.match(r"[a-zA-Z][\w+.-]*:", target):
                     continue
-                if not (document.parent / unquote(target)).exists():
+                resolved_target = document.parent / unquote(target)
+                if not resolved_target.exists():
                     diagnostics.append({"file": doc, "line": line, "rule": "local-link", "message": f"Missing target: {target}"})
+                elif anchor and resolved_target.is_file() and resolved_target.suffix.lower() == ".md":
+                    if unquote(anchor).lower() not in markdown_headings(resolved_target, heading_cache):
+                        diagnostics.append({"file": doc, "line": line, "rule": "local-link", "message": f"Missing anchor: {cleaned}"})
     analysis = (root / "PROJECT_ANALYSIS.md").read_text(encoding="utf-8")
     changed_paths = sorted({r[k] for group in changes.values() for r in group for k in ("path", "old_path") if k in r})
     modules = {module_name(p) for p in changed_paths if p.endswith(".py")}
     dependents = sorted(p for p, deps in graph.items() if any(d == m or d.startswith(m + ".") for d in deps for m in modules))
+    reached: set[str] = set()
+    frontier = set(modules)
+    while frontier:
+        next_paths = {
+            p for p, deps in graph.items()
+            if p not in reached and any(d == m or d.startswith(m + ".") for d in deps for m in frontier)
+        }
+        if not next_paths:
+            break
+        reached.update(next_paths)
+        frontier = {module_name(p) for p in next_paths} - modules
+    transitive = sorted(reached - set(dependents) - set(changed_paths))
+    affected_tests = sorted(
+        p for p in (reached | (set(changed_paths) & set(files)))
+        if p.startswith("tests/") or Path(p).name.startswith("test_") or Path(p).name.endswith("_test.py")
+    )
     broad = [p for p in changed_paths if p.startswith(("src/workflows/core/", "src/zoho/", ".github/", "tests/", "okf/")) or p in {"pyproject.toml", "AGENTS.md", ".python-version", *DOCUMENTS}]
     return {"schema_version": 1, "revision": revision, "baseline": baseline, "changes": changes,
             "python_files": files, "typing": {"configured_targets": targets, "explicitly_covered": covered,
             "outside_explicit_targets": sorted(set(files) - set(covered))},
             "finding_ids": re.findall(r"^### ([A-Z]+-\d+)", analysis, re.MULTILINE),
             "review_baseline_text": analysis.split("## Categories and ownership")[0],
-            "review_candidates": {"changed": changed_paths, "direct_dependents": dependents, "broader_review_triggers": broad},
+            "review_candidates": {
+                "changed": changed_paths,
+                "direct_dependents": dependents,
+                "transitive_dependents": transitive,
+                "affected_tests": affected_tests,
+                "broader_review_triggers": broad,
+            },
             "diagnostics": diagnostics, "errors": errors,
             "limitations": ["Static imports only; dynamic imports and indirect dependencies require review.",
                             "Explicit mypy targets are not transitive type-check coverage.",
-                            "Link checks cover designated navigation files, not anchors or all Markdown syntax.",
+                            "Link checks cover designated navigation, changelog, and OKF Markdown files (including cross-file heading anchors), not in-page anchors or all Markdown syntax.",
                             "Incremental candidates do not establish financial safety or verify unchanged code."]}
 
 

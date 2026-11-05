@@ -123,7 +123,12 @@ The `test` extra includes pinned `pytest-xdist==3.8.0`; the earlier preparation-
 `test-parallel` extra has been replaced by the standard `test` extra. Provision
 new test environments using the existing setup commands. Existing environments
 need the updated test dependencies installed only when explicitly authorized;
-missing xdist is an actionable setup error, not a reason to switch interpreters.
+missing xdist is an actionable setup error (failing with unrecognized `-n`,
+`--dist`, and `--max-worker-restart` options), not a reason to switch interpreters.
+If an existing `.venv` has not yet been authorized to install `pytest-xdist`,
+report the missing plugin and, when read-only serial verification is needed in
+the interim, pass `-o addopts="--import-mode=importlib"` to bypass the xdist
+flags in `pyproject.toml`.
 
 Use `-n 0` for serial debugging or comparison and `-n 2` to use fewer workers:
 

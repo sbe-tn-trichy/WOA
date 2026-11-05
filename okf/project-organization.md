@@ -54,17 +54,22 @@ The command parses source without importing inspected modules, reading credentia
 calling remote services or refreshing Analytics metadata. Its only project writes
 are reports; optional check tools can also write their usual caches.
 
-Fast inspection checks static import boundaries and local file links in README,
-INDEX, WORKFLOWS, PROJECT_ANALYSIS and the OKF root index. It reports explicit
-mypy target coverage separately from transitive checking. Syntax/read failures
-are incomplete inspections. Link anchors, full Markdown parsing, dynamic imports
-and financial safety are outside these checks.
+Fast inspection checks static import boundaries, local file links and cross-file
+Markdown heading anchors in README, INDEX, WORKFLOWS, PROJECT_ANALYSIS, AGENTS,
+GEMINI, CHANGELOG and `okf/*.md`, plus OKF frontmatter rules (`type:` required
+on concept files; no frontmatter on `okf/log.md`). It reports explicit mypy target
+coverage separately from transitive checking. Syntax/read failures are incomplete
+inspections. In-page anchors, full CommonMark parsing, dynamic imports and
+financial safety are outside these checks.
 
 `--since COMMIT` compares the resolved commit with HEAD and separately lists staged,
-unstaged and untracked changes, including renamed/deleted paths. Direct static
-import dependents are review candidates, not a complete impact graph. Changes to
-SDK/shared workflow infrastructure, tests, configuration or guidance trigger broader
-inspection. Ignored local configuration and recovery state are not inventoried.
+unstaged and untracked changes, including renamed/deleted paths. Review candidates
+include 1-hop `direct_dependents`, multi-hop `transitive_dependents`, and
+`affected_tests` (test files that changed or statically import changed modules
+directly or transitively); static imports remain review candidates rather than a
+complete runtime impact graph. Changes to SDK/shared workflow infrastructure,
+tests, configuration or guidance trigger broader inspection. Ignored local
+configuration and recovery state are not inventoried.
 
 `--verify` additionally runs the existing API reference check and configured mypy
 using the executing interpreter. It never installs tools. Exit codes are 0 for

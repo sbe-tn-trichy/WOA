@@ -1,5 +1,16 @@
 # Knowledge Change Log
 
+## 2026-11-05
+
+- Expanded [project organization](project-organization.md#repeatable-project-analysis)
+  and the [runbook](development-runbook.md#default-parallel-tests) to cover
+  multi-hop transitive dependents, affected test mapping, cross-file Markdown
+  heading anchor checks, OKF frontmatter checks, and read-only serial pytest
+  override when `pytest-xdist` is not yet installed. Updated finding commit and
+  macOS arm64 verification evidence in
+  [PROJECT_ANALYSIS.md](../PROJECT_ANALYSIS.md). See the
+  [project entry](../CHANGELOG.md#expand-offline-project-analysis-and-update-finding-register).
+
 ## 2026-11-04
 
 - Made four-worker pytest execution the default and documented dependency setup,
