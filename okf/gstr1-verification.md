@@ -5,7 +5,7 @@ description: Read-only previous-month invoice, credit-note, sequence, draft, and
 tags: [gstr-1, gst, invoices, credit-notes, e-invoice, compliance]
 sources:
   - id: workflow-source
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/src/workflows/gstr1_verification/verifier.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/workflows/gstr1_verification/verifier.py
     title: GSTR-1 verification workflow
     author: team:sbe-tn-trichy
     last_modified: 2026-08-10

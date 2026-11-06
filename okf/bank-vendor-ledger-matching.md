@@ -5,7 +5,7 @@ description: Books bank-withdrawal matching against vendor payments or external 
 tags: [books, banking, reconciliation, icici, upi]
 sources:
   - id: bank-matcher
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/src/workflows/bank_vendor_ledger_matching/_matcher.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/workflows/bank_vendor_ledger_matching/_matcher.py
     title: Bank–vendor ledger matcher
     author: team:sbe-tn-trichy
     last_modified: 2026-08-13

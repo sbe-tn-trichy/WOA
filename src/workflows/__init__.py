@@ -171,7 +171,7 @@ def __getattr__(name: str):
         if exc.name in {"pdfplumber", "xlrd", "openpyxl", "dotenv"}:
             raise ModuleNotFoundError(
                 f"Workflow {name!r} requires optional dependencies; install "
-                "zoho-sdk[workflows]."
+                "WOA[workflows]."
             ) from exc
         raise
     value = getattr(module, attribute_name)

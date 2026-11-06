@@ -5,7 +5,7 @@ description: Read-only purchase reconciliation cross-checking GSTR-2 / GSTR-2B J
 tags: [gstr-2, gstr-2b, gst, itc, bills, expenses, vendor-credits, purchases, reconciliation]
 sources:
   - id: workflow-source
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/src/workflows/gstr2_verification/verifier.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/workflows/gstr2_verification/verifier.py
     title: GSTR-2 verification workflow
     author: team:sbe-tn-trichy
     last_modified: 2026-09-22

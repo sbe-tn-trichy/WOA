@@ -5,7 +5,7 @@ description: Creator payment matching, Analytics-assisted bank suggestions, and 
 tags: [creator, books, analytics, collections, reconciliation, audit]
 sources:
   - id: collection-reconciler
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/src/workflows/collection_reconciliation/reconciler.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/workflows/collection_reconciliation/reconciler.py
     title: Collection reconciliation workflow
     author: team:sbe-tn-trichy
     last_modified: 2026-08-04

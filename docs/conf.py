@@ -1,13 +1,13 @@
-"""Sphinx configuration for zoho-sdk documentation."""
+"""Sphinx configuration for WOA documentation."""
 import os
 import sys
 
 # Add src to sys.path
 sys.path.insert(0, os.path.abspath("../src"))
 
-project = "zoho-sdk"
-copyright = "2026, Zoho SDK Contributors"
-author = "Zoho SDK Contributors"
+project = "WOA"
+copyright = "2026, WOA Contributors"
+author = "WOA Contributors"
 release = "0.2.0"
 
 extensions = [

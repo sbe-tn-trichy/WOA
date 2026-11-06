@@ -1,7 +1,12 @@
-# Zoho SDK
+# WOA — Workflows, Ops and Automations
 
-Python 3.14 clients for ERP, Books, Inventory, Creator, Analytics, WorkDrive, Mail,
-Cliq and Sheet, with reusable business workflows and local review applications.
+A Zoho-focused workspace for business workflows, operational tools and automations,
+with Python 3.14 clients for ERP, Books, Inventory, Creator, Analytics, WorkDrive,
+Mail, Cliq and Sheet, plus Google Sheets integration and local review applications.
+
+The Python distribution is `WOA` (`woa` in normalized package metadata). Import
+the Zoho SDK as `zoho`, business workflows as `workflows`, and Google Sheets
+integration as `google_sheets`.
 
 ## Start here
 

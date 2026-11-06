@@ -9,6 +9,24 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-06
 
+### Keep generated Analytics metadata local
+
+- **Why:** Workspace metadata caches and generated analysis reports are local artifacts rather than project source.
+- **What:** Ignore `workspace_metadata/` and remove its four tracked artifacts from the Git index, preserving the local cache and reports.
+- **Verification:** Confirmed the artifacts are ignored, absent from the Git index, and retained locally; targeted diff whitespace check passed. No runtime code changed; tests not run. Annual rollover checked: root entries remain in 2026.
+
+### Keep VS Code settings local to each machine
+
+- **Why:** Editor settings and automatic dashboard tasks are machine-specific and are not portable across the project machines.
+- **What:** Ignore the entire `.vscode/` directory and stop tracking `settings.json` and `tasks.json`, retaining the local files.
+- **Verification:** Confirmed both files are ignored, absent from the Git index, and still present locally; targeted diff whitespace check passed. No runtime code changed; tests not run. Annual rollover checked: root entries remain in 2026.
+
+### Name the project WOA
+
+- **Why:** Give the broader workflow and operations project the chosen identity beyond its Zoho SDK foundation.
+- **What:** Adopted WOA — Workflows, Ops and Automations across project documentation, Python distribution metadata, dashboard title, installation hints and generated API references. Dashboard favorites read the former storage key for compatibility. Vendor SDK and workflow import names retain their meanings. GitHub rename is user-managed; remote/source URLs and local folder migration remain pending. Existing editable environment metadata needs an explicitly authorized reinstall; folder migration also requires environment reprovisioning because installed paths are absolute.
+- **Verification:** Windows x64 / workspace CPython 3.14.4: 39 focused tests passed, including generated-document synchronization, package imports and old/new favorites storage behavior. Full suite with workspace-local temporary directories: 2880 passed, 1 skipped, 4 subtests passed; 8 failures from socket permissions (6), symlink privilege (1) and cleanup Git-discovery expectations (1). Initial full run also encountered sandbox temporary-directory permissions. API references regenerated; `git diff --check` passed. Interpreter differs from the required 3.14.10; environment unchanged. Annual rollover checked: root entries remain in 2026.
+
 ### Clarify and rename the unified YAML configuration
 
 - **Why:** Give the unified configuration a neutral filename and make profile selection, project policy and workflow identifiers easier to understand.

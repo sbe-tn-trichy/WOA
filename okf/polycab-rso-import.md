@@ -5,7 +5,7 @@ description: Parsing Polycab return-sales-order PDFs into Zoho Books sales order
 tags: [polycab, rso, sales-orders, pdf, zoho-books]
 sources:
   - id: rso-processor
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/src/workflows/polycab_rso/processor.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/workflows/polycab_rso/processor.py
     title: Polycab RSO processor
     author: team:sbe-tn-trichy
     last_modified: 2026-08-17

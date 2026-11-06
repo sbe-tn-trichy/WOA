@@ -5,7 +5,7 @@ description: Read-only, resumable workspace metadata collection and relationship
 tags: [analytics, metadata, relationships, rate-limits, snapshots]
 sources:
   - id: metadata-resource
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/src/zoho/analytics/metadata.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/zoho/analytics/metadata.py
     title: Analytics metadata resource
     author: team:sbe-tn-trichy
     last_modified: 2026-08-02

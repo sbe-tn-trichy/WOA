@@ -1,7 +1,7 @@
 ---
 type: Runbook
 title: Project Operations Dashboard
-description: Local numbered launcher for frequently used Zoho SDK workflows.
+description: Local numbered launcher for frequently used WOA workflows.
 tags: [operations, dashboard, workflows, safety]
 status: active
 ---

@@ -316,6 +316,19 @@ vm.runInNewContext(source + `
   activeTab = 'Favorites'; render();
   assert.match(document.getElementById('grid').innerHTML, /Neoseal audit/);
 `, { ...context, localStorage: blockedStorage });
+stored.clear();
+stored.set('zoho-sdk-dashboard-favorites', '[2]');
+vm.runInNewContext(source + `
+  assert.equal(activeTab, 'Favorites');
+  assert.equal(favorites.has(2), true);
+  toggleFavorite(1);
+  assert.equal(localStorage.getItem('woa-dashboard-favorites'), '[2,1]');
+`, { ...context });
+stored.set('woa-dashboard-favorites', '[]');
+vm.runInNewContext(source + `
+  assert.equal(favorites.size, 0);
+  assert.equal(activeTab, 'All');
+`, { ...context });
 """
     result = subprocess.run(
         [node, "-e", harness], input=script, text=True, capture_output=True

@@ -1,6 +1,6 @@
-# Zoho SDK Documentation
+# WOA Documentation
 
-Welcome to the Zoho SDK API reference documentation.
+Welcome to the WOA API reference documentation.
 
 - [API Reference Overview](api/README.md)
 - [Core SDK & Transport Architecture](api/core.md)

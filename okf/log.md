@@ -2,6 +2,8 @@
 
 ## 2026-11-06
 
+- Adopted **WOA — Workflows, Ops and Automations** as the project and distribution identity in the [overview](project-overview.md), retaining vendor SDK and workflow imports. Updated dashboard and generated API branding, preserving saved favorites. See [project change](../CHANGELOG.md#name-the-project-woa).
+
 - Renamed the canonical settings/template to `config/config.yaml` and `config/config.example.yaml`, with explained sections and profile selection; documented priority and independent profiles in [configuration](configuration.md). See [project change](../CHANGELOG.md#clarify-and-rename-the-unified-yaml-configuration).
 
 - Unified directory policy and runtime profiles in `config/zoho_config.yaml`, with a matching example and top-level policy shared across profiles. Updated [configuration](configuration.md) and [organization](project-organization.md). See [project change](../CHANGELOG.md#merge-directory-policy-into-the-runtime-yaml-configuration).

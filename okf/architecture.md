@@ -1,11 +1,11 @@
 ---
 type: Concept
 title: Package Architecture & Modularity
-description: Layered architecture, import direction rules, and subpackage encapsulation in the merged zoho_sdk repository.
+description: Layered architecture, import direction rules, and subpackage encapsulation in the WOA repository.
 tags: [architecture, modularity, layers, imports]
 sources:
   - id: package-root
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/src/zoho/__init__.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/zoho/__init__.py
     title: Package root exports
     author: team:sbe-tn-trichy
     last_modified: 2026-08-02
@@ -14,7 +14,7 @@ status: active
 
 # Layered Architecture
 
-`zoho_sdk` enforces strict modularity through a layered architecture with one-way import rules:
+`WOA` enforces strict modularity through a layered architecture with one-way import rules:
 
 ```
 zoho (API Clients & Auth) <-- workflows (Business Engines) <-- apps (Web UIs & CLI Tools)

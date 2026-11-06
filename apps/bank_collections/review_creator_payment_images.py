@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
     import shutil
     import importlib.util
     if not shutil.which("tesseract") or any(importlib.util.find_spec(m) is None for m in ("PIL", "pytesseract")):
-        parser.error("Install zoho-sdk[ocr] and the Tesseract executable before running OCR.")
+        parser.error("Install WOA[ocr] and the Tesseract executable before running OCR.")
     result = review_creator_payment_images(
         get_creator_client(), app=args.creator_app,
         sources=(PaymentOCRSource(args.online_report, args.image_field),

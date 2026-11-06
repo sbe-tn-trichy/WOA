@@ -5,7 +5,7 @@ description: Security, performance, and usability review and hardening across co
 tags: [security, performance, usability, audit, quality]
 sources:
   - id: base-client
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/src/zoho/base_client.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/zoho/base_client.py
     title: Base Zoho Client
     author: team:sbe-tn-trichy
     last_modified: 2026-09-01
@@ -21,7 +21,7 @@ improvement here does not imply closure of related failure paths in that registe
 
 ## Overview
 
-A comprehensive code audit across all `zoho_sdk` service clients identified key areas for defensive security improvements, performance optimizations, and usability fixes.
+A comprehensive code audit across all `WOA` service clients identified key areas for defensive security improvements, performance optimizations, and usability fixes.
 
 ## Key Improvements
 

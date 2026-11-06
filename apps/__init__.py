@@ -1,4 +1,4 @@
-"""Operational applications, web servers, and CLI runners for zoho_sdk."""
+"""Operational applications, web servers, and CLI runners for WOA."""
 
 from __future__ import annotations
 

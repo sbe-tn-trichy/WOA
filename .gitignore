@@ -20,14 +20,13 @@ logs/
 # SDK-generated output files
 output/
 Output/
+workspace_metadata/
 
 # Ephemeral scratch scripts
 scripts/
 
 # IDE files
-.vscode/*
-!.vscode/tasks.json
-!.vscode/settings.json
+.vscode/
 .idea/
 .DS_Store
 .codex/

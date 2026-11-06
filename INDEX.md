@@ -1,4 +1,4 @@
-# zoho_sdk — Code Index
+# WOA — SDK Code Index
 
 > **Navigation reference:** This index summarizes the public SDK surface. For detailed
 > generated API reference documentation of modules, classes, methods, and comments, see
@@ -30,7 +30,7 @@ Supported services:
 ## Directory Layout
 
 ```
-zoho_sdk/
+WOA/
 ├── src/zoho/                        # Installable package (pip install -e .)
 │   ├── __init__.py                  # Public API — re-exports all client classes
 │   ├── base_client.py               # BaseZohoClient — shared HTTP engine for all services
@@ -105,7 +105,7 @@ zoho_sdk/
 │   ├── test_sheet.py
 │   └── test_wd.py
 ├── logs/                            # Runtime log files
-└── pyproject.toml                   # Package metadata (name: zoho-sdk, version: 0.2.0)
+└── pyproject.toml                   # Package metadata (name: WOA, version: 0.2.0)
 ```
 
 ---

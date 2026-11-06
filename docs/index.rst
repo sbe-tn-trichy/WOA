@@ -1,6 +1,6 @@
-.. zoho-sdk documentation master file.
+.. WOA documentation master file.
 
-Zoho SDK Documentation
+WOA Documentation
 ======================
 
 Typed Python SDK for Zoho API services with shared transport, OAuth2 management,

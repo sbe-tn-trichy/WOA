@@ -5,7 +5,7 @@ description: Rules for keeping the repository's OKF v0.2 knowledge bundle accura
 tags: [okf, documentation, governance, maintenance]
 sources:
   - id: repository-guidance
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/AGENTS.md
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/AGENTS.md
     title: Repository guidance
     author: team:sbe-tn-trichy
     last_modified: 2026-08-02

@@ -125,6 +125,9 @@ def test_generate_all_docs_in_temp_dir(tmp_path: Path) -> None:
     assert (docs_root / "index.rst").exists()
     assert (docs_root / "index.md").exists()
 
+    assert '# WOA — Generated API Reference' in (output_dir / 'README.md').read_text(encoding='utf-8')
+    assert 'project = "WOA"' in (docs_root / 'conf.py').read_text(encoding='utf-8')
+
     # Verify idempotency
     in_sync2, changed2 = generate_all_docs(docs_root, output_dir, check_only=True)
     assert in_sync2

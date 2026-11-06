@@ -1,11 +1,11 @@
 ---
 type: Reference
 title: Configuration Reference
-description: Runtime configuration, environment variables, organization identifiers, and credential handling in zoho_sdk.
+description: Runtime configuration, environment variables, organization identifiers, and credential handling in WOA.
 tags: [configuration, environment, credentials]
 sources:
   - id: config-module
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/src/workflows/core/config.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/workflows/core/config.py
     title: Workflow Configuration module
     author: team:sbe-tn-trichy
     last_modified: 2026-08-02

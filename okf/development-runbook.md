@@ -1,11 +1,11 @@
 ---
 type: Runbook
 title: Development Runbook
-description: Local setup, validation commands, and safe development practices for the unified Zoho SDK and workflow packages.
+description: Local setup, validation commands, and safe development practices for the WOA SDK and workflow packages.
 tags: [development, testing, operations, workflows]
 sources:
   - id: project-config
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/pyproject.toml
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/pyproject.toml
     title: Python project configuration
     author: team:sbe-tn-trichy
     last_modified: 2026-08-02

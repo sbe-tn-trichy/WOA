@@ -1,11 +1,11 @@
 ---
 type: Project
-title: Unified Project Overview
-description: Scope, architecture layers, low-level REST clients, and business workflows in the merged zoho_sdk repository.
+title: WOA Project Overview
+description: Scope, architecture layers, low-level REST clients, and business workflows in the WOA repository.
 tags: [python, zoho, sdk, workflows, reconciliation]
 sources:
   - id: readme
-    resource: https://github.com/sbe-tn-trichy/zoho_sdk/blob/main/README.md
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/README.md
     title: Unified Repository README
     author: team:sbe-tn-trichy
     last_modified: 2026-08-02
@@ -14,7 +14,15 @@ status: active
 
 # Purpose
 
-`zoho_sdk` distributes low-level REST API clients under `zoho` and higher-level domain workflows under the parallel top-level `workflows` package.
+**WOA — Workflows, Ops and Automations** is the project name for this Zoho-focused
+business operations workspace. It distributes low-level REST API clients under
+`zoho` and higher-level domain workflows under the parallel top-level `workflows`
+package, with operational applications in `apps/` and Google Sheets integration.
+The Python distribution is named `WOA` (normalized to `woa` by packaging tools).
+Vendor SDK imports remain `zoho` and `google_sheets`; business workflows remain
+under `workflows`. These names describe their responsibilities within WOA.
+Existing environments need an explicitly requested editable reinstall to refresh
+installed distribution metadata after the rename.
 
 # Architecture Scope
 

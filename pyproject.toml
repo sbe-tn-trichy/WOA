@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "zoho-sdk"
+name = "WOA"
 version = "0.2.0"
-description = "Decoupled SDK for Zoho API services"
+description = "WOA — Workflows, Ops and Automations for Zoho-focused business operations"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="launcher-token" content="__TOKEN__">
-  <title>Zoho SDK Operations</title>
+  <title>WOA — Workflows, Ops and Automations</title>
   <style>
     :root {
       color-scheme: dark;
@@ -360,9 +360,9 @@
     const token = document.querySelector('meta[name="launcher-token"]').content;
     let state = { workflows: [], runs: [] }, selectedRun = null, activeTab = 'All', query = '';
     const selectedSources = new Map();
-    const favoritesKey = 'zoho-sdk-dashboard-favorites';
+    const favoritesKey = 'woa-dashboard-favorites';
     let favorites = new Set();
-    try { favorites = new Set(JSON.parse(localStorage.getItem(favoritesKey) || '[]').map(Number)); } catch (_) { /* Browser storage may be unavailable. */ }
+    try { favorites = new Set(JSON.parse(localStorage.getItem(favoritesKey) ?? localStorage.getItem('zoho-sdk-dashboard-favorites') ?? '[]').map(Number)); } catch (_) { /* Browser storage may be unavailable. */ }
     if (favorites.size) activeTab = 'Favorites';
     const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
