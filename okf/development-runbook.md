@@ -77,13 +77,18 @@ never silently fall back to system Python. OCR needs the `ocr` extra as well.
 Native tools such as Tesseract and Poppler, and Node for JavaScript UI checks,
 need separate installation when required by the selected workflow.
 
-The `workflows` extra includes `tzdata` so `zoneinfo` can resolve IANA names such
-as `Asia/Kolkata` on Windows without a system timezone database. Text fixtures
+Base dependencies include `tzdata` so `zoneinfo` can resolve IANA names such
+as `Asia/Kolkata` on Windows without a system timezone database, and
+`PyYAML>=6.0.3` for YAML configuration parsing. Text fixtures
 containing a BOM or other Unicode characters must specify UTF-8 explicitly.
 Pytest stores its cache under ignored `output/pytest-cache`, avoiding legacy
 root cache directories that may retain permissions from another installation.
 Pytest temporary test directories are separate from this cache; sandbox access
-restrictions must be reported separately from product failures.
+restrictions must be reported separately from product failures. The cleanup
+symlink integration test skips when Windows reports missing symlink privilege
+(WinError 1314); other setup errors still fail. That safety check requires a
+symlink-capable host, such as Windows with Developer Mode or appropriate
+privileges, to execute its assertions.
 
 ## Machine configuration and recovery state
 
@@ -119,10 +124,10 @@ Run the suite with the workspace interpreter:
 
 On macOS use `.venv/bin/python`. `pyproject.toml` owns the default: four
 pytest-xdist worker processes, `--dist=loadfile`, and no automatic worker restart.
-The `test` extra includes pinned `pytest-xdist==3.8.0`; the earlier preparation-only
-`test-parallel` extra has been replaced by the standard `test` extra. Provision
-new test environments using the existing setup commands. Existing environments
-need the updated test dependencies installed only when explicitly authorized;
+Base dependencies include pytest and pinned `pytest-xdist==3.8.0`, so every
+project installation includes the configured test runner. The empty `test` extra
+is retained for compatibility with existing installation commands. Existing
+environments still need an explicitly authorized reinstall to receive missing dependencies;
 missing xdist is an actionable setup error (failing with unrecognized `-n`,
 `--dist`, and `--max-worker-restart` options), not a reason to switch interpreters.
 If an existing `.venv` has not yet been authorized to install `pytest-xdist`,
@@ -149,8 +154,7 @@ write generated files to temporary destinations.
 
 Push and pull-request CI jobs use the configured default, including type-check
 regression tests. Manual **Run workflow → test_workers** defaults to 4 and allows
-0 (serial) or 2. The ordinary test extra supplies xdist in all test jobs; base
-runtime installation remains independent of the test extra.
+0 (serial) or 2. Base dependencies supply pytest and xdist in all installation and test jobs.
 
 When changing workers or distribution, record OS/architecture, interpreter/plugin
 versions, revision/local changes and comparable serial/parallel wall times. Repeat
@@ -209,10 +213,11 @@ investigating machine-specific failures. Runner details are documented in the
 
 ## Type checking
 
-The optional `typing` extra pins mypy and requests stubs for development; it is
-not a runtime dependency. Install it in the existing project environment only
-when dependency installation is explicitly authorized. Do not synchronize or
-replace the environment to run a check.
+Base dependencies pin `mypy==2.4.1` and `types-requests==2.32.4.20250913` so
+every project installation includes the type checker and requests stubs. The
+empty `typing` extra preserves existing installation commands. Existing
+environments need an explicitly authorized reinstall to receive missing
+dependencies. Do not synchronize or replace the environment to run a check.
 
 Run the blocking scope from the repository root:
 
@@ -228,7 +233,8 @@ the entire repository is typed. Explicit Any and Any from missing imports are
 rejected in checked targets; do not fix diagnostics using blanket ignores or
 casts of external data. Positive/negative contract tests run the same pinned
 checker, including actual SDK clients and a typed fake. They skip only when the
-optional checker is absent; the type-check CI job installs it before running them.
+checker is absent in an incomplete environment; base installation supplies it
+before the type-check CI job runs them.
 
 The CI gate is configured on all three existing runner platforms. Actual hosted
 results and primary-machine smoke results remain required. See the

@@ -9,6 +9,36 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-06
 
+### Handle unavailable Windows symlink privilege in cleanup tests
+
+- **Why:** The cleanup integration test failed during setup on Windows hosts without symlink creation privileges, before testing cleanup behavior.
+- **What:** Skip that integration test only for WinError 1314 during directory symlink creation; other errors still fail and symlink-capable hosts retain the original safety assertions. Documented the verification limit in the runbook; production cleanup is unchanged.
+- **Verification:** Windows AMD64 / workspace CPython 3.14.10: cleanup tests 10 passed, 1 skipped; full suite 2887 passed, 2 skipped, 4 subtests passed in 14.21s. Actual symlink assertions remain unverified on this host because privilege is unavailable. Diff whitespace check passed; annual rollover checked: root entries remain in 2026.
+
+### Install all declared dependencies in the Windows environment
+
+- **Why:** The existing workspace environment lacked the dependencies needed for development and workflow execution.
+- **What:** Installed the editable project and all declared extras into the existing virtual environment using `constraints.txt`; retained its CPython 3.14.10 interpreter. No native external tools were installed.
+- **Verification:** Windows AMD64: installation succeeded, `pip check` found no broken requirements, direct-library import checks and Asia/Kolkata timezone resolution passed; pytest 9.1.0, xdist 3.8.0 and mypy 2.4.1 load successfully. Full test suite not run as part of this installation. Annual rollover checked: root entries remain in 2026.
+
+### Require type checking dependencies in every installation
+
+- **Why:** Type checking should be available without selecting an optional extra.
+- **What:** Moved pinned mypy and requests type stubs into base dependencies, retained an empty `typing` compatibility extra, and updated the runbook.
+- **Verification:** Workspace TOML checks confirmed exact mandatory versions, no optional duplicates and the compatibility alias; diff whitespace check passed. Full suite remains blocked by missing pytest in the existing environment; no packages installed. Annual rollover checked: root entries remain in 2026.
+
+### Require timezone data and YAML support in every installation
+
+- **Why:** Timezone resolution and YAML configuration support should be available without selecting workflow extras.
+- **What:** Moved `tzdata` and `PyYAML>=6.0.3` from the workflows extra into base dependencies and updated the setup runbook.
+- **Verification:** Workspace CPython 3.14.10 TOML checks confirmed both requirements occur in base dependencies and no optional group duplicates them; diff whitespace check passed. Full suite remains blocked by missing pytest in the existing environment; no packages installed. Annual rollover checked: all root entries are from 2026.
+
+### Require the test runner in every installation
+
+- **Why:** A base installation could not run the required test suite because pytest was optional.
+- **What:** Moved pytest and pinned pytest-xdist into base dependencies; retained an empty `test` extra for compatible existing commands and updated the runbook.
+- **Verification:** Parsed TOML and checked mandatory requirements, compatibility extra and configured parallel runner. Full suite remains blocked by missing pytest in the existing Windows CPython 3.14.10 environment; no packages installed. Annual rollover checked: root entries remain in 2026.
+
 ### Keep generated Analytics metadata local
 
 - **Why:** Workspace metadata caches and generated analysis reports are local artifacts rather than project source.

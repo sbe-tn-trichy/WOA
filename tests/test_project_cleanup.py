@@ -44,7 +44,13 @@ def test_symlink_directory_and_file_are_skipped(repo, tmp_path_factory):
     outside = tmp_path_factory.mktemp("outside")
     target = put(outside, "valuable", age=20)
     (repo / "output").mkdir()
-    (repo / "output/tmp").symlink_to(outside, target_is_directory=True)
+    try:
+        (repo / "output/tmp").symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        # Windows may deny symlinks without Developer Mode or elevated privileges.
+        if getattr(exc, "winerror", None) == 1314:
+            pytest.skip("Windows symlink privilege unavailable (WinError 1314)")
+        raise
     assert plan_cleanup(repo, 0, now=1000000) == []
     (repo / "build").mkdir()
     (repo / "build/link").symlink_to(target)

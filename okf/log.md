@@ -2,6 +2,14 @@
 
 ## 2026-11-06
 
+- Documented the Windows symlink-privilege skip and remaining integration verification requirement in the [runbook](development-runbook.md). See [project change](../CHANGELOG.md#handle-unavailable-windows-symlink-privilege-in-cleanup-tests).
+
+- Documented mandatory mypy and requests stubs and the compatibility `typing` extra in the [runbook](development-runbook.md). See [project change](../CHANGELOG.md#require-type-checking-dependencies-in-every-installation).
+
+- Updated the [runbook](development-runbook.md) to describe mandatory timezone data and YAML dependencies. See [project change](../CHANGELOG.md#require-timezone-data-and-yaml-support-in-every-installation).
+
+- Documented mandatory pytest/xdist base dependencies and the compatibility `test` extra in the [runbook](development-runbook.md). See [project change](../CHANGELOG.md#require-the-test-runner-in-every-installation).
+
 - Adopted **WOA — Workflows, Ops and Automations** as the project and distribution identity in the [overview](project-overview.md), retaining vendor SDK and workflow imports. Updated dashboard and generated API branding, preserving saved favorites. See [project change](../CHANGELOG.md#name-the-project-woa).
 
 - Renamed the canonical settings/template to `config/config.yaml` and `config/config.example.yaml`, with explained sections and profile selection; documented priority and independent profiles in [configuration](configuration.md). See [project change](../CHANGELOG.md#clarify-and-rename-the-unified-yaml-configuration).

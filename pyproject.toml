@@ -9,6 +9,12 @@ description = "WOA — Workflows, Ops and Automations for Zoho-focused business 
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "mypy==2.4.1",
+    "types-requests==2.32.4.20250913",
+    "tzdata",
+    "PyYAML>=6.0.3",
+    "pytest>=8.0.0",
+    "pytest-xdist==3.8.0",
     "requests>=2.25.0",
     "google-api-python-client>=2.0.0",
     "google-auth>=2.0.0",
@@ -18,16 +24,16 @@ dependencies = [
 
 [project.optional-dependencies]
 workflows = [
-    "tzdata",
-    "PyYAML>=6.0.3",
     "xlrd>=2.0.1",
     "pdfplumber>=0.10.0",
     "python-dotenv>=1.0.0",
     "openpyxl>=3.1.5",
 ]
 ocr = ["pytesseract>=0.3.13", "Pillow>=11.0.0"]
-test = ["pytest>=8.0.0", "pytest-xdist==3.8.0"]
-typing = ["mypy==2.4.1", "types-requests==2.32.4.20250913"]
+# Compatibility alias for existing installation commands; testing is mandatory.
+test = []
+# Compatibility alias for existing installation commands; typing is mandatory.
+typing = []
 
 [tool.mypy]
 python_version = "3.14"
