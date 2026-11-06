@@ -44,6 +44,13 @@ correctness and data safety:
 
 - Library code lives in `src/zoho/` (low-level clients) and `src/workflows/`
   (domain workflows); permanent entry points live in `apps/`.
+- Maintain shallow nesting and a strict limit of $\le 10$ files per directory across
+  `apps/`, domain packages, and output locations to prevent clutter and preserve
+  maintainability.
+- Group operational scripts into shallow 1-level domain subdirectories under `apps/`
+  (e.g., `apps/<domain>/`) alongside unified entry-point dispatchers at the `apps/`
+  root. Transparent meta-path redirection in `apps/__init__.py` preserves
+  backward-compatible imports for legacy script paths.
 - Imports flow `zoho <- workflows <- apps`. Neither `zoho` nor `workflows` may
   import from `apps` or `scripts`; workflows contain no servers or CLI parsers.
 - `scripts/` is Git-ignored scratch space with a retention target under 24 hours.

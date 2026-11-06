@@ -33,7 +33,7 @@ def test_plan_and_apply_preserve_business_data(repo):
     tracked = put(repo, "build/tracked.txt")
     subprocess.run(["git", "-C", str(repo), "add", "build/tracked.txt"], check=True)
     plan = plan_cleanup(repo, 7, now=1000000)
-    assert {str(c.path) for c in plan} == set(disposable)
+    assert {c.path for c in plan} == {Path(name) for name in disposable}
     assert all((repo / c.path).exists() for c in plan)
     assert apply_cleanup(repo, plan) == len(disposable)
     assert all((repo / name).exists() for name in protected)

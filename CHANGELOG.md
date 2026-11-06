@@ -9,6 +9,19 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-06
 
+### Fix Windows cleanup test path comparison
+
+- **Why:** Hosted CI run [#67](https://github.com/sbe-tn-trichy/zoho_sdk/actions/runs/42202567269)
+  failed on Windows because the cleanup assertion compared native backslash
+  strings with forward-slash literals, blocking the matrix for SDK-001.
+- **What:** Compare `Path` objects on both sides of the existing cleanup
+  assertion, preserving its exact candidate-set and business-data checks.
+- **Verification:** Full suite on macOS arm64 / workspace CPython 3.14.10:
+  2879 passed, 4 subtests passed. Initial sandboxed focused run had six
+  localhost-bind permission failures; the full permitted rerun passed.
+  Windows hosted rerun remains pending; no production behavior changed.
+  Annual rollover checked: root entries are all from 2026.
+
 ### Reorganize output folder adhering to file count limits and shallow nesting
 
 - **Why:** `output/` had accumulated 21 flat files in the root and multiple subdirectories with large file counts (e.g. 428 files in `mobile_empty_preparation/`, 177 in `creator_payment_ocr/images/`, 900+ across 35 directories in `archive/2026-10-27_144954/`), violating the rule of maintaining $\le 10$ files per directory and cluttering project inspection.
@@ -41,7 +54,7 @@ This file keeps the current year's entries; older years are archived under
 ### Reorganize apps into shallow domain subfolders adhering to file count limits
 
 - **Why:** 70 top-level scripts in `apps/` violated the project health constraint of maintaining $\le 10$ files per directory, making navigation cluttered and maintenance difficult.
-- **What:** Reorganized all standalone scripts into shallow, 1-level domain subfolders: `apps/bank_collections/`, `apps/customers/`, `apps/gst/`, `apps/inter_location_ops/`, `apps/inventory/`, `apps/neoseal_items/`, `apps/payments/`, `apps/statements/`, `apps/tools/`, and `apps/vendor_payments/`. Every single directory in `apps/` (including the root `apps/`) now contains $\le 10$ Python files. Implemented a zero-overhead PEP 451 `_AppsRedirectFinder` in `apps/__init__.py` to provide 100% transparent backwards compatibility and exact module object identity for existing tests and callers. Updated `apps/dashboard.py`, `apps/_bootstrap.py`, unified CLIs, and documentation links.
+- **What:** Reorganized all standalone scripts into shallow, 1-level domain subfolders: `apps/bank_collections/`, `apps/customers/`, `apps/gst/`, `apps/inter_location_ops/`, `apps/inventory/`, `apps/neoseal_items/`, `apps/payments/`, `apps/statements/`, `apps/tools/`, and `apps/vendor_payments/`. Every single directory in `apps/` (including the root `apps/`) now contains $\le 10$ Python files. Implemented a zero-overhead PEP 451 `_AppsRedirectFinder` in `apps/__init__.py` to provide 100% transparent backwards compatibility and exact module object identity for existing tests and callers. Updated `apps/dashboard.py`, `apps/_bootstrap.py`, unified CLIs, and documentation links. Codified the $\le 10$ files per directory limit and shallow hierarchy policy in `AGENTS.md` and `okf/project-organization.md`.
 - **Verification:** Verified file count constraint ($\le 10$ Python files per directory across all directories under `apps/`); full test suite passed (2,861 passed, 4 subtests passed); offline project analysis (`apps/analyze_project.py --verify`) passed with 0 diagnostics, 0 inspection errors, mypy clean across 26 source files, and API reference documentation up to date. Annual rollover checked: all entries remain in 2026.
 
 ### Introduce unified domain CLI entry points in apps

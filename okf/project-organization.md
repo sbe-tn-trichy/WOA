@@ -50,6 +50,25 @@ Without `--view-id`, it previews creation. With `--view-id ID`, it previews an
 update. Both require `--apply` to save. Historical create/update commands delegate
 to the same parser and execution path; output wording is now shared.
 
+## Directory structure and file limits
+
+Maintain shallow nesting and $\le 10$ files per directory across the repository
+to keep navigation discoverable and project inspection clean:
+
+- **Apps hierarchy**: Primary domain operations are organized into shallow 1-level
+  subdirectories (e.g., `apps/bank_collections/`, `apps/customers/`, `apps/gst/`,
+  `apps/inter_location_ops/`, `apps/inventory/`, `apps/neoseal_items/`, `apps/payments/`,
+  `apps/statements/`, `apps/tools/`, and `apps/vendor_payments/`). Every directory
+  under `apps/` (including root `apps/`) must contain $\le 10$ Python files.
+- **Unified entry points**: Multi-command domains provide a root dispatcher
+  (`apps/inter_location.py`, `apps/neoseal.py`, `apps/verify_gst.py`) offering
+  discoverable subcommands and help screens.
+- **Transparent backward compatibility**: Legacy command references and test imports
+  continue to resolve via the PEP 451 `_AppsRedirectFinder` in `apps/__init__.py`.
+- **Output hygiene**: Keep $\le 10$ files per directory in `output/` by compacting
+  historical runs and intermediate artifacts into `.tar.gz` archives with manifests,
+  leaving only active canonical reports at the root.
+
 ## Further cleanup boundaries
 
 ### Routine local cleanup
