@@ -257,22 +257,12 @@ results and primary-machine smoke results remain required. See the
 
 Use dry-run options where a workflow provides them. Verify organization, domain, vendor, location, and destination identifiers before running mutations. Token values and authorization headers must never be logged.
 
-## NeoSeal item alias review
+## Item catalog and alias review
 
-Run the read-only export below to create an all-items catalog and a smaller
-review list for NeoSeal Inventory items that do not yet have an `alias_name`:
-
-```bash
-.venv/bin/python apps/export_neoseal_items.py \
-  --purchase-account-id "$NEOSEAL_PURCHASE_ACCOUNT_ID"
-```
-
-The export always requests `status="active"`; inactive catalog records are never
-included in review or downstream update inputs. The default outputs are `output/neoseal_items.csv` and
-`output/neoseal_items_missing_alias.csv`. The latter is the working list for
-recording the vendor's exact supplied item name in Books `alias_name`; the
-script scopes the catalog by the dedicated NeoSeal purchase account rather than
-by a free-text manufacturer value, and never creates or updates Inventory items.
+Use the [item catalog export](item-catalog.md) for any Inventory purchase account.
+It owns command usage, status selection, CSV destinations and the retained
+Neoseal compatibility entry points. Exporting reads Inventory and writes local
+reports; it does not change remote item records.
 
 # Related Knowledge
 

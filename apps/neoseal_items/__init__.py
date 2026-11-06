@@ -1,0 +1,1 @@
+"""Domain apps for neoseal."""

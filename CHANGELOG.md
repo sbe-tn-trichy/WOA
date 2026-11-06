@@ -9,6 +9,65 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-06
 
+### Reorganize output folder adhering to file count limits and shallow nesting
+
+- **Why:** `output/` had accumulated 21 flat files in the root and multiple subdirectories with large file counts (e.g. 428 files in `mobile_empty_preparation/`, 177 in `creator_payment_ocr/images/`, 900+ across 35 directories in `archive/2026-10-27_144954/`), violating the rule of maintaining $\le 10$ files per directory and cluttering project inspection.
+- **What:** Reorganized `output/` so that 100% of its directories strictly contain $\le 10$ files:
+  1. Preserved the exact 10 canonical active outputs (`gstr2_*` snapshots, `it_balance_sheet_*`, `inter_location_contra_review.json`, `unearned_revenue.json`, `neoseal_item_audit.md`, and `README.md`) at the root of `output/`.
+  2. Moved 3 scratch Python scripts from `output/` to `scripts/`.
+  3. Archived 14 completed past operational runs and loose run artifacts into `output/archive/2026-11-06_completed_runs.tar.gz` with a full JSON manifest (`manifest_2026-11-06.json`).
+  4. Compressed the historical `output/archive/2026-10-27_144954/` tree into `output/archive/2026-10-27_144954.tar.gz`.
+  5. Compacted intermediate per-file snapshots in `output/statement-schedules/`, `output/customer_cleanup/mobile_empty_preparation/`, and `output/creator_payment_ocr/` into `.tar.gz` packages, leaving primary plans, summaries, and Markdown reports immediately accessible.
+  6. Updated `output/README.md` to document all active and archived outputs.
+- **Verification:** Verified all 22 directories under `output/` strictly contain $\le 10$ files; full test suite passed (2,873 passed, 4 subtests passed); offline project analysis (`apps/analyze_project.py --verify`) clean with 0 diagnostics and 0 inspection errors; mypy and API documentation checks pass. Annual rollover checked: all entries remain in 2026.
+
+### Generalize Inventory item catalog export
+
+- **Why:** Purchase-account-based export logic was reusable across vendors but
+  lived in the Neoseal package and used Neoseal-only command/output names.
+- **What:** Added `workflows.item_catalog` and `apps/inventory/export_items.py`
+  with neutral CSV defaults and active/inactive/all status selection. Retained
+  Neoseal command/library compatibility and old output defaults. Validate account
+  scope and distinct output paths before writing; updated owning documentation
+  and command navigation.
+- **Verification:** macOS arm64 / workspace CPython 3.14.10: focused
+  exporter/compatibility/launcher tests: 21 passed; full suite: 2879 passed,
+  4 subtests passed. The first sandboxed run could not bind localhost in six
+  server tests; the permitted unsandboxed rerun passed. Offline analysis:
+  zero diagnostics/errors; API-reference and configured mypy checks passed.
+  Both export CLI help checks and `git diff --check` passed. No live API calls.
+  Annual rollover checked for 2026; no older root entries require archival.
+
+### Reorganize apps into shallow domain subfolders adhering to file count limits
+
+- **Why:** 70 top-level scripts in `apps/` violated the project health constraint of maintaining $\le 10$ files per directory, making navigation cluttered and maintenance difficult.
+- **What:** Reorganized all standalone scripts into shallow, 1-level domain subfolders: `apps/bank_collections/`, `apps/customers/`, `apps/gst/`, `apps/inter_location_ops/`, `apps/inventory/`, `apps/neoseal_items/`, `apps/payments/`, `apps/statements/`, `apps/tools/`, and `apps/vendor_payments/`. Every single directory in `apps/` (including the root `apps/`) now contains $\le 10$ Python files. Implemented a zero-overhead PEP 451 `_AppsRedirectFinder` in `apps/__init__.py` to provide 100% transparent backwards compatibility and exact module object identity for existing tests and callers. Updated `apps/dashboard.py`, `apps/_bootstrap.py`, unified CLIs, and documentation links.
+- **Verification:** Verified file count constraint ($\le 10$ Python files per directory across all directories under `apps/`); full test suite passed (2,861 passed, 4 subtests passed); offline project analysis (`apps/analyze_project.py --verify`) passed with 0 diagnostics, 0 inspection errors, mypy clean across 26 source files, and API reference documentation up to date. Annual rollover checked: all entries remain in 2026.
+
+### Introduce unified domain CLI entry points in apps
+
+- **Why:** 70 top-level scripts in `apps/` created cognitive overhead and discoverability friction across inter-location, Neoseal, and GST tasks.
+- **What:** Created unified subcommand entry points for three primary domains: `apps/inter_location.py`, `apps/neoseal.py`, and `apps/verify_gst.py`. Each dispatcher provides structured `--help`, command discovery, and robust argument forwarding with `sys.argv` context preservation, while all standalone scripts remain intact for backward compatibility. Added test suite `tests/test_unified_apps.py`.
+- **Verification:** `tests/test_unified_apps.py` passes (6 tests); full suite passes (2861 passed, 4 subtests passed); offline analysis (`apps/analyze_project.py --verify`) clean with 0 diagnostics and 0 inspection errors; mypy and API documentation checks pass. Annual rollover checked: all entries remain in 2026.
+
+### Package customer management workflow modules
+
+- **Why:** Five loose modules for customer management (`customer_analytics_sync`, `customer_invoice_payment_review`, `customer_local_store`, `customer_normalization`, `customer_table`) remained in `src/workflows/`.
+- **What:** Consolidated them into the cohesive package `workflows.customer_management`, exposing clean public symbols via `__init__.py`. Replaced the root files with transparent `sys.modules` compatibility redirects, preserving identical module identity and monkeypatch behavior for existing apps and tests.
+- **Verification:** 58 focused tests passed; full test suite passed (2855 passed, 4 subtests passed); offline project analysis (`apps/analyze_project.py --verify`) passed with 0 diagnostics and 0 inspection errors; mypy and API documentation checks passed. Annual rollover checked: all entries remain in 2026.
+
+### Package Books statements and GST workflow modules
+
+- **Why:** Loose modules for Books statements/catalogs (`books_statement_sheet`, `books_account_catalog`, `books_custom_module_store`, `books_pnl_notes`, `it_balance_sheet_comparison`) and GST (`gst_cash_ledger`, `gst_monthly`) cluttered the `src/workflows/` root.
+- **What:** Consolidated them into two packages: `workflows.books_statements` and `workflows.gst`, each exporting clean public symbols via `__init__.py`. Replaced the root files with transparent `sys.modules` compatibility redirects, preserving identical module identity and monkeypatch behavior for existing apps and tests.
+- **Verification:** 47 focused tests passed across both domains; full test suite passed (2855 passed, 4 subtests passed); offline project analysis (`apps/analyze_project.py --verify`) passed with 0 diagnostics and 0 inspection errors; mypy and API documentation checks passed. Annual rollover checked: all entries remain in 2026.
+
+### Package inter-location workflow modules
+
+- **Why:** Nine loose inter-location modules in `src/workflows/` cluttered the top-level directory and made domain ownership fragmented.
+- **What:** Consolidated contra detection, location/payment proposals, and update logic into the structured package `workflows.inter_location` with public exports in `__init__.py`. Replaced the root `inter_location_*.py` and `apply_inter_location_updates.py` files with thin re-exporting compatibility redirects, maintaining zero-breakage for existing CLI and test callers.
+- **Verification:** 62 focused inter-location tests passed; full test suite passed (2855 passed, 4 subtests passed); offline project analysis (`apps/analyze_project.py --verify`) passed with 0 diagnostics and 0 inspection errors; mypy and API documentation checks passed. Annual rollover checked: all entries remain in 2026.
+
 ### Align CPython version pin to 3.14.10 and remove external venv path
 
 - **Why:** The workspace was executing CPython 3.14.10 on macOS arm64 while `.python-version` pinned 3.14.4; an extraneous editable install reference (`zoho_usable_functions`) in `.venv` pointed outside the workspace, causing sandbox permission failures during `pip check`.

@@ -40,7 +40,7 @@ Adjacent formula cells are read as column ranges to keep large check lists
 within Google request URL limits.
 Newly added or renamed statement/note lines require updating its check list.
 
-[apps/update_statement_schedules.py](../apps/update_statement_schedules.py) prepares
+[apps/update_statement_schedules.py](../apps/statements/update_statement_schedules.py) prepares
 the four-tab financial statement workbook using the public
 [workflows.statement_schedules](../src/workflows/statement_schedules/) API.
 Google Sheets range parsing, cell construction, changed-value batching, note

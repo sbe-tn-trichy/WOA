@@ -1,62 +1,22 @@
-"""Export Inventory items for a purchase account and flag missing vendor aliases."""
-
-from __future__ import annotations
-
-import csv
+"""Compatibility exports retaining the historical Neoseal output filenames."""
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
-
-FIELDS = (
-    "item_id",
-    "name",
-    "sku",
-    "alias_name",
-    "has_alias_name",
-    "manufacturer",
-    "purchase_account_id",
-)
-
-
-def export_row(item: Mapping[str, Any]) -> Dict[str, str]:
-    """Return the stable CSV representation of one Inventory item."""
-    alias = str(item.get("alias_name") or "").strip()
-    return {
-        "item_id": str(item.get("item_id") or "").strip(),
-        "name": str(item.get("name") or "").strip(),
-        "sku": str(item.get("sku") or "").strip(),
-        "alias_name": alias,
-        "has_alias_name": "true" if alias else "false",
-        "manufacturer": str(item.get("manufacturer") or "").strip(),
-        "purchase_account_id": str(item.get("purchase_account_id") or "").strip(),
-    }
-
-
-def write_export_rows(path: Path | str, rows: Sequence[Mapping[str, str]]) -> None:
-    """Write export rows to CSV."""
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    with target.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=FIELDS)
-        writer.writeheader()
-        writer.writerows(rows)
+from zoho.inventory import ZohoInventoryAPI
+from workflows.item_catalog import FIELDS, ItemExportRow, export_row, write_export_rows
+from workflows.item_catalog import export_inventory_items as _export_inventory_items
 
 
 def export_inventory_items(
-    inventory_client: Any,
+    inventory_client: ZohoInventoryAPI,
     purchase_account_id: str,
     *,
     status: str = "active",
     output_path: Path | str = Path("output/neoseal_items.csv"),
     missing_output_path: Path | str = Path("output/neoseal_items_missing_alias.csv"),
-) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
-    """Fetch items by purchase account, export CSV, and write missing aliases."""
-    items = inventory_client.items.list_by_purchase_account(
-        purchase_account_id,
-        status=status,
-    )
-    rows = [export_row(item) for item in items]
-    missing = [row for row in rows if row["has_alias_name"] == "false"]
-    write_export_rows(output_path, rows)
-    write_export_rows(missing_output_path, missing)
-    return rows, missing
+) -> tuple[list[ItemExportRow], list[ItemExportRow]]:
+    """Delegate to the generic catalog export with legacy destination defaults."""
+    return _export_inventory_items(inventory_client, purchase_account_id, status=status,
+        output_path=output_path, missing_output_path=missing_output_path)
+
+
+__all__ = ["FIELDS", "export_inventory_items", "export_row", "write_export_rows"]

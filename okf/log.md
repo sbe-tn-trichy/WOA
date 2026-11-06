@@ -2,6 +2,22 @@
 
 ## 2026-11-06
 
+- Reorganized `output/` and archived completed runs with manifest tracking, ensuring all directories strictly contain $\le 10$ files and maintain shallow hierarchy. See [project change](../CHANGELOG.md#reorganize-output-folder-adhering-to-file-count-limits-and-shallow-nesting).
+
+- Added the generic [item catalog export](item-catalog.md) owner and documented
+  account/status selection, neutral outputs and Neoseal compatibility. See the
+  [project entry](../CHANGELOG.md#generalize-inventory-item-catalog-export).
+
+- Reorganized `apps/` into shallow domain subfolders (`apps/<domain>/`) strictly adhering to $\le 10$ files per directory with transparent meta-path redirection in `apps/__init__.py`. See [project change](../CHANGELOG.md#reorganize-apps-into-shallow-domain-subfolders-adhering-to-file-count-limits).
+
+- Added unified subcommand CLI dispatchers for Inter-location (`apps/inter_location.py`), Neoseal (`apps/neoseal.py`), and GST (`apps/verify_gst.py`). See [project change](../CHANGELOG.md#introduce-unified-domain-cli-entry-points-in-apps).
+
+- Consolidated loose customer management workflow modules into `workflows.customer_management` with transparent module-identity redirects in the workflow root. See [project change](../CHANGELOG.md#package-customer-management-workflow-modules).
+
+- Consolidated loose Books statements and GST workflow modules into `workflows.books_statements` and `workflows.gst` with transparent module-identity redirects in the workflow root. See [project change](../CHANGELOG.md#package-books-statements-and-gst-workflow-modules).
+
+- Consolidated loose inter-location workflow modules into package `workflows.inter_location` with backwards-compatible redirects in the workflow root. See [project change](../CHANGELOG.md#package-inter-location-workflow-modules).
+
 - Aligned project deployment Python pin to CPython 3.14.10 across `.python-version`, CI, and the [runbook](development-runbook.md). Removed obsolete external sibling `.pth` reference from `.venv`. See [project change](../CHANGELOG.md#align-cpython-version-pin-to-31410-and-remove-external-venv-path).
 
 - Document transport upload replay, paired-offset checkpoints/read-back recovery, explicit deployment IDs, local Host validation and application constraints. See [project change](../CHANGELOG.md#harden-transport-offset-recovery-and-deployment-boundaries).

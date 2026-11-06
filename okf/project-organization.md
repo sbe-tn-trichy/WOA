@@ -27,7 +27,14 @@ new checkouts need to create it before running that workflow.
 
 | Area | Canonical owner | Why related modules remain separate |
 |---|---|---|
+| Inter-location unified CLI | `apps/inter_location.py` | Unified dispatcher for contra, proposals, and updates; historical standalone apps delegate here. |
+| Neoseal unified CLI | `apps/neoseal.py` | Unified dispatcher for stock count, audit, export, name updates, and formatting; historical apps delegate here. |
+| GST verification unified CLI | `apps/verify_gst.py` | Unified dispatcher for GSTR-1, GSTR-2, GSTR-3B vs P&L, and cash ledger; standalone apps delegate here. |
 | Inter-location Analytics Query Table commands | `apps/manage_inter_location_contra_query_table.py` | Create/update filenames are compatibility adapters; update retains its historical saved view ID. |
+| Inter-location workflow operations | `workflows.inter_location` | Packages contra detection, location/payment proposals, and update logic; root `inter_location_*.py` modules provide compatibility redirects. |
+| Books financial statement sheet operations | `workflows.books_statements` | Packages statement sheet preparation, account catalog, custom module stores, and P&L notes; root modules provide compatibility redirects. |
+| GST workflow operations | `workflows.gst` | Packages cash-ledger check and monthly GST movements; root modules provide compatibility redirects. |
+| Customer management workflow operations | `workflows.customer_management` | Packages analytics sync, invoice/payment review, normalization, and local store; root modules provide compatibility redirects. |
 | Books and Inventory CRUD | `zoho.base_resource.BaseResource` | Service base classes select their exception and logger. |
 | Bank statement categorization | `workflows.collection_reconciliation` | Review, generic schema reconciliation and allocation repair have different input and mutation contracts. |
 | Payment linking/backfills | `workflows.core.payments` for common evidence | Creator-to-Books and Books-to-Creator writes have opposite directions and conflict rules. |

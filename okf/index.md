@@ -60,6 +60,7 @@ okf_version: "0.2"
 * [Local Customer Store](customer-local-store.md) - Four-table Analytics customer sync, local cleanup reconciliation and legacy Books mirror.
 * [Customer Registration](customer-registration.md) - Paired Books and Creator creation with recovery.
 * [Creator Customer Sync](creator-customer-delete-sync.md) - Books-to-Creator customer creation, update, and deletion reconciliation.
+* [Item Catalog Export](item-catalog.md) - Generic purchase-account-scoped Inventory CSV exports and missing-alias reports.
 * [Neoseal Item Audit](neoseal-item-audit.md) - Automated catalog data quality, duplicate/packaging twin detection, nomenclature verification, and item group audit.
 * [Neoseal Stock Count](neoseal-stock-count.md) - Active, inventory-tracked item quantity upserts into the Flat Zoho Sheet tab.
 * [SDK Audit Findings](sdk-audit-findings.md) - Security, performance, and usability review across core transport and service clients.

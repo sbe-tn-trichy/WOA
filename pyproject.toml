@@ -52,7 +52,7 @@ files = [
     "src/workflows/vendor_customer_offset/__init__.py",
     "src/workflows/vendor_customer_offset/contracts.py",
     "src/workflows/vendor_customer_offset/processor.py",
-    "apps/renumber_sbe2627_payments.py",
+    "apps/payments/renumber_sbe2627_payments.py",
     "apps/analyze_project.py",
     "tests/typecheck/renumber_contracts.py",
 ]

@@ -179,9 +179,9 @@ was unavailable during this review.
 
 - **Priority / status:** Medium / Fixed, awaiting verification; missing validation confirmed statically,
   DNS-rebinding exploitability not demonstrated.
-- **Original evidence (before the 2026-11-06 correction):** [payment review](apps/payment_review.py) and
+- **Original evidence (before the 2026-11-06 correction):** [payment review](apps/bank_collections/payment_review.py) and
   [dashboard](apps/dashboard.py) serve token-bearing pages without checking the
-  request Host. [Beat allocation](apps/allocate_customer_beats.py) already checks
+  request Host. [Beat allocation](apps/customers/allocate_customer_beats.py) already checks
   the expected local host and port.
 - **Impact:** Loopback binding and request tokens alone leave a potential
   DNS-rebinding route to local data/actions in affected browser environments.

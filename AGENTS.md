@@ -114,7 +114,7 @@ The table uses Linux/macOS paths. On Windows replace `.venv/bin/python` with
 | **Neoseal Stock Count** | `.venv/bin/python apps/neoseal_stock_count.py` |
 | **Neoseal Item Audit** | `.venv/bin/python apps/audit_neoseal_items.py` |
 | **Apply Neoseal Name Updates** | `.venv/bin/python apps/apply_neoseal_name_updates.py` |
-| **Export Neoseal Items** | `.venv/bin/python apps/export_neoseal_items.py` |
+| **Export Inventory Items** | `.venv/bin/python apps/inventory/export_items.py --purchase-account-id ACCOUNT_ID` |
 | **Creator Customer Sync** | `.venv/bin/python apps/sync_creator_customers.py` |
 | **Creator Beat Sync** | `.venv/bin/python apps/sync_creator_beats.py` |
 | **Stock Transfer** | `.venv/bin/python apps/transfer_stock.py` |

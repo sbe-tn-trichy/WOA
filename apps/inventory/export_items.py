@@ -13,12 +13,7 @@ except ImportError:  # Direct script execution.
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
 from workflows.core.auth import get_inventory_client
-from workflows.neoseal_audit.exporter import (
-    FIELDS,
-    export_inventory_items,
-    export_row,
-    write_export_rows as _write_rows,
-)
+from workflows.item_catalog import export_inventory_items
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,13 +22,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("output/neoseal_items.csv"),
+        default=Path("output/items.csv"),
     )
     parser.add_argument(
         "--missing-output",
         type=Path,
-        default=Path("output/neoseal_items_missing_alias.csv"),
+        default=Path("output/items_missing_alias.csv"),
     )
+    parser.add_argument("--status", choices=["active", "inactive", "all"], default="active")
     return parser
 
 
@@ -42,7 +38,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     rows, missing = export_inventory_items(
         get_inventory_client(),
         args.purchase_account_id,
-        status="active",
+        status=args.status,
         output_path=args.output,
         missing_output_path=args.missing_output,
     )

@@ -4,6 +4,10 @@ type: reference
 
 # Neoseal Item Audit & Nomenclature Review
 
+Vendor-independent catalog exports are owned by
+[item catalog export](item-catalog.md). The Neoseal export command remains a
+compatibility entry point; naming, SKU and audit rules stay in this workflow.
+
 The Neoseal item audit workflow provides automated data quality analysis of the
 Neoseal inventory catalog. It is implemented in `src/workflows/neoseal_audit/`
 and exposed as a permanent CLI tool in `apps/audit_neoseal_items.py`.
