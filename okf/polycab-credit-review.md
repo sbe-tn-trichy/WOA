@@ -71,6 +71,29 @@ managed labeled lines without appending duplicate reference blocks.
 
 ## CLI and execution
 
+### Saved evidence review
+
+`review_saved_polycab_vendor_credits(directory, policy=..., from_date=...,
+to_date=..., credit_numbers=...)` reuses the canonical PDF-text parser, exact
+reference linkage and accounting rules without any remote client. It accepts
+the former scratch evidence layout: `credits/*.json`, `journals/*.json`,
+`payments/*.json` and `texts/<credit-number-with-slashes-replaced>_<document-id>.txt`.
+Duplicate record IDs, missing directories and missing explicit credit selections
+fail with context; missing/unreadable attachment text becomes a blocking finding.
+Vendor/customer/date scope is enforced locally. Every saved audit carries a
+blocking historical-evidence finding; rerun a live review for corrections.
+
+```sh
+.venv/bin/python apps/review_polycab_vendor_credits.py --fy 25-26 --evidence-dir output/polycab_recording_audit
+```
+
+This mode writes the normal review JSON with `evidence_source="saved"`, creates
+no live client and rejects `--apply` and live link overrides. No historical
+record totals, fixed account IDs or precomputed conclusions are promoted from
+the scratch reporting scripts.
+
+### Live review and correction
+
 Configure `POLYCAB_VENDOR_ID`, `RSO_CUSTOMER_ID`, `POLYCAB_RMA_ITEM_ID`,
 `POLYCAB_RMA_ACCOUNT_ID` and `POLYCAB_CLEARING_ACCOUNT_ID` through the existing
 configuration loader, or provide the corresponding CLI ID flags. Poppler must

@@ -183,3 +183,17 @@ with live reads. See [Request Efficiency](collection-reconciliation.md#request-e
 Polycab supplier-credit creation uses `POLYCAB_SCHEME_ACCOUNT_ID`,
 `POLYCAB_RMA_ACCOUNT_ID` and `POLYCAB_CLEARING_ACCOUNT_ID`; see
 [credit import](polycab-credit-import.md) for command selection and accounting rules.
+
+## Explicit deployment identifiers (HELPER-002)
+
+Analytics organization, payment travel/salary/cash accounts, and the NeoSeal
+stock-count workbook no longer inherit built-in tenant IDs. Set
+`ANALYTICS_ORG_ID`, `PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID`,
+`PAYMENT_SALARY_EXPENSE_ACCOUNT_ID`, `PAYMENT_CASH_ACCOUNT_ID`, and
+`NEOSEAL_STOCK_COUNT_SHEET_ID` in the existing environment or deployment profile.
+Existing explicit values keep their precedence; omitted values now remain empty.
+Analytics client construction rejects a missing organization before token access.
+Stock-count commands require a workbook before writing; salary/cash operations
+require account IDs. Travel expenses retain their existing scoped account-name
+lookup and uniqueness checks when no ID is supplied. These are operation-specific
+guards; unrelated SDK operations do not require all deployment settings.

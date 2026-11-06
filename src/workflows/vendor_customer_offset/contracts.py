@@ -10,11 +10,17 @@ class ListResource(Protocol):
 
 
 class PaymentResource(Protocol):
+    def list_all(self, params: dict[str, object] | None = None, resource_key: str | None = None) -> object: ...
+    def get(self, resource_id: str) -> object: ...
     def create(self, data: dict[str, object]) -> object: ...
     def delete(self, resource_id: str) -> object: ...
 
 
 class OffsetBooksClient(Protocol):
+    @property
+    def organization_id(self) -> str: ...
+    @property
+    def domain(self) -> str: ...
     @property
     def contacts(self) -> ListResource: ...
     @property
@@ -82,6 +88,8 @@ class PostedOffset(PairSummary):
 
 
 class FailedOffset(PairSummary):
+    customer_payment_id: NotRequired[str]
+    vendor_payment_id: NotRequired[str]
     error: str
     rollback: str
     bill_id: NotRequired[str]

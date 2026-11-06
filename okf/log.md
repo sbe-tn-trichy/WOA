@@ -1,5 +1,21 @@
 # Knowledge Change Log
 
+## 2026-11-06
+
+- Aligned project deployment Python pin to CPython 3.14.10 across `.python-version`, CI, and the [runbook](development-runbook.md). Removed obsolete external sibling `.pth` reference from `.venv`. See [project change](../CHANGELOG.md#align-cpython-version-pin-to-31410-and-remove-external-venv-path).
+
+- Document transport upload replay, paired-offset checkpoints/read-back recovery, explicit deployment IDs, local Host validation and application constraints. See [project change](../CHANGELOG.md#harden-transport-offset-recovery-and-deployment-boundaries).
+
+- Promoted scratch customer selection, stock-count formula operations, saved PDF
+  evidence review and recorded transfer recovery into their domain packages and
+  apps. Replacement commands and safety contracts are linked from
+  [project organization](project-organization.md#promoted-scratch-operations).
+  See the [project entry](../CHANGELOG.md#promote-reusable-scratch-operations-to-workflows-and-apps).
+
+- Documented the [routine cleanup contract](project-organization.md#routine-local-cleanup)
+  and scratch-code promotion candidates. See the
+  [project entry](../CHANGELOG.md#add-safe-repeatable-project-cleanup).
+
 ## 2026-11-05
 
 - Expanded [project organization](project-organization.md#repeatable-project-analysis)

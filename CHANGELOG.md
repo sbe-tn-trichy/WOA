@@ -7,6 +7,73 @@ available; never invent a commit or claim checks that were not run.
 This file keeps the current year's entries; older years are archived under
 `changelog/YYYY.md` and linked here when created. Check rollover with each change.
 
+## 2026-11-06
+
+### Align CPython version pin to 3.14.10 and remove external venv path
+
+- **Why:** The workspace was executing CPython 3.14.10 on macOS arm64 while `.python-version` pinned 3.14.4; an extraneous editable install reference (`zoho_usable_functions`) in `.venv` pointed outside the workspace, causing sandbox permission failures during `pip check`.
+- **What:** Aligned `.python-version`, CI workflow matrix, `AGENTS.md`, `README.md`, development runbook and finding register to CPython 3.14.10. Removed obsolete external `.pth` and `dist-info` files for `zoho_usable_functions` from `.venv`, ensuring all imports resolve hermetically from `src/`.
+- **Verification:** macOS arm64: `pip check` passes cleanly ("No broken requirements found"); `.venv/bin/python apps/analyze_project.py --verify` passes with 0 diagnostics, 0 inspection errors, mypy clean across 26 source files, and API docs up to date; `git diff --check` passes cleanly; full test suite passes (2852 passed, 4 subtests passed). Annual rollover checked: all entries remain in 2026.
+
+### Harden transport, offset recovery and deployment boundaries
+
+- **Why:** SDK-001, HELPER-001/002 and APPS-001 exposed upload corruption,
+  unsafe uncertain-payment compensation, inherited tenant IDs and unvalidated
+  local HTTP authorities; APPS-003 lacked an application dependency baseline.
+- **What:** Restore upload offsets on retries and reject non-seekable streams;
+  require scoped, locked offset checkpoints with intent/ID persistence and
+  read-back before resuming, withholding automatic compensation; remove tenant
+  defaults and guard Analytics org configuration; validate Host before both
+  local servers' routes. Add application constraints to CI installs, regression
+  tests, migration/recovery documentation and finding-register evidence.
+- **Verification:** macOS arm64 workspace suite: **2860 passed, 4 subtests
+  passed** (4 workers); final offset recovery tests: **16 passed**. `mypy`,
+  offline analysis, API-reference check, `pip check`
+  and `git diff --check` pass. No live financial changes, environment replacement
+  or dependency installation. Mac CPython 3.14.10 remains
+  outside the 3.14.4 pin; fresh constrained installs, Windows and hosted runs of
+  these local changes remain unverified. GitHub PR-run lookup at the base SHA
+  returned no runs. Annual rollover checked: root entries remain in 2026.
+
+
+### Promote reusable scratch operations to workflows and apps
+
+- **Why:** Useful local scripts contained fixed record selections, duplicated
+  formula logic and financial recovery operations without permanent ownership.
+- **What:** Extended Creator customer sync with explicit IDs and selected live
+  read-back; extracted StockCount formula helpers from the app; added offline
+  Polycab evidence review using existing parsing/accounting rules; added a
+  preview-first recorded-pair recovery helper/app with stock guards, atomic
+  intent checkpoints and verified posting. Removed eight superseded ignored
+  scratch implementations; preserved evidence, configuration and recovery data.
+  Updated owning concepts and command navigation.
+- **Verification:** macOS arm64: 154 focused/related tests passed, including
+  preview/apply boundaries, scope guards, probe cleanup, offline evidence,
+  stock/bin validation, uncertain posting and read-back failures. Full-suite
+  snapshot: 2829 passed, 9 failed, 4 subtests passed; failures are in concurrently
+  edited dashboard/payment-review Host checks and their test fixtures, outside
+  this change. Offline analysis reports zero diagnostics/errors; API-reference
+  check and configured mypy (26 source files) passed. CLI help smoke checks
+  passed for all four entry points. No live services were called or changed.
+  Workspace CPython 3.14.10 differs from the 3.14.4 pin; Windows unverified.
+  Annual rollover checked: all root entries are from 2026; no archive needed.
+
+### Add safe repeatable project cleanup
+
+- **Why:** Generated build/cache files accumulate, while scratch scripts and
+  other output may contain useful code or essential financial recovery state.
+- **What:** Added `apps/cleanup_project.py`, previewing known disposable paths
+  older than seven days and requiring `--apply` for removal. Excludes tracked
+  files, symlinks and business output; rechecks file identity before deletion
+  and fails explicitly on inspection or apply errors. Documented weekly usage
+  and domain-owned scratch-code promotion candidates without moving scripts.
+- **Verification:** Focused cleanup tests: 11 passed on macOS arm64 with workspace
+  CPython 3.14.10 (pin remains 3.14.4). Actual checkout preview listed 188 files,
+  1,356,928 bytes; no project artifacts were deleted. Full suite: 2769 passed,
+  4 subtests passed. Offline analysis completed successfully; `git diff --check`
+  passed (Git emitted a local fsmonitor IPC warning). Annual rollover checked:
+  all root entries are from 2026; no archive needed. Windows execution unverified.
+
 ## 2026-11-05
 
 ### Expand offline project analysis and update finding register

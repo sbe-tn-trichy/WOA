@@ -90,3 +90,12 @@ Mutation classification is based on semantics rather than legacy service-specifi
 * [Configuration Reference](configuration.md)
 * [Zoho Books Client](zoho-books.md)
 * [OKF Maintenance](okf-maintenance.md)
+
+## Multipart upload replay (SDK-001)
+
+The shared transport records each upload stream's current position before its
+first request and restores it before authentication/rate-limit retries. This
+preserves nonzero starting offsets and leaves caller-owned streams open.
+Non-seekable uploads fail before any HTTP attempt; callers must supply bytes or
+a seekable stream. Multipart regression tests prepare actual request bodies on
+401 and 429 retries rather than merely asserting reused file objects.

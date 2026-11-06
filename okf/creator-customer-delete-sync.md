@@ -71,6 +71,26 @@ the creation form when customers are missing. The new helper is `sync_creator_cu
 
 ## Customer scope
 
+### Explicit customer selection
+
+Pass `customer_ids=("ID", ...)` in `CreatorCustomerSyncConfig` or repeat
+`--customer-id ID` on `apps/sync_creator_customers.py` to create/update just those
+Books customers. IDs must be unique numeric strings. This mode fetches each Books
+detail and only matching Creator records, rejects identity/type mismatches and
+out-of-scope or duplicate Creator links, and never deletes unrelated records.
+The CLI defaults to no branch filter for explicit IDs; full sync retains its
+Electricals default. Explicit branch/status filters still restrict selection.
+An applied selected sync verifies every mapped field through live read-back
+before marking its audit complete. Read-back failure persists a failed audit
+with confirmed write counts; inspect it and live state before retrying.
+
+```sh
+.venv/bin/python apps/sync_creator_customers.py --customer-id BOOKS_ID
+.venv/bin/python apps/sync_creator_customers.py --customer-id BOOKS_ID --apply
+```
+
+### Branch and status filters
+
 Set `books_status_filter="active"` and `books_branch_name="Electricals"` to
 limit creates and updates to active Electricals customers. Branch uses the Books
 custom field `cf_b_name` by default (`books_branch_field` can override it), with

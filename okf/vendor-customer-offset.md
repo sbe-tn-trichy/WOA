@@ -7,11 +7,9 @@ description: GSTIN-safe clearing of linked customer receivables and vendor payab
 
 The public workflow accepts the structural `OffsetBooksClient` protocol and
 returns `OffsetReport`, with typed plans, posted/failed rows, summary counts,
-allocations and dated Decimal tranches. Basic response shapes are validated;
-the existing financial conversion and compensation policies remain unchanged.
-This typing does not resolve uncertain remote completion (HELPER-001 in the
-[finding register](../PROJECT_ANALYSIS.md)); recovery safety and complete input
-validation remain outstanding in the [type-safety plan](type-safety-plan.md).
+allocations and dated Decimal tranches. Live calls require an explicit
+`checkpoint_path` (normally beneath `output/vendor_customer_offset/`). The
+checkpoint binds saved payment intent to the client's organization and domain.
 
 `workflows.vendor_customer_offset.run_vendor_customer_offset()` offsets balances
 for contacts that exist once as a customer and once as a vendor under the same
@@ -45,7 +43,24 @@ During a live run, `ensure_linked=True` uses the Books web-client operation
 `POST /customers/{customer_id}/link`; the Zoho `3051` response is treated as an
 idempotent indication that the contacts are already linked.
 
-The customer payment is created first. If vendor-payment creation fails, the
-workflow attempts to delete the newly created customer payment and reports the
-rollback outcome. Callers must inspect the `failed` collection, especially any
-rollback marked `failed`, before retrying.
+The customer payment is created first. Before each create, the workflow atomically
+saves both payloads, the requested stage, and any known IDs. Exceptions, missing
+IDs and lost responses retain this evidence and stop further posting. Customer
+payments are never automatically deleted: even a vendor rejection requires live
+reconciliation before deciding whether compensation is appropriate.
+
+Keep the checkpoint across reruns and machines. On a rerun, known IDs are read
+back; missing IDs are searched using the saved reference/contact and then read
+in detail. Both sides must uniquely match contact, clearing account, date,
+reference, amount and allocations. Verified bill intents are skipped, preventing
+duplicate creates. Absence, ambiguity, changed records, or failed reads stop the
+run without retrying or deleting payments. Operators must reconcile unresolved
+intent against Books; creating a new checkpoint is not a recovery procedure.
+
+An exclusive sibling `.lock` prevents overlapping runs using the same checkpoint.
+A process interruption leaves the lock: confirm the original process is stopped
+and reconcile live state before removing it. Locks do not coordinate different
+checkpoint paths; never run overlapping offsets for the same organization.
+Checkpoint loss must be treated as lost recovery evidence, not proof that no
+payments were posted. Dry runs create neither checkpoint nor lock. Unit tests
+cover uncertain completion; no live financial mutations were used for validation.

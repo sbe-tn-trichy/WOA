@@ -9,7 +9,7 @@ Create a fresh environment on each machine; do not copy `.venv`. With uv
 installed, run from the repository root (Windows, Linux or macOS):
 
 ```bash
-uv venv --python 3.14.4
+uv venv --python 3.14.10
 uv pip install --python .venv -e ".[workflows,test]"
 ```
 

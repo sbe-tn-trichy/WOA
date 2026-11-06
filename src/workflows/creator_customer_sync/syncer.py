@@ -1,4 +1,5 @@
 import logging
+import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,10 +35,24 @@ class CreatorCustomerSyncer:
     def fetch_books_customers(self) -> Dict[str, Dict[str, Any]]:
         if self.config.books_status_filter not in {"all", "active", "inactive"}:
             raise ReconciliationError("books_status_filter must be all, active, or inactive.")
-        records = self.books_client.contacts.list_all(
-            params={"contact_type": "customer", "filter_by": "Status.All"},
-            resource_key="contacts",
-        )
+        if self.config.customer_ids:
+            ids = self.config.customer_ids
+            if (len(set(ids)) != len(ids)
+                    or any(not isinstance(key, str) or not re.fullmatch(r"[0-9]+", key) for key in ids)):
+                raise ReconciliationError("Selected customer IDs must be unique numeric strings.")
+            records = []
+            for key in ids:
+                response = self.books_client.contacts.get(key)
+                record = response.get("contact") if isinstance(response, dict) else None
+                if (not isinstance(record, dict) or str(record.get(self.config.books_id_field)) != key
+                        or record.get("contact_type") != "customer" or not record.get("contact_name")):
+                    raise ReconciliationError(f"Books customer identity/type/name mismatch for {key}.")
+                records.append(record)
+        else:
+            records = self.books_client.contacts.list_all(
+                params={"contact_type": "customer", "filter_by": "Status.All"},
+                resource_key="contacts",
+            )
         if not isinstance(records, list):
             raise ReconciliationError("Invalid Books customer response.")
         customers = {}
@@ -70,6 +85,21 @@ class CreatorCustomerSyncer:
 
     def fetch_creator_customers(self) -> List[Dict[str, Any]]:
         """Fetch all customer records from Zoho Creator."""
+        if self.config.customer_ids:
+            field = self.config.creator_id_field
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", field):
+                raise ReconciliationError("Invalid Creator customer identity field.")
+            selected = []
+            for key in self.config.customer_ids:
+                rows = self.creator_client.get_all_records(
+                    self.config.app_link_name, self.config.report_link_name,
+                    criteria=f'{field} == "{key}"',
+                )
+                if (not isinstance(rows, list) or any(not isinstance(row, dict)
+                        or str(self.field_value(row, field)).strip() != key for row in rows)):
+                    raise ReconciliationError(f"Creator returned records outside selected customer {key}.")
+                selected.extend(rows)
+            return selected
         logger.info(
             f"Fetching Zoho Creator records from app '{self.config.app_link_name}', report '{self.config.report_link_name}'..."
         )
@@ -156,6 +186,7 @@ class CreatorCustomerSyncer:
             missing = [source for source in mapping.values() if source not in customer]
             if missing:
                 raise ReconciliationError(f"Books customer is missing mapped fields: {missing}")
+            books[key] = customer
             payload = {target: customer[source] for target, source in mapping.items()}
             payload[self.config.creator_id_field] = key
             existing = indexed.get(key)
@@ -189,6 +220,7 @@ class CreatorCustomerSyncer:
             "scanned_books_customer_keys_count": len(books), "scanned_creator_records_count": len(records),
             "books_status_filter": self.config.books_status_filter,
             "books_branch_name": self.config.books_branch_name,
+            "customer_ids": list(self.config.customer_ids),
             "all_books_customer_keys_count": len(self.all_books_customer_keys),
             "excluded_creator_records_count": len((set(indexed) & self.all_books_customer_keys) - set(books)),
             "matched_records_count": len(set(books) & set(indexed)), "unchanged_count": unchanged,
@@ -204,6 +236,8 @@ class CreatorCustomerSyncer:
         if not self.config.dry_run:
             try:
                 self._apply_changes(changes, summary, report_path)
+                if self.config.customer_ids:
+                    self._verify_selected_customers(books, mapping, summary)
             except Exception:
                 summary["status"] = "FAILED"
                 write_atomic_json(report_path, summary)
@@ -212,6 +246,23 @@ class CreatorCustomerSyncer:
             summary["status"] = "COMPLETE"
             write_atomic_json(report_path, summary)
         return summary
+
+    def _verify_selected_customers(self, books: Dict[str, Dict[str, Any]],
+                                   mapping: Dict[str, str], summary: Dict[str, Any]) -> None:
+        records = self.fetch_creator_customers()
+        for key, customer in books.items():
+            matches = [row for row in records
+                       if str(self.field_value(row, self.config.creator_id_field)).strip() == key]
+            if len(matches) != 1 or not (matches[0].get("ID") or matches[0].get("id")):
+                raise ReconciliationError(f"Selected customer {key} failed unique live read-back.")
+            for target, source in mapping.items():
+                expected = key if target == self.config.creator_id_field else customer[source]
+                actual = self.field_value(matches[0], target)
+                if target == self.config.creator_id_field:
+                    actual = str(actual).strip()
+                if actual != expected:
+                    raise ReconciliationError(f"Selected customer {key} failed read-back for {target}.")
+        summary["verified_customer_ids"] = list(books)
 
     def _apply_changes(self, changes: List[Dict[str, Any]], summary: Dict[str, Any],
                        report_path: Path) -> None:

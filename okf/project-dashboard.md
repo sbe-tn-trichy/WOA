@@ -91,3 +91,12 @@ From the repository root:
 
 See [Development Runbook](development-runbook.md) and
 [Bank Statement Categorization](collection-reconciliation.md).
+
+## Local HTTP boundary (APPS-001)
+
+Dashboard and payment-review handlers validate a single Host header before every
+GET/POST route, including token-bearing HTML. Accepted authorities are
+`localhost:<bound-port>`, `127.0.0.1:<bound-port>` and `[::1]:<bound-port>`;
+portless forms are accepted only on port 80. Foreign, missing, duplicate and
+incorrect-port headers fail with 403 before service access. Existing action
+tokens and explicit confirmation remain required.

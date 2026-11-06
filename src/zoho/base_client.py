@@ -269,6 +269,21 @@ class BaseZohoClient:
                     except Exception:
                         self.logger.exception("HTTP attempt observer failed")
 
+        upload_positions = []
+        for value in (files or {}).values():
+            body = value[1] if isinstance(value, (tuple, list)) else value
+            if hasattr(body, "read"):
+                try:
+                    position = body.tell()
+                    body.seek(position)
+                except (AttributeError, OSError, ValueError) as exc:
+                    raise ValueError("Upload streams must be seekable for safe retries.") from exc
+                upload_positions.append((body, position))
+
+        def _rewind_uploads() -> None:
+            for body, position in upload_positions:
+                body.seek(position)
+
         response = _execute_http(method, req_kwargs)
 
         # Handle 401 refresh with thread lock
@@ -302,6 +317,7 @@ class BaseZohoClient:
                 
                 retry_kwargs = {**req_kwargs}
                 retry_kwargs["headers"] = req_headers
+                _rewind_uploads()
                 response = _execute_http(method, retry_kwargs)
 
         # Handle 429 or rate-limit code 44 with backoff
@@ -335,6 +351,7 @@ class BaseZohoClient:
                 )
                 response.close()
                 time.sleep(retry_after)
+                _rewind_uploads()
                 response = _execute_http(method, req_kwargs)
             else:
                 break

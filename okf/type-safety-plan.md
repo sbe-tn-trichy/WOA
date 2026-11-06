@@ -55,16 +55,18 @@ a reviewable change with its own changelog evidence.
 
 ### Remaining implementation
 
-1. Complete offset boundary validation and HELPER-001 recovery safety in a focused
-   change before claiming that offset execution is recovery-safe. Its historical
-   invalid-to-zero conversion and rollback behavior remain unchanged here.
+1. Complete offset financial boundary validation. Its historical invalid-to-zero
+   conversion remains a separate concern. The later HELPER-001 correction adds
+   scoped checkpoints and reconciliation; implementation and verification limits
+   belong to the [finding register](../PROJECT_ANALYSIS.md).
 2. Carry typed stock-transfer records through its execution CLI and journal;
    migrate collection review/reconciler/repair services and their application
    entry points. The existing total-false proposal records are not proof that
    every field is available in every execution state.
 3. Migrate shared HTTP transport/token/callback types and every service override,
    then auth/configuration, Google Sheets and remaining workflow/app boundaries.
-   Resolve SDK-001 separately. Expand the blocking file list as each slice passes.
+   Retain the SDK-001 retry regression coverage documented in the finding
+   register. Expand the blocking file list as each slice passes.
 4. Verify hosted and primary-machine execution, and publish package typing markers
    with wheel/consumer verification only after supported public APIs are ready.
 
@@ -196,9 +198,9 @@ collection reconciliation. Inventory each slice's callers/dependencies first.
 **Finding coordination:** HELPER-001 (uncertain offset completion), SDK-001
 (upload retries), SDK-002 (pagination), and HELPER-002 (tenant defaults) remain
 separate correctness work in the [finding register](../PROJECT_ANALYSIS.md).
-Typing does not close them. Resolve HELPER-001 in a focused prerequisite or
-companion change before representing offset execution as recovery-safe; retain
-its prescribed tests and recovery evidence. No live writes are needed to type it.
+Typing does not close them. The later correctness corrections and remaining
+verification are recorded there; retain their regression coverage when migrating
+types. No live writes are needed to type the workflow.
 
 **Exit per slice:** Zero blocking diagnostics; normal/edge/error tests pass;
 invalid financial input fails before any mocked mutation; existing output,

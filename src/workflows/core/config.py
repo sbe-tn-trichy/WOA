@@ -133,7 +133,7 @@ class Config:
     # API Access
     TOKEN_URL = get_config("TOKEN_URL", "http://localhost:3000/server/new/tokens")
     ORG_ID = get_config("ORG_ID", "")
-    ANALYTICS_ORG_ID = get_config("ANALYTICS_ORG_ID", "60018545708")
+    ANALYTICS_ORG_ID = get_config("ANALYTICS_ORG_ID", "")
     DOMAIN = get_config("DOMAIN", "in")
     CREATOR_OWNER_NAME = get_config(
         "CREATOR_OWNER_NAME", get_config("CREATOR_ACCOUNT_OWNER_NAME", "")
@@ -142,10 +142,10 @@ class Config:
         "PAYMENT_CREATOR_APP_LINK_NAME", "order-management-new"
     )
     PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID = get_config(
-        "PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID", "1094368000029132050"
+        "PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID", ""
     )
-    PAYMENT_SALARY_EXPENSE_ACCOUNT_ID = get_config("PAYMENT_SALARY_EXPENSE_ACCOUNT_ID", "1094368000000000543")
-    PAYMENT_CASH_ACCOUNT_ID = get_config("PAYMENT_CASH_ACCOUNT_ID", "1094368000005226023")
+    PAYMENT_SALARY_EXPENSE_ACCOUNT_ID = get_config("PAYMENT_SALARY_EXPENSE_ACCOUNT_ID", "")
+    PAYMENT_CASH_ACCOUNT_ID = get_config("PAYMENT_CASH_ACCOUNT_ID", "")
     PAYMENT_CREATOR_REPORTS = {
         "online": "Online_Payments",
         "cheque": "Cheques",
@@ -183,7 +183,7 @@ class Config:
     GOOGLE_SHEETS_ACCESS_TOKEN = get_config("GOOGLE_SHEETS_ACCESS_TOKEN", "")
     GOOGLE_APPLICATION_CREDENTIALS = get_config("GOOGLE_APPLICATION_CREDENTIALS", "")
     NEOSEAL_STOCK_COUNT_SHEET_ID = get_config(
-        "NEOSEAL_STOCK_COUNT_SHEET_ID", "m7or01c58bd7a660a4be8b8f2e2390e98c237"
+        "NEOSEAL_STOCK_COUNT_SHEET_ID", ""
     )
     _neoseal_worksheets = get_mapping_config("NEOSEAL_STOCK_COUNT_WORKSHEETS", {})
     NEOSEAL_STOCK_COUNT_WORKSHEET = get_config(

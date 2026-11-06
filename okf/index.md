@@ -9,7 +9,7 @@ okf_version: "0.2"
 * [Project Overview](project-overview.md) - Unified purpose, scope, low-level clients, and workflow domain boundaries.
 * [Package Architecture](architecture.md) - Layered package architecture, import direction rules, and subpackage encapsulation.
 
-* [Project Organization](project-organization.md) - Navigation ownership, offline analysis, incremental reviews and overlapping command boundaries.
+* [Project Organization](project-organization.md) - Navigation ownership, safe routine cleanup, promoted scratch operations, offline analysis, incremental reviews and overlapping command boundaries.
 
 * [Project Analysis and Finding Register](../PROJECT_ANALYSIS.md) - SDK, helper and apps review ownership, finding status and verification criteria.
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 from typing import Sequence
 
 try:
@@ -15,62 +14,20 @@ except ImportError:
 
 from workflows.core.auth import get_sheet_client
 from workflows.core.config import Config
-from workflows.neoseal_stock_count.stable_sync import StableSyncPlan, read_stable_sync_plan
-
-
-def formula_audit(sheet, workbook: str, cells: Sequence[str]) -> dict[str, str]:
-    """Read stored expressions through Zoho's FORMULA function in an empty probe cell."""
-    probe = sheet.request("GET", workbook, params={
-        "method": "worksheet.content.get", "worksheet_name": "StockCount", "range": "L1",
-    })
-    if probe.get("range_details"):
-        raise ValueError("StockCount L1 must be empty for formula introspection")
-    found: dict[str, str] = {}
-    try:
-        for start in range(0, len(cells), 12):
-            batch = cells[start:start + 12]
-            expression = "=" + '&"♦"&'.join(f'IFERROR(FORMULA({cell});"")' for cell in batch)
-            response = sheet.set_cell(workbook, "StockCount", 1, 12, expression)
-            parts = str(response["cell"]["cell_value"]).split("♦")
-            if len(parts) != len(batch):
-                raise ValueError(f"Formula audit response count differs at {batch[0]}")
-            found.update(zip(batch, parts))
-            time.sleep(1.25)
-    finally:
-        sheet.clear_range(workbook, "StockCount", 1, 12, 1, 12)
-    return found
-
-
-def apply_plan(sheet, workbook: str, plan: StableSyncPlan) -> int:
-    addresses = list(plan.formulas)
-    before = formula_audit(sheet, workbook, addresses)
-    formula_changes = {cell: value for cell, value in plan.formulas.items() if before[cell] != value}
-    print(f"Helper/address writes: {len(plan.changes)}; formula writes: {len(formula_changes)}", flush=True)
-    for index, change in enumerate(plan.changes, 1):
-        sheet.set_cell(workbook, change.sheet, change.row, change.column, change.content)
-        if index % 25 == 0:
-            print(f"Applied {index}/{len(plan.changes)} helper/address writes", flush=True)
-        time.sleep(1.25)
-    for index, (address, formula) in enumerate(formula_changes.items(), 1):
-        row = int(address[1:])
-        column = ord(address[0]) - 64
-        sheet.set_cell(workbook, "StockCount", row, column, formula)
-        if index % 25 == 0:
-            print(f"Applied {index}/{len(formula_changes)} formula writes", flush=True)
-        time.sleep(1.25)
-    after = formula_audit(sheet, workbook, addresses)
-    bad = [cell for cell in addresses if after[cell] != plan.formulas[cell]]
-    if bad:
-        raise ValueError(f"Stored formulas differ: {bad[:10]}")
-    print(f"Verified {len(addresses)} stored formulas", flush=True)
-    return len(formula_changes)
+from workflows.neoseal_stock_count import (
+    read_stable_sync_plan, apply_stable_sync_plan, verify_stockcount_formulas,
+)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sheet-id", default=Config.NEOSEAL_STOCK_COUNT_SHEET_ID)
     parser.add_argument("--apply", action="store_true", help="Write plan via Zoho Sheet API")
+    parser.add_argument("--verify-only", action="store_true",
+                        help="Verify expressions only; requires --apply because a temporary L1 probe is written")
     args = parser.parse_args(argv)
+    if args.verify_only and not args.apply:
+        parser.error("--verify-only requires --apply to authorize the temporary StockCount L1 probe")
     try:
         sheet = get_sheet_client()
         plan = read_stable_sync_plan(sheet, args.sheet_id)
@@ -82,7 +39,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         for sku in plan.stale_mapping_skus:
             print(f"Stale unmapped Mapping row: {sku}", flush=True)
         if args.apply:
-            apply_plan(sheet, args.sheet_id, plan)
+            if args.verify_only:
+                count = verify_stockcount_formulas(sheet, args.sheet_id, plan.formulas)
+                print(f"Verified {count} stored formulas", flush=True)
+            else:
+                count = apply_stable_sync_plan(sheet, args.sheet_id, plan,
+                    progress=lambda message: print(message, flush=True))
+                print(f"Updated {count} formulas and verified all planned expressions", flush=True)
     except Exception as exc:
         print(f"Stable sync failed: {exc}", file=sys.stderr)
         return 1

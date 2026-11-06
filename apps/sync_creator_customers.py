@@ -21,6 +21,8 @@ from workflows.creator_customer_sync import CreatorCustomerSyncConfig, sync_crea
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--customer-id", action="append", default=[],
+                        help="Sync only this Books customer ID; repeat for multiple. Never deletes unrelated records.")
     parser.add_argument(
         "--app-link-name",
         default=Config.PAYMENT_CREATOR_APP_LINK_NAME,
@@ -38,8 +40,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument(
         "--branch",
-        default="Electricals",
-        help="Filter Books customers by branch name; use 'all' for no branch filter (default: %(default)s)",
+        default=None,
+        help="Branch filter; default Electricals for full sync, all for explicit customer IDs",
     )
     parser.add_argument(
         "--status",
@@ -80,7 +82,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
-    branch = None if args.branch.strip().lower() == "all" else args.branch.strip()
+    branch_arg = args.branch if args.branch is not None else ("all" if args.customer_id else "Electricals")
+    branch = None if branch_arg.strip().lower() == "all" else branch_arg.strip()
 
     config = CreatorCustomerSyncConfig(
         app_link_name=args.app_link_name,
@@ -95,6 +98,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         max_deletion_limit=args.max_deletion_limit,
         max_deletion_percentage=args.max_deletion_percentage,
         output_dir=args.output_dir,
+        customer_ids=tuple(args.customer_id),
     )
 
     mode_label = "DRY-RUN (Simulated)" if config.dry_run else "LIVE (Mutating)"

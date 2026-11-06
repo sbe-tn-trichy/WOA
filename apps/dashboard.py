@@ -429,6 +429,14 @@ HTML = _TEMPLATE_PATH.read_text(encoding="utf-8")
 
 def make_handler(runner: WorkflowRunner, launcher_token: str):
     class Handler(BaseHTTPRequestHandler):
+        def _valid_host(self) -> bool:
+            port = self.server.server_address[1]
+            values = self.headers.get_all("Host", [])
+            return len(values) == 1 and values[0] in {
+                f"localhost:{port}", f"127.0.0.1:{port}", f"[::1]:{port}",
+                *({"localhost", "127.0.0.1", "[::1]"} if port == 80 else set()),
+            }
+
         def _json(self, value: Any, status: int = 200) -> None:
             payload = json.dumps(value, default=str).encode("utf-8")
             self.send_response(status)
@@ -439,6 +447,9 @@ def make_handler(runner: WorkflowRunner, launcher_token: str):
             self.wfile.write(payload)
 
         def do_GET(self) -> None:
+            if not self._valid_host():
+                self._json({"error": "Invalid Host header"}, 403)
+                return
             path = urlparse(self.path).path
             if path == "/":
                 payload = HTML.replace("__TOKEN__", launcher_token).encode("utf-8")
@@ -458,6 +469,9 @@ def make_handler(runner: WorkflowRunner, launcher_token: str):
                 self._json({"error": "Not found"}, 404)
 
         def do_POST(self) -> None:
+            if not self._valid_host():
+                self._json({"error": "Invalid Host header"}, 403)
+                return
             if not secrets.compare_digest(
                 self.headers.get("X-Launcher-Token", ""), launcher_token
             ):

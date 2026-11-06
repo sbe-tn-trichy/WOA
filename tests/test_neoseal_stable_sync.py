@@ -1,5 +1,12 @@
 """Stable count-page references survive Mapping reorder and product row moves."""
 
+from unittest.mock import MagicMock
+
+import pytest
+
+from workflows.neoseal_stock_count import (
+    audit_stockcount_formulas, verify_stockcount_formulas, apply_stable_sync_plan,
+)
 from workflows.neoseal_stock_count.stable_sync import build_stable_sync_plan
 
 
@@ -45,3 +52,72 @@ def test_new_flat_item_is_reported_without_automatic_placement():
     extra[4] = {1: "103", 2: "SKU-C", 5: "8", 12: "12"}
     plan = build_stable_sync_plan(extra, MAPPING, COUNT)
     assert plan.unplaced_skus == ("SKU-C",)
+
+
+def sheet_client():
+    sheet = MagicMock()
+    sheet.request.return_value = {"range_details": []}
+    return sheet
+
+
+def test_formula_audit_batches_and_clears_probe():
+    sheet = sheet_client()
+    cells = [f"C{n}" for n in range(1, 14)]
+    sheet.set_cell.side_effect = [{"cell": {"cell_value": "♦".join(["=0"] * 12)}}, {"cell": {"cell_value": "=1"}}]
+    assert audit_stockcount_formulas(sheet, "book", cells, delay_seconds=0) == dict(zip(cells, ["=0"] * 12 + ["=1"]))
+    sheet.clear_range.assert_called_once_with("book", "StockCount", 1, 12, 1, 12)
+
+
+@pytest.mark.parametrize("response", [{}, {"range_details": [{}]}, {"range_details": "invalid"}])
+def test_formula_probe_must_be_confirmed_empty(response):
+    sheet = sheet_client()
+    sheet.request.return_value = response
+    with pytest.raises(ValueError):
+        audit_stockcount_formulas(sheet, "book", ["C3"], delay_seconds=0)
+    sheet.set_cell.assert_not_called()
+    sheet.clear_range.assert_not_called()
+
+
+@pytest.mark.parametrize("cells", [["L1"], ["C0"], ["C1", "C1"], ['C1);HYPERLINK("x")'], ["c3"]])
+def test_formula_addresses_validated_before_probe(cells):
+    sheet = sheet_client()
+    with pytest.raises(ValueError):
+        audit_stockcount_formulas(sheet, "book", cells, delay_seconds=0)
+    sheet.request.assert_not_called()
+
+
+@pytest.mark.parametrize("failure", [RuntimeError("lost response"), {"cell": {"cell_value": "one♦two"}}, {}])
+def test_formula_audit_failure_cleans_probe(failure):
+    sheet = sheet_client()
+    sheet.set_cell.side_effect = [failure]
+    with pytest.raises((ValueError, RuntimeError)):
+        audit_stockcount_formulas(sheet, "book", ["C3"], delay_seconds=0)
+    sheet.clear_range.assert_called_once()
+
+
+def test_verify_formulas_reports_mismatch():
+    sheet = sheet_client()
+    sheet.set_cell.return_value = {"cell": {"cell_value": "=wrong"}}
+    with pytest.raises(ValueError, match="Stored formulas differ"):
+        verify_stockcount_formulas(sheet, "book", {"C3": "=right"}, delay_seconds=0)
+
+
+def test_apply_stable_formulas_only_changes_differences_and_verifies():
+    sheet = sheet_client()
+    plan = build_stable_sync_plan(FLAT, MAPPING, COUNT)
+    expected = list(plan.formulas.values())
+    sheet.set_cell.side_effect = [
+        {"cell": {"cell_value": "♦".join(["=old", expected[1]])}},
+        {"cell": {}}, {"cell": {"cell_value": "♦".join(expected)}},
+    ]
+    progress = []
+    assert apply_stable_sync_plan(sheet, "book", plan, delay_seconds=0, progress=progress.append) == 1
+    assert progress == ["Helper/address writes: 0; formula writes: 1"]
+    assert sheet.set_cell.call_count == 3
+
+
+def test_formula_verification_cli_requires_probe_authorization():
+    from apps.sync_neoseal_stockcount import main
+    with pytest.raises(SystemExit) as exc:
+        main(["--verify-only"])
+    assert exc.value.code == 2

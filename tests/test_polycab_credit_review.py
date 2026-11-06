@@ -370,3 +370,73 @@ def test_cli_apply_persists_verified_checkpoint(records, tmp_path, monkeypatch):
 def test_workflow_root_exports_supported_review_apis():
     from workflows import CreditCorrectionError as RootError, RmaCreditPolicy as RootPolicy
     assert RootError is CreditCorrectionError and RootPolicy is RmaCreditPolicy
+
+
+def saved_evidence(records, root):
+    import json
+    _, audit, _ = records
+    for folder, rows, key in (("credits", [audit.credit], "vendor_credit_id"),
+                              ("journals", [audit.journal], "journal_id"),
+                              ("payments", [audit.payment], "payment_id")):
+        (root / folder).mkdir(parents=True)
+        for row in rows:
+            (root / folder / (row[key] + ".json")).write_text(json.dumps(row), encoding="utf-8")
+    (root / "texts").mkdir()
+    for n, amount in ((1, "13.00"), (2, "0.32")):
+        (root / "texts" / f"1001_d{n}.txt").write_text(text(number=str(1000+n), amount=amount), encoding="utf-8")
+
+
+def test_saved_evidence_uses_canonical_parser_and_rules(records, tmp_path):
+    from workflows.polycab_credit_review import review_saved_polycab_vendor_credits
+    policy, audit, books = records
+    saved_evidence(records, tmp_path)
+    result = review_saved_polycab_vendor_credits(tmp_path, policy=policy,
+        from_date=date(2025, 4, 1), to_date=date(2026, 3, 31), credit_numbers=["1001"])
+    assert len(result) == 1
+    assert [m.amount for m in result[0].memos] == [Decimal("13.00"), Decimal("0.32")]
+    assert result[0].journal["journal_id"] == audit.journal["journal_id"]
+    assert result[0].payment["payment_id"] == audit.payment["payment_id"]
+    assert not result[0].correction_allowed
+    assert "saved_evidence" in {f.code for f in result[0].findings}
+    assert not books.vendor_credits.updates
+
+
+def test_saved_missing_text_is_blocking_not_silently_skipped(records, tmp_path):
+    from workflows.polycab_credit_review import review_saved_polycab_vendor_credits
+    saved_evidence(records, tmp_path)
+    (tmp_path / "texts/1001_d2.txt").unlink()
+    result = review_saved_polycab_vendor_credits(tmp_path, policy=records[0],
+        from_date=date(2025, 4, 1), to_date=date(2026, 3, 31))
+    assert any(f.code == "pdf_error" and f.blocking for f in result[0].findings)
+
+
+@pytest.mark.parametrize("problem", ["missing_directory", "duplicate_record", "missing_selection", "wrong_vendor"])
+def test_invalid_saved_evidence_fails_with_context(records, tmp_path, problem):
+    import json
+    from workflows.polycab_credit_review import review_saved_polycab_vendor_credits
+    saved_evidence(records, tmp_path)
+    policy = records[0]
+    if problem == "missing_directory":
+        (tmp_path / "payments/p.json").unlink()
+        (tmp_path / "payments").rmdir()
+    elif problem == "duplicate_record":
+        source = next((tmp_path / "credits").glob("*.json"))
+        (tmp_path / "credits/duplicate.json").write_text(source.read_text())
+    elif problem == "wrong_vendor":
+        policy = replace(policy, vendor_id="999")
+    with pytest.raises(ValueError):
+        review_saved_polycab_vendor_credits(tmp_path, policy=policy,
+            from_date=date(2025, 4, 1), to_date=date(2026, 3, 31),
+            credit_numbers=["absent" if problem == "missing_selection" else "1001"])
+
+
+def test_offline_cli_never_constructs_live_clients(records, tmp_path, monkeypatch):
+    from apps import review_polycab_vendor_credits as app
+    root = tmp_path / "saved"
+    saved_evidence(records, root)
+    factory = Mock(side_effect=AssertionError("Unexpected network client"))
+    monkeypatch.setattr(app, "get_books_client", factory)
+    assert app.main(cli_args(tmp_path) + ["--evidence-dir", str(root)]) == 0
+    factory.assert_not_called()
+    with pytest.raises(SystemExit):
+        app.main(cli_args(tmp_path) + ["--evidence-dir", str(root), "--apply", "--credit", "1001"])

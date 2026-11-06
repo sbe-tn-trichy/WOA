@@ -5,6 +5,30 @@ description: Inventory quantity upserts into the Neoseal Flat stock-count sheet.
 
 # Neoseal stock count
 
+## Formula inspection and execution
+
+`neoseal_stock_count.formulas` owns `audit_stockcount_formulas`,
+`verify_stockcount_formulas` and `apply_stable_sync_plan`, exported by the domain
+package. The application delegates formula reads/writes to these helpers and
+uses existing cell-address parsing instead of duplicating address arithmetic.
+The supported plan remains the stable SKU/line-ID plan; old scratch formulas
+that depended on Mapping row positions or former Flat columns are superseded.
+
+```sh
+.venv/bin/python apps/sync_neoseal_stockcount.py
+.venv/bin/python apps/sync_neoseal_stockcount.py --apply
+.venv/bin/python apps/sync_neoseal_stockcount.py --verify-only --apply
+```
+
+Default execution only reads the plan. Formula introspection temporarily writes
+StockCount L1, so even verification-only requires `--apply`. The helper refuses
+an occupied or unconfirmed probe, validates addresses and batch response sizes,
+and clears its probe on success/failure. It never uses J1, which contains a
+stable line-ID header. Execution writes only changed formulas and verifies all
+expected expressions afterward. Operate with other sheet writers idle: the
+empty-cell check and temporary probe are not an atomic lock. Formula execution
+can be partial on failure; refetch the plan before retrying.
+
 `apps/neoseal_stock_count.py` lists active Neoseal catalog items using the
 Inventory purchase account, keeps only items with `track_inventory=true`, then
 bulk-fetches their details through

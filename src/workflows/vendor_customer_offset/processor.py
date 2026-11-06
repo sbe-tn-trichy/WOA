@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+import json
+from pathlib import Path
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
@@ -19,6 +21,7 @@ from zoho.helpers import (
     is_valid_gstin,
     normalize_gstin,
 )
+from ..core.checkpoint import write_atomic_json
 from ..core.matching import to_decimal
 from zoho.validation import require_record, require_records, require_text
 from .contracts import (
@@ -43,6 +46,7 @@ class VendorCustomerOffsetConfig:
     dry_run: bool = True
     ensure_linked: bool = True
     vendor_id: Optional[str] = None
+    checkpoint_path: Optional[Path] = None
 
     def __post_init__(self) -> None:
         if not self.bank_account_id and not self.bank_account_name.strip():
@@ -258,7 +262,52 @@ def _reference_number(prefix: str, bill_id: str) -> str:
     return f"{prefix.strip()} {bill_id}"[:50]
 
 
-def run_vendor_customer_offset(
+def _allocation_signature(value: object, id_key: str) -> list[tuple[str, Decimal]]:
+    return sorted((require_text(row.get(id_key), "Recovery allocation ID"),
+                   _money(_decimal(row.get("amount_applied"))))
+                  for row in require_records(value, "Recovery allocations"))
+
+
+def _reconcile_operation(books_client: OffsetBooksClient, operation: dict[str, object]) -> None:
+    """Read both sides of saved intent; absence is never proof of rejection."""
+    for side, resource, container, contact, account, allocations in (
+        ("customer", books_client.customer_payments, "payment", "customer_id", "account_id", "invoices"),
+        ("vendor", books_client.vendor_payments, "vendorpayment", "vendor_id", "paid_through_account_id", "bills"),
+    ):
+        payload = require_record(operation.get(f"{side}_payload"), "Saved payment intent")
+        known_id = operation.get(f"{side}_payment_id")
+        if isinstance(known_id, str) and known_id:
+            ids = [known_id]
+        else:
+            candidates = require_records(resource.list_all(params={
+                contact: payload[contact], "reference_number": payload["reference_number"],
+            }), "Recovery payment candidates")
+            ids = [require_text(row.get("payment_id") or row.get("vendorpayment_id"), "Recovery payment ID")
+                   for row in candidates if row.get("reference_number") == payload["reference_number"]
+                   and row.get(contact) == payload[contact]]
+        matches: list[str] = []
+        for payment_id in ids:
+            response = require_record(resource.get(payment_id), "Recovery payment response")
+            record = require_record(response.get(container) or response.get("payment"), "Recovery payment")
+            id_key = "invoice_id" if side == "customer" else "bill_id"
+            if (str(record.get("payment_id") or record.get("vendorpayment_id") or "") == payment_id
+                and str(record.get("status") or "").lower() not in {"void", "voided", "deleted", "refunded"}
+                and all(str(record.get(key) or "") == str(payload[key]) for key in
+                    (contact, account, "reference_number", "date"))
+                and _decimal(record.get("amount")) == _decimal(payload["amount"])
+                and _allocation_signature(record.get(allocations), id_key)
+                == _allocation_signature(payload[allocations], id_key)):
+                matches.append(payment_id)
+        if len(matches) != 1:
+            raise VendorCustomerOffsetError(
+                f"Existing offset intent: cannot uniquely verify {side} payment; "
+                "live reconciliation required. No automatic retry or rollback is safe."
+            )
+        operation[f"{side}_payment_id"] = matches[0]
+    operation["state"] = "paired"
+
+
+def _run_vendor_customer_offset(
     books_client: OffsetBooksClient,
     config: Optional[VendorCustomerOffsetConfig] = None,
 ) -> OffsetReport:
@@ -270,6 +319,23 @@ def run_vendor_customer_offset(
     documents cannot absorb the calculated offset completely.
     """
     config = config or VendorCustomerOffsetConfig()
+    journal: dict[str, object] = {}
+    operations: list[dict[str, object]] = []
+    if not config.dry_run:
+        assert config.checkpoint_path is not None
+        scope = {"organization_id": books_client.organization_id, "domain": books_client.domain}
+        if not all(isinstance(value, str) and value.strip() for value in scope.values()):
+            raise VendorCustomerOffsetError("Explicit Books organization and domain are required.")
+        if config.checkpoint_path.exists():
+            journal = require_record(json.loads(config.checkpoint_path.read_text(encoding="utf-8")), "Offset checkpoint")
+            if journal.get("scope") != scope:
+                raise VendorCustomerOffsetError("Offset checkpoint organization/domain does not match this client.")
+            operations = require_records(journal.get("operations"), "Offset checkpoint operations")
+            for saved_operation in operations:
+                _reconcile_operation(books_client, saved_operation)
+        else:
+            journal = {"scope": scope, "operations": operations}
+        write_atomic_json(config.checkpoint_path, journal)
     bank_account_id = _resolve_bank_account_id(books_client, config)
     contacts = require_records(books_client.contacts.list_all(params={"filter_by": "Status.Active"}), "Offset contacts")
     pairs, skipped = _unique_gstin_pairs(contacts)
@@ -293,6 +359,8 @@ def run_vendor_customer_offset(
     }
 
     for gstin, customer, vendor in pairs:
+        if results["failed"]:
+            break
         customer_id = str(customer.get("contact_id") or "")
         vendor_id = str(vendor.get("contact_id") or "")
         customer_currency = str(customer.get("currency_code") or "")
@@ -361,6 +429,16 @@ def run_vendor_customer_offset(
             payment_date_text = tranche["payment_date"].isoformat()
             tranche_amount = tranche["amount"]
             bill_id = tranche["bill_allocations"][0]["bill_id"]
+            if any(
+                any(row.get("bill_id") == bill_id for row in require_records(
+                    require_record(saved.get("vendor_payload"), "Saved vendor payload").get("bills"), "Saved bill allocations"))
+                for saved in operations
+            ):
+                results["skipped"].append(SkippedOffset(
+                    gstin=gstin, customer_id=customer_id, vendor_id=vendor_id,
+                    amount=float(tranche_amount), reason="already_verified_in_checkpoint"
+                ))
+                continue
             reference = _reference_number(config.reference_prefix, bill_id)
             customer_payload: dict[str, object] = {
                 "customer_id": customer_id,
@@ -383,6 +461,15 @@ def run_vendor_customer_offset(
                 "bills": tranche["bill_allocations"],
             }
             customer_payment_id = ""
+            vendor_payment_id = ""
+            operation: dict[str, object] = {
+                "customer_payload": customer_payload, "vendor_payload": vendor_payload,
+                "state": "customer_create_requested",
+            }
+            operations.append(operation)
+            assert config.checkpoint_path is not None
+            journal["operations"] = operations
+            write_atomic_json(config.checkpoint_path, journal)
             try:
                 customer_response = books_client.customer_payments.create(customer_payload)
                 customer_payment_id = _payment_id(customer_response, "payment")
@@ -390,12 +477,16 @@ def run_vendor_customer_offset(
                     raise VendorCustomerOffsetError(
                         "Zoho did not return the created customer payment ID."
                     )
+                operation.update(customer_payment_id=customer_payment_id, state="vendor_create_requested")
+                write_atomic_json(config.checkpoint_path, journal)
                 vendor_response = books_client.vendor_payments.create(vendor_payload)
                 vendor_payment_id = _payment_id(vendor_response, "vendorpayment")
                 if not vendor_payment_id:
                     raise VendorCustomerOffsetError(
                         "Zoho did not return the created vendor payment ID."
                     )
+                operation.update(vendor_payment_id=vendor_payment_id, state="paired")
+                write_atomic_json(config.checkpoint_path, journal)
                 results["posted"].append(
                     {
                         **pair_summary,
@@ -408,13 +499,10 @@ def run_vendor_customer_offset(
                     }
                 )
             except Exception as exc:
-                rollback = "not_required"
-                if customer_payment_id:
-                    try:
-                        books_client.customer_payments.delete(customer_payment_id)
-                        rollback = "customer_payment_deleted"
-                    except Exception as rollback_exc:
-                        rollback = f"failed: {rollback_exc}"
+                operation.update(customer_payment_id=customer_payment_id,
+                                 vendor_payment_id=vendor_payment_id, error=str(exc))
+                write_atomic_json(config.checkpoint_path, journal)
+                rollback = "withheld_pending_live_reconciliation"
                 results["failed"].append(
                     {
                         **pair_summary,
@@ -423,6 +511,8 @@ def run_vendor_customer_offset(
                         "payment_date": payment_date_text,
                         "error": str(exc),
                         "rollback": rollback,
+                        "customer_payment_id": customer_payment_id,
+                        "vendor_payment_id": vendor_payment_id,
                     }
                 )
                 break
@@ -438,3 +528,32 @@ def run_vendor_customer_offset(
         "failed": len(results["failed"]),
     }
     return results
+
+
+def run_vendor_customer_offset(
+    books_client: OffsetBooksClient,
+    config: Optional[VendorCustomerOffsetConfig] = None,
+) -> OffsetReport:
+    """Plan offsets or post with an exclusive, durable recovery checkpoint.
+
+    Saved intent is reconciled with live detail reads before resuming. Missing or
+    ambiguous payments require operator review, never automatic retry/rollback.
+    """
+    config = config or VendorCustomerOffsetConfig()
+    if config.dry_run:
+        return _run_vendor_customer_offset(books_client, config)
+    if config.checkpoint_path is None:
+        raise VendorCustomerOffsetError("Live offsets require an explicit checkpoint_path.")
+    lock = config.checkpoint_path.with_suffix(config.checkpoint_path.suffix + ".lock")
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        handle = lock.open("x", encoding="utf-8")
+    except FileExistsError as exc:
+        raise VendorCustomerOffsetError(
+            f"Offset checkpoint is locked: {lock}. Reconcile interrupted work before removing the lock."
+        ) from exc
+    try:
+        with handle:
+            return _run_vendor_customer_offset(books_client, config)
+    finally:
+        lock.unlink()

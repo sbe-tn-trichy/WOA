@@ -53,6 +53,13 @@ def test_force_refresh_route_keeps_confirmation_and_passes_cache_bypass():
     for confirmed in (False, True):
         body = json.dumps({"confirm": confirmed, "force_refresh": True}).encode()
         handler.headers = {"X-Review-Token": "token", "Content-Length": str(len(body))}
+        from email.message import Message
+        headers = Message()
+        for key, value in handler.headers.items():
+            headers[key] = value
+        headers["Host"] = "localhost:8765"
+        handler.headers = headers
+        handler.server = MagicMock(server_address=("127.0.0.1", 8765))
         handler.rfile = io.BytesIO(body)
         handler.wfile = io.BytesIO()
         handler.do_POST()

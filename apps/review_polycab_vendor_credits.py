@@ -19,6 +19,7 @@ from workflows.core.dates import get_fy_date_range
 from workflows.polycab_credit_review import (
     CreditCorrectionError, CreditCorrectionResult, RmaCreditPolicy, build_credit_correction_plan,
     execute_credit_correction, review_polycab_vendor_credits,
+    review_saved_polycab_vendor_credits,
 )
 from zoho.security import resolve_output_path
 
@@ -36,7 +37,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--payment-id', default='', help='Reviewed explicit link for one selected credit')
     parser.add_argument('--output-dir', type=Path, default=Path('output/polycab_credit_review'))
     parser.add_argument('--apply', action='store_true', help='Save eligible selected corrections, preserving allocations')
+    parser.add_argument('--evidence-dir', type=Path,
+                        help='Offline saved credits/texts/journals/payments directory; never permits --apply')
     args = parser.parse_args(argv)
+    if args.evidence_dir and (args.apply or args.journal_id or args.payment_id):
+        parser.error('--evidence-dir cannot be combined with --apply or live link overrides')
     if args.apply and not args.credit:
         parser.error('--apply requires explicit --credit selections')
     try:
@@ -49,17 +54,23 @@ def main(argv: list[str] | None = None) -> int:
     # Unique run files keep earlier audit/checkpoints intact.
     run_id = datetime.now().strftime('%Y%m%dT%H%M%S%f')
     report_path = output / ('review_' + run_id + '.json')
-    books = get_books_client()
-    audits = review_polycab_vendor_credits(books, policy=policy, from_date=start,
-        to_date=end, credit_numbers=args.credit, output_dir=output / run_id,
-        journal_id=args.journal_id, payment_id=args.payment_id)
-    report = {'policy': asdict(policy), 'from_date': start.isoformat(), 'to_date': end.isoformat(),
+    books = None
+    if args.evidence_dir:
+        audits = review_saved_polycab_vendor_credits(args.evidence_dir, policy=policy,
+            from_date=start, to_date=end, credit_numbers=args.credit)
+    else:
+        books = get_books_client()
+        audits = review_polycab_vendor_credits(books, policy=policy, from_date=start,
+            to_date=end, credit_numbers=args.credit, output_dir=output / run_id,
+            journal_id=args.journal_id, payment_id=args.payment_id)
+    report = {'evidence_source': 'saved' if args.evidence_dir else 'live',
+              'policy': asdict(policy), 'from_date': start.isoformat(), 'to_date': end.isoformat(),
               'audits': [asdict(x) for x in audits], 'plans': [], 'results': []}
     plans = []
     for audit in audits:
         print(f"{audit.credit['vendor_credit_number']}: " +
               (', '.join(f.code for f in audit.findings) or 'No findings'))
-        if audit.correction_allowed:
+        if audit.correction_allowed and not args.evidence_dir:
             plan = build_credit_correction_plan(audit, policy)
             plans.append(plan)
             report['plans'].append(asdict(plan))

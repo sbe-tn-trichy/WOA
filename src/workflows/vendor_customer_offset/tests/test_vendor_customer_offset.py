@@ -1,4 +1,6 @@
 import unittest
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from workflows.vendor_customer_offset import (
@@ -31,7 +33,12 @@ def _contacts(customer_outstanding=120, vendor_outstanding=80):
 
 class TestVendorCustomerOffset(unittest.TestCase):
     def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.checkpoint = Path(temporary.name) / "offset.json"
         self.books = MagicMock()
+        self.books.organization_id = "org-1"
+        self.books.domain = "in"
         self.books.bank_accounts.list_all.return_value = [
             {"account_id": "bank-1", "account_name": "Vendor To Customer"}
         ]
@@ -93,7 +100,7 @@ class TestVendorCustomerOffset(unittest.TestCase):
 
         result = run_vendor_customer_offset(
             self.books,
-            VendorCustomerOffsetConfig(dry_run=False),
+            VendorCustomerOffsetConfig(dry_run=False, checkpoint_path=self.checkpoint),
         )
 
         self.assertEqual(result["summary"]["posted"], 2)
@@ -170,7 +177,7 @@ class TestVendorCustomerOffset(unittest.TestCase):
         }
         self.assertEqual(allocated_ids, {"open-invoice"})
 
-    def test_vendor_failure_rolls_back_customer_payment(self):
+    def test_vendor_failure_retains_customer_payment_and_checkpoint(self):
         self.books.request.side_effect = Exception(
             'HTTP Error: 400 - {"code":3051,"message":"already linked"}'
         )
@@ -181,11 +188,14 @@ class TestVendorCustomerOffset(unittest.TestCase):
 
         result = run_vendor_customer_offset(
             self.books,
-            VendorCustomerOffsetConfig(dry_run=False),
+            VendorCustomerOffsetConfig(dry_run=False, checkpoint_path=self.checkpoint),
         )
 
-        self.books.customer_payments.delete.assert_called_once_with("cp-1")
-        self.assertEqual(result["failed"][0]["rollback"], "customer_payment_deleted")
+        self.books.customer_payments.delete.assert_not_called()
+        self.assertIn("cp-1", self.checkpoint.read_text())
+        with self.assertRaises((RuntimeError, ValueError)):
+            run_vendor_customer_offset(self.books, VendorCustomerOffsetConfig(dry_run=False, checkpoint_path=self.checkpoint))
+        self.assertEqual(result["failed"][0]["rollback"], "withheld_pending_live_reconciliation")
 
     def test_missing_vendor_invoice_date_is_skipped(self):
         self.books.bills.list_all.return_value = [
@@ -196,6 +206,87 @@ class TestVendorCustomerOffset(unittest.TestCase):
 
         self.assertEqual(result["skipped"][0]["reason"], "missing_vendor_invoice_date")
         self.books.customer_payments.create.assert_not_called()
+
+class TestOffsetRecovery(unittest.TestCase):
+    setUp = TestVendorCustomerOffset.setUp
+    def _live_config(self):
+        return VendorCustomerOffsetConfig(dry_run=False, ensure_linked=False,
+                                          checkpoint_path=self.checkpoint)
+
+    def test_live_requires_checkpoint_before_any_call(self):
+        with self.assertRaisesRegex(RuntimeError, "checkpoint_path"):
+            run_vendor_customer_offset(self.books, VendorCustomerOffsetConfig(dry_run=False))
+        self.assertFalse(self.books.mock_calls)
+
+    def test_committed_response_lost_is_reconciled_without_duplicate(self):
+        customer_records, vendor_records = {}, {}
+
+        def customer_create(payload):
+            customer_records['cp-1'] = dict(payload, payment_id='cp-1')
+            return {'payment': {'payment_id': 'cp-1'}}
+
+        def vendor_create(payload):
+            vendor_records['vp-1'] = dict(payload, payment_id='vp-1')
+            raise TimeoutError('response lost')
+
+        self.books.contacts.list_all.return_value = _contacts(50, 50)
+        self.books.customer_payments.create.side_effect = customer_create
+        self.books.vendor_payments.create.side_effect = vendor_create
+        first = run_vendor_customer_offset(self.books, self._live_config())
+        self.assertEqual(first['failed'][0]['customer_payment_id'], 'cp-1')
+        self.books.customer_payments.delete.assert_not_called()
+        self.books.customer_payments.get.side_effect = lambda key: {'payment': customer_records[key]}
+        self.books.vendor_payments.list_all.return_value = list(vendor_records.values())
+        self.books.vendor_payments.get.side_effect = lambda key: {'vendorpayment': vendor_records[key]}
+        second = run_vendor_customer_offset(self.books, self._live_config())
+        self.assertEqual(second['summary']['failed'], 0)
+        self.assertEqual(self.books.customer_payments.create.call_count, 1)
+        self.assertEqual(self.books.vendor_payments.create.call_count, 1)
+
+    def test_missing_customer_id_keeps_intent_and_does_not_post_vendor(self):
+        self.books.customer_payments.create.return_value = {'payment': {}}
+        report = run_vendor_customer_offset(self.books, self._live_config())
+        self.assertEqual(report['summary']['failed'], 1)
+        self.books.vendor_payments.create.assert_not_called()
+        self.assertIn('customer_create_requested', self.checkpoint.read_text())
+
+    def test_missing_vendor_id_keeps_known_customer(self):
+        self.books.customer_payments.create.return_value = {'payment': {'payment_id': 'cp-1'}}
+        self.books.vendor_payments.create.return_value = {'vendorpayment': {}}
+        report = run_vendor_customer_offset(self.books, self._live_config())
+        self.assertEqual(report['failed'][0]['customer_payment_id'], 'cp-1')
+        self.books.customer_payments.delete.assert_not_called()
+
+    def test_stale_lock_blocks_before_network(self):
+        self.checkpoint.with_suffix('.json.lock').touch()
+        with self.assertRaisesRegex(RuntimeError, 'locked'):
+            run_vendor_customer_offset(self.books, self._live_config())
+        self.assertFalse(self.books.mock_calls)
+
+    def test_checkpoint_scope_mismatch_blocks_before_network(self):
+        import json
+        self.checkpoint.write_text(json.dumps({'scope': {'organization_id': 'other', 'domain': 'in'}, 'operations': []}))
+        with self.assertRaisesRegex(RuntimeError, 'organization/domain'):
+            run_vendor_customer_offset(self.books, self._live_config())
+        self.assertFalse(self.books.mock_calls)
+
+    def test_checkpoint_write_failure_prevents_payment(self):
+        from unittest.mock import patch
+        with patch('workflows.vendor_customer_offset.processor.write_atomic_json', side_effect=OSError('disk full')):
+            with self.assertRaises(OSError):
+                run_vendor_customer_offset(self.books, self._live_config())
+        self.books.customer_payments.create.assert_not_called()
+
+    def test_process_interruption_keeps_intent_and_blocks_replay(self):
+        self.books.customer_payments.create.side_effect = KeyboardInterrupt()
+        with self.assertRaises(KeyboardInterrupt):
+            run_vendor_customer_offset(self.books, self._live_config())
+        self.assertIn('customer_create_requested', self.checkpoint.read_text())
+        self.books.customer_payments.list_all.return_value = []
+        with self.assertRaisesRegex(RuntimeError, 'Existing offset intent'):
+            run_vendor_customer_offset(self.books, self._live_config())
+        self.assertEqual(self.books.customer_payments.create.call_count, 1)
+        self.books.vendor_payments.create.assert_not_called()
 
 
 if __name__ == "__main__":

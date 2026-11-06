@@ -155,6 +155,8 @@ def get_analytics_client(
     token_refresh_callback: Optional[Callable[[], str]] = None,
 ) -> ZohoAnalyticsAPI:
     """Create an authenticated Zoho Analytics client with token refresh support."""
+    if not str(org_id or "").strip():
+        raise ValueError("ANALYTICS_ORG_ID must be explicitly configured.")
     if not token:
         token = get_token_for("analytics", "zoho_analytics_conn", token_url=token_url)
     if not token:

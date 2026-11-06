@@ -272,6 +272,13 @@ categorizeSelectedBankLines().then(async () => {
         handler = handler_cls.__new__(handler_cls)
         body = json.dumps({"confirm": True}).encode("utf-8")
         handler.headers = {"X-Review-Token": "test-token", "Content-Length": str(len(body))}
+        from email.message import Message
+        headers = Message()
+        for key, value in handler.headers.items():
+            headers[key] = value
+        headers["Host"] = "localhost:8765"
+        handler.headers = headers
+        handler.server = MagicMock(server_address=("127.0.0.1", 8765))
         handler.rfile = io.BytesIO(body)
         handler.wfile = io.BytesIO()
         handler.path = "/api/bank-lines/tx-123/categorize-travel"
@@ -295,6 +302,13 @@ categorizeSelectedBankLines().then(async () => {
             handler = handler_cls.__new__(handler_cls)
             body = json.dumps({"confirm": confirmed}).encode()
             handler.headers = {"X-Review-Token": "test-token", "Content-Length": str(len(body))}
+            from email.message import Message
+            headers = Message()
+            for key, value in handler.headers.items():
+                headers[key] = value
+            headers["Host"] = "localhost:8765"
+            handler.headers = headers
+            handler.server = MagicMock(server_address=("127.0.0.1", 8765))
             handler.rfile, handler.wfile = io.BytesIO(body), io.BytesIO()
             handler.path = "/api/bank-transfers/pair/categorize"
             handler.send_response, handler.send_header, handler.end_headers = MagicMock(), MagicMock(), MagicMock()

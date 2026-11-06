@@ -163,3 +163,97 @@ def test_cli_main_dry_run(monkeypatch, tmp_path):
     creator.update_records.assert_not_called()
     creator.delete_records.assert_not_called()
 
+
+
+def selected_clients():
+    books, creator = clients()
+    source = {
+        "1": {"contact_id": "1", "contact_type": "customer", "contact_name": "Changed"},
+        "2": {"contact_id": "2", "contact_type": "customer", "contact_name": "New"},
+    }
+    records = {"1": {"ID": "a", "Customer_Id": "1", "Customer_Name": "Old"}}
+    books.contacts.get.side_effect = lambda key: {"contact": dict(source[key])}
+    def lookup(app, report, *, criteria):
+        key = criteria.split('"')[1]
+        return [dict(records[key])] if key in records else []
+    creator.get_all_records.side_effect = lookup
+    def update(app, report, *, payload, record_id):
+        records["1"].update(payload["data"])
+        return {"code": 3000}
+    def create(app, form, payload):
+        for row in payload["data"]:
+            records[row["Customer_Id"]] = {"ID": "created-" + row["Customer_Id"], **row}
+        return {"code": 3000, "result": [{"code": 3000, "data": {"ID": records[row["Customer_Id"]]["ID"]}} for row in payload["data"]]}
+    creator.update_records.side_effect = update
+    creator.add_records.side_effect = create
+    return books, creator
+
+
+@pytest.mark.parametrize("dry_run", [True, False])
+def test_explicit_customer_selection_reuses_sync_and_never_deletes(tmp_path, dry_run):
+    books, creator = selected_clients()
+    result = sync_creator_customers(books, creator, config(tmp_path, dry_run=dry_run, customer_ids=("1", "2")))
+    books.contacts.list_all.assert_not_called()
+    creator.delete_records.assert_not_called()
+    assert result["candidate_create_count"] == result["candidate_update_count"] == 1
+    assert result["candidate_delete_count"] == 0
+    assert result["customer_ids"] == ["1", "2"]
+    assert result.get("verified_customer_ids") == (None if dry_run else ["1", "2"])
+    if dry_run:
+        creator.update_records.assert_not_called()
+        creator.add_records.assert_not_called()
+
+
+@pytest.mark.parametrize("ids", [("1", "1"), ('1" || true',), ("vendor",)])
+def test_invalid_selected_ids_fail_before_reads(tmp_path, ids):
+    books, creator = selected_clients()
+    with pytest.raises(ReconciliationError, match="unique numeric"):
+        sync_creator_customers(books, creator, config(tmp_path, customer_ids=ids))
+    books.contacts.get.assert_not_called()
+    creator.get_all_records.assert_not_called()
+
+
+@pytest.mark.parametrize("problem", ["vendor", "wrong_id", "wrong_creator", "duplicate"])
+def test_selected_scope_guards_abort_before_writes(tmp_path, problem):
+    books, creator = selected_clients()
+    if problem in {"vendor", "wrong_id"}:
+        books.contacts.get.side_effect = None
+        books.contacts.get.return_value = {"contact": {"contact_id": "2" if problem == "wrong_id" else "1",
+            "contact_name": "Name", "contact_type": "vendor" if problem == "vendor" else "customer"}}
+    else:
+        creator.get_all_records.side_effect = None
+        row = {"ID": "a", "Customer_Id": "9" if problem == "wrong_creator" else "1"}
+        creator.get_all_records.return_value = [row, row] if problem == "duplicate" else [row]
+    with pytest.raises(ReconciliationError):
+        sync_creator_customers(books, creator, config(tmp_path, dry_run=False, customer_ids=("1",)))
+    creator.update_records.assert_not_called()
+    creator.add_records.assert_not_called()
+    creator.delete_records.assert_not_called()
+
+
+def test_selected_live_readback_failure_is_persisted(tmp_path):
+    import json
+    books, creator = selected_clients()
+    creator.update_records.side_effect = None
+    creator.update_records.return_value = {"code": 3000}
+    with pytest.raises(ReconciliationError, match="failed read-back"):
+        sync_creator_customers(books, creator, config(tmp_path, dry_run=False, customer_ids=("1",)))
+    report = json.loads(next(tmp_path.glob("*.json")).read_text())
+    assert report["status"] == "FAILED"
+    assert report["updated_count"] == 1
+
+
+@pytest.mark.parametrize("selected,expected_branch", [(False, "Electricals"), (True, None)])
+def test_cli_selects_branch_default_by_scope(tmp_path, monkeypatch, selected, expected_branch):
+    from apps import sync_creator_customers as app
+    factory = MagicMock()
+    sync = MagicMock(return_value={"records": []})
+    monkeypatch.setattr(app, "get_books_client", factory)
+    monkeypatch.setattr(app, "get_creator_client", factory)
+    monkeypatch.setattr(app, "sync_creator_customers", sync)
+    argv = ["--output-dir", str(tmp_path)] + (["--customer-id", "1", "--customer-id", "2"] if selected else [])
+    assert app.main(argv) == 0
+    cfg = sync.call_args.args[2]
+    assert cfg.customer_ids == (("1", "2") if selected else ())
+    assert cfg.books_branch_name == expected_branch
+    assert cfg.dry_run

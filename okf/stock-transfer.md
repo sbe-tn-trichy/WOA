@@ -77,6 +77,32 @@ aligning a bill: it reads back and verifies the existing drafts, aligns the
 current bill total, and then continues without recreating earlier pairs. Bin
 balance reads retry transient failures up to three times.
 
+## Recorded-pair recovery
+
+`apps/recover_stock_transfer.py` and the exported domain helper
+`recover_stock_transfer` post existing IDs recorded in a `bill_aligned` journal.
+This is separate from `transfer_stock.py --resume`, which can continue creating
+remaining planned pairs. Recovery requires an explicit journal, reference,
+expected pair count, invoice-total cap, source/destination, customer/vendor and
+purchase accounts. It previews by default and requires `--apply` to post.
+
+```sh
+.venv/bin/python apps/recover_stock_transfer.py --journal output/stock_transfer/REFERENCE/execution.json --reference REFERENCE --expected-pairs COUNT --maximum-invoice-total CAP --source SOURCE_ID --destination DESTINATION_ID --customer-id CUSTOMER_ID --vendor-id VENDOR_ID --purchase-account-id PURCHASE_ACCOUNT_ID
+```
+
+It verifies unique recorded IDs, exact per-pair references, identities, scope,
+dates, numbers, totals and paired item quantities/rates/taxes. Invoices must
+remain draft; already-open/overdue bills are preserved. Inventory reads enforce
+purchase-account scope, aggregate source availability and recorded active-bin
+allocations before posting, and nonnegative source stock afterward. No new
+documents, payments, compensation or numbering changes are performed.
+
+Atomic checkpoints record intent before each invoice/bill posting and read-back
+verification afterward. Any attempted recovery stage, including uncertain API
+completion or failed final verification, is blocked from automatic replay.
+Inspect live state before manual recovery. Run while other writers are idle;
+checkpoint comparisons and stock reads provide no cross-machine isolation.
+
 ## Catalog request efficiency
 
 Transfer selection and stock validation use in-memory item-ID indexes and

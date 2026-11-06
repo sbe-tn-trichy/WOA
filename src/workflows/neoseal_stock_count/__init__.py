@@ -34,8 +34,12 @@ from .reporting import (
     zero_unmapped_stockcount_quantities,
 )
 from .stable_sync import CellChange, StableSyncPlan, build_stable_sync_plan, read_stable_sync_plan
+from .formulas import audit_stockcount_formulas, verify_stockcount_formulas, apply_stable_sync_plan
 
 __all__ = [
+    "audit_stockcount_formulas",
+    "verify_stockcount_formulas",
+    "apply_stable_sync_plan",
     "FlatStockRow",
     "FlatStockSnapshot",
     "fetch_neoseal_flat_stock",

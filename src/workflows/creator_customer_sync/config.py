@@ -25,3 +25,5 @@ class CreatorCustomerSyncConfig:
 
     books_branch_name: Optional[str] = None
     books_branch_field: str = "cf_b_name"
+    # Explicit selection never reconciles or deletes unrelated Creator customers.
+    customer_ids: tuple[str, ...] = ()

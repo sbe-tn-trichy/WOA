@@ -27,7 +27,7 @@ jobs:
         with:
           python-version-file: .python-version
           cache: pip
-      - run: python -m pip install -e ".[workflows,test,typing]"
+      - run: python -m pip install -c constraints.txt -e ".[workflows,test,typing]"
       - run: python -m mypy
       - run: python apps/analyze_project.py
       - run: python apps/generate_api_reference.py --check
@@ -39,7 +39,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-2025, macos-26]
-        python-version: ["3.14.4"]
+        python-version: ["3.14.10"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,7 +50,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e ".[workflows,test]"
+      - run: python -m pip install -c constraints.txt -e ".[workflows,test]"
       - run: python -m pip check
       - name: Run default parallel suite
         if: github.event_name != 'workflow_dispatch'
@@ -74,6 +74,6 @@ jobs:
           python-version-file: .python-version
           cache: pip
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e .
+      - run: python -m pip install -c constraints.txt -e .
       - run: python -m pip check
       - run: python -c "import zoho; import workflows.core.auth"

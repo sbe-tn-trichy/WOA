@@ -105,7 +105,9 @@ Bank Statement Categorization includes Creator collection matching, Analytics-as
 |---|---|---|---|---|
 | Neoseal item audit, catalog export and name updates | [neoseal_audit](src/workflows/neoseal_audit/) | [audit_neoseal_items.py](apps/audit_neoseal_items.py) | Read; separate name-update runner writes | [Contract](okf/neoseal-item-audit.md) |
 | Neoseal stock count, sheet formatting and synchronization | [neoseal_stock_count](src/workflows/neoseal_stock_count/) | [neoseal_stock_count.py](apps/neoseal_stock_count.py) | Writes Sheet on invocation | [Contract](okf/neoseal-stock-count.md) |
+| Stable StockCount formulas and line IDs | [neoseal_stock_count](src/workflows/neoseal_stock_count/) | [sync_neoseal_stockcount.py](apps/sync_neoseal_stockcount.py) | Preview / write; formula verification uses a temporary live probe | [Contract](okf/neoseal-stock-count.md#formula-inspection-and-execution) |
 | Paired stock transfer | [stock_transfer](src/workflows/stock_transfer/) | [transfer_stock.py](apps/transfer_stock.py) | Preview / write | [Contract](okf/stock-transfer.md) |
+| Recorded stock-transfer recovery | [stock_transfer](src/workflows/stock_transfer/) | [recover_stock_transfer.py](apps/recover_stock_transfer.py) | Preview / write | [Contract](okf/stock-transfer.md#recorded-pair-recovery) |
 
 ## Running workflows
 

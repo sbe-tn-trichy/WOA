@@ -32,7 +32,7 @@ and deployment settings on both machines, with machine-specific credential/input
 paths configured locally. On macOS, Homebrew paths can differ from Windows tool
 paths; discover tools through PATH or explicit local configuration.
 
-CPython 3.14.4 is pinned in the root `.python-version` for both machines and CI.
+CPython 3.14.10 is pinned in the root `.python-version` for both machines and CI.
 The pin guides provisioning; it does not change an existing `.venv`. Report a
 version mismatch and obtain user instruction before replacing its interpreter.
 The package's `requires-python` remains a library compatibility range, separate
@@ -43,15 +43,15 @@ checks after an OS, Python or native-tool upgrade before resuming live mutations
 
 Create a separate virtual environment on every machine. Do not copy `.venv`:
 its interpreter paths and installed binaries belong to the local machine.
-Use the pinned CPython 3.14.4. Run from the repository root.
+Use the pinned CPython 3.14.10. Run from the repository root.
 With uv installed, these commands work on Windows, Linux and macOS:
 
 ```text
-uv venv --python 3.14.4
+uv venv --python 3.14.10
 uv pip install --python .venv -e ".[workflows,test]"
 ```
 
-Without uv, explicitly select an installed CPython 3.14.4 interpreter to bootstrap
+Without uv, explicitly select an installed CPython 3.14.10 interpreter to bootstrap
 `.venv`, then use only its local interpreter. Windows PowerShell:
 
 ```powershell
@@ -67,7 +67,7 @@ python3.14 -m venv .venv
 ```
 
 The `py -3.14` and `python3.14` selectors identify a minor version only; confirm
-that the selected interpreter reports exactly 3.14.4 before provisioning, or
+that the selected interpreter reports exactly 3.14.10 before provisioning, or
 use its explicit executable path. Verify the resulting workspace interpreter
 with `.venv/bin/python --version` (Windows: `.\.venv\Scripts\python.exe --version`).
 
@@ -196,7 +196,7 @@ dependency validation. If pytest is absent, report the missing dependency;
 installation requires explicit user instruction. Unittest discovery is not an
 equivalent replacement for the full suite.
 
-CI is configured for Python 3.14.4 full-suite and base-install checks on Ubuntu,
+CI is configured for Python 3.14.10 full-suite and base-install checks on Ubuntu,
 Windows Server 2025 x64 and macOS 26 arm64, with Node available for UI tests.
 These are hosted-runner proxies: Windows Server is not Windows 11, and the Mac
 runner is not the user's M4. Passing CI must be supplemented by local smoke
@@ -277,3 +277,20 @@ by a free-text manufacturer value, and never creates or updates Inventory items.
 # Related Knowledge
 
 See [Package Architecture](architecture.md), [Configuration Reference](configuration.md), and [OKF Maintenance](okf-maintenance.md).
+
+## Application dependency baseline (APPS-003)
+
+`constraints.txt` pins the base, workflows, test and typing dependency closure
+from the 2026-11-06 macOS environment. Provision application deployments with the
+workspace interpreter using `-m pip install -c constraints.txt -e
+".[workflows,test,typing]"` only when environment provisioning is authorized.
+CI applies the same constraints to its install jobs. Library consumers retain
+compatibility ranges in `pyproject.toml`; constraints are an application policy,
+not mandatory library dependency pins. Optional OCR/Jupyter tools are outside
+this baseline. Windows also constrains its pytest colorama dependency.
+
+Update constraints deliberately from a reviewed environment and validate fresh
+installs plus the supported-platform CI matrix. The initial baseline has local
+suite evidence on CPython 3.14.10; fresh constrained installs on pinned
+3.14.10 and hosted cross-platform runs remain required. Do not replace an existing
+workspace environment or upgrade dependencies merely to align this file.

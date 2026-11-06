@@ -45,6 +45,42 @@ to the same parser and execution path; output wording is now shared.
 
 ## Further cleanup boundaries
 
+### Routine local cleanup
+
+Run `.venv/bin/python apps/cleanup_project.py` weekly to preview disposable
+files older than seven days. Add `--apply` to remove the listed files, or
+`--older-than-days N` to change the minimum age. Run when builds and tests are
+idle. The command only scans `build/`, `.pytest_cache/`, `output/pytest-cache/`,
+`output/mypy-cache/`, `output/tmp/`, and Python bytecode caches beneath `apps/`,
+`src/` and `tests/`. It leaves empty directories intact. Git-tracked files and
+symlinks are excluded; tracking and file identity are rechecked during apply.
+An inspection/deletion failure returns a nonzero status; deletion can be partial.
+Checks do not coordinate concurrent writers, so this is not a cleanup service
+for actively running workflows.
+
+Scripts, logs, other output, configuration, Analytics metadata, databases and
+recovery checkpoints are excluded. New disposable scratch data should go in
+`output/tmp/`; do not store evidence or recovery data there. The existing
+24-hour scratch-script target requires review and promotion before removal,
+rather than deletion based on age alone.
+
+### Promoted scratch operations
+
+Eight local scratch implementations were superseded and removed after promotion.
+Their fixed customer IDs, expected document counts and obsolete Flat-column
+migration assumptions are not permanent defaults. Evidence JSON/PDFs and journals
+remain intact. Other one-off scripts still require separate review.
+
+| Former scratch operation | Permanent owner and command |
+|---|---|
+| `sync_one_creator_customer.py`, `sync_requested_customers.py` | [Creator customer sync](creator-customer-delete-sync.md#explicit-customer-selection), using repeated `--customer-id` selections on `apps/sync_creator_customers.py` |
+| `verify_stockcount_formulas.py`, `apply_stockcount_formulas.py`, `update_stockcount_formulas.py` | [Stock-count formula helpers](neoseal-stock-count.md#formula-inspection-and-execution), used by `apps/sync_neoseal_stockcount.py`; obsolete positional formulas are replaced by the existing stable SKU plan |
+| `audit_polycab_pdf_records.py`, `report_polycab_pdf_records.py` | [Polycab credit review](polycab-credit-review.md#saved-evidence-review), using the canonical parser/rules and `apps/review_polycab_vendor_credits.py` for live or saved evidence |
+| `recover_stock_transfer.py` | [Recorded-pair recovery](stock-transfer.md#recorded-pair-recovery), using `workflows.stock_transfer.recover_stock_transfer` and `apps/recover_stock_transfer.py` |
+
+Domain helpers stay with their workflow packages; only shared mechanics such as
+cell addresses, currency parsing and atomic checkpoints use existing common owners.
+
 ### Repeatable project analysis
 
 Run `apps/analyze_project.py` with the workspace interpreter for an offline

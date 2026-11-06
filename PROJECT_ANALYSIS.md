@@ -29,15 +29,53 @@ closure criteria. No findings are closed by adding inspection tooling alone.
 
 | ID | Priority | Correction owner | Implementation | Verification |
 |---|---|---|---|---|
-| SDK-001 | High | SDK transport | Open | Regression coverage required |
+| SDK-001 | High | SDK transport | Fixed, awaiting verification | Multipart replay regression coverage passes; commit/hosted verification pending |
 | SDK-002 | Medium | SDK pagination | Committed (`d0e0067`) | Verified on Windows x64 and macOS arm64; hosted CI evidence pending |
-| HELPER-001 | High | Vendor/customer offset | Open | Recovery failure-path coverage required |
-| HELPER-002 | Medium | Workflow configuration | Open | Explicit deployment config guard and migration tests required |
-| APPS-001 | Medium | Local review servers | Open | Host-validation coverage required |
-| APPS-002 | Medium | Workspace environment | Committed (`731fe01`, `7a05976`) | Windows x64 and macOS arm64 parallel/serial suites pass; Mac `.venv` patch pin (`3.14.10` vs `3.14.4`) pending |
-| APPS-003 | Medium | Cross-platform & dependencies | Open | Hosted CI results, Mac `.venv` 3.14.4 patch pin, and lock/constraint policy pending |
+| HELPER-001 | High | Vendor/customer offset | Fixed, awaiting verification | Durable intent, no automatic compensation, read-back recovery tests pass; live behavior unverified |
+| HELPER-002 | Medium | Workflow configuration | Fixed, awaiting verification | Removed tenant defaults; fresh/explicit migration and guard tests pass |
+| APPS-001 | Medium | Local review servers | Fixed, awaiting verification | Handler rejection/acceptance tests pass; commit/hosted verification pending |
+| APPS-002 | Medium | Workspace environment | Committed (`731fe01`, `7a05976`) | Windows x64 and macOS arm64 parallel/serial suites pass; `.python-version` aligned to `3.14.10` |
+| APPS-003 | Medium | Cross-platform & dependencies | In progress | Constraints and CI install policy added; pinned runtime/fresh installs/hosted runs pending |
 | APPS-004 | Medium | Repository tracking | Committed (`3491064`, `731fe01`) | Verified on Windows x64 and macOS 26.6.2 arm64 |
 | APPS-005 | Medium | Agent policy | Committed (`731fe01`) | Verified on Windows x64 and macOS 26.6.2 arm64 |
+
+## 2026-11-06 local corrections and remaining verification
+
+At base `29c9eb2393f2014c229e03a5e222d56baad8ce7d` plus pre-existing local
+changes, implemented SDK-001, HELPER-001, HELPER-002 and APPS-001 without live
+financial mutations or environment changes. Historical evidence below describes
+the original failure mechanisms; this section records their corrections.
+
+- **SDK-001:** Transport snapshots/restores seekable upload offsets before 401
+  and 429 retries; rejects non-seekable streams before HTTP. Actual multipart
+  replay tests cover raw/tuple uploads and nonzero positions.
+- **HELPER-001:** Live offsets require an explicit checkpoint; organization/domain
+  scope, exclusive lock, payload intent and known IDs persist around creates.
+  Compensation is withheld after any uncertain result. Reruns verify both saved
+  payments by live detail reads before skipping already-created bill intents;
+  missing/ambiguous state blocks posting. Tests cover response loss, missing IDs,
+  checkpoint failures, scope mismatch, stale locks and duplicate prevention.
+  See the [recovery contract](okf/vendor-customer-offset.md). Allocation
+  identities/amounts are compared after detail reads; discrepancies fail safely.
+- **HELPER-002:** Removed the five tenant-specific organization/account/workbook
+  defaults. Missing Analytics organization fails before token retrieval; existing
+  stock-count/payment guards retain their scoped behavior. Fresh defaults and
+  explicit configuration migration are covered by regression tests.
+- **APPS-001:** Both handlers reject invalid/duplicate Host headers before pages
+  and APIs; local authorities use the actual bound port. Token/confirmation
+  regression tests continue to pass.
+- **APPS-003:** Added application constraints and applied them to CI installs;
+  library compatibility ranges remain separate. Existing Mac `.venv` remains
+  CPython 3.14.10, with no installs or interpreter changes. Fresh installs using
+  3.14.4 and supported-platform hosted results remain pending. GitHub's PR-run
+  lookup for the base SHA returned no runs; this limited lookup does not establish
+  whether push-triggered CI ran. Uncommitted fixes have no hosted CI evidence.
+
+Verification commands and final results are recorded in the
+[change entry](CHANGELOG.md#harden-transport-offset-recovery-and-deployment-boundaries).
+Local fixes remain **Fixed, awaiting verification**, rather than Verified without
+implementation commits and required platform evidence. APPS-004/005 retain their
+previous verified status; SDK-002/APPS-002 retain their outstanding verification.
 
 ## Categories and ownership
 
@@ -61,8 +99,8 @@ that every neighboring failure path is covered.
 
 ### SDK-001 — File uploads are not safely replayed
 
-- **Priority / status:** High / Open; supported by static code inspection.
-- **Evidence:** [transport](src/zoho/base_client.py) reuses request arguments for
+- **Priority / status:** High / Fixed, awaiting verification; supported by static code inspection.
+- **Original evidence (before the 2026-11-06 correction):** [transport](src/zoho/base_client.py) reuses request arguments for
   401 and rate-limit retries without restoring file positions.
   [WorkDrive upload](src/zoho/wd/resources/files.py) supplies an open binary file.
   Multipart preparation consumes that file before the retry.
@@ -113,9 +151,9 @@ in their domain owners.
 
 ### HELPER-001 — Uncertain paired-payment results trigger unsafe compensation
 
-- **Priority / status:** High / Open; failure path established by static review,
+- **Priority / status:** High / Fixed, awaiting verification; failure path established by static review,
   uncertain server completion not reproduced against a live service.
-- **Evidence:** [offset processor](src/workflows/vendor_customer_offset/processor.py)
+- **Original evidence (before the 2026-11-06 correction):** [offset processor](src/workflows/vendor_customer_offset/processor.py)
   creates a customer payment, then a vendor payment. Any exception in the second
   operation, including a missing returned ID, leads to customer-payment deletion.
   It does not reconcile whether the vendor payment actually committed first.
@@ -139,9 +177,9 @@ was unavailable during this review.
 
 ### APPS-001 — Local review servers lack consistent Host validation
 
-- **Priority / status:** Medium / Open; missing validation confirmed statically,
+- **Priority / status:** Medium / Fixed, awaiting verification; missing validation confirmed statically,
   DNS-rebinding exploitability not demonstrated.
-- **Evidence:** [payment review](apps/payment_review.py) and
+- **Original evidence (before the 2026-11-06 correction):** [payment review](apps/payment_review.py) and
   [dashboard](apps/dashboard.py) serve token-bearing pages without checking the
   request Host. [Beat allocation](apps/allocate_customer_beats.py) already checks
   the expected local host and port.
@@ -239,8 +277,8 @@ Documentation changes do not close APPS-002 or prove platform compatibility.
 
 ### HELPER-002 — Tenant-specific configuration defaults
 
-- **Priority / status:** Medium / Open.
-- **Evidence:** [Config](src/workflows/core/config.py) includes deployment-specific
+- **Priority / status:** Medium / Fixed, awaiting verification.
+- **Original evidence (before the 2026-11-06 correction):** [Config](src/workflows/core/config.py) includes deployment-specific
   defaults for Analytics organization, payment accounts and a stock-count worksheet.
   A fresh machine can inherit these when settings are omitted.
 - **Close when:** Affected workflows require explicit deployment values and fail
@@ -250,7 +288,7 @@ Documentation changes do not close APPS-002 or prove platform compatibility.
 
 ### APPS-003 — Cross-platform and dependency reproducibility unverified
 
-- **Priority / status:** Medium / Open.
+- **Priority / status:** Medium / In progress; dependency constraints implemented locally, runtime and hosted verification pending.
 - **Evidence:** CI now includes Ubuntu, Windows x64 and macOS 26 arm64 jobs;
   hosted CI results remain unverified. Local macOS 26.6.2 arm64 passed `mypy`,
   `analyze_project.py --verify`, and the full test suite on 2026-11-05 (2758 passed,
