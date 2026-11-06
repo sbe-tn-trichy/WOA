@@ -73,7 +73,6 @@ Bank Statement Categorization includes Creator collection matching, Analytics-as
 | Workflow | Module | Primary entry point | Operation | Contract |
 |---|---|---|---|---|
 | Books-to-Creator customer creation and updates | [creator_customer_sync](src/workflows/creator_customer_sync/) | [sync_creator_customers.py](apps/customers/sync_creator_customers.py) | Preview / write | [Contract](okf/creator-customer-delete-sync.md) |
-| Customer deletion synchronization | [creator_customer_delete_sync](src/workflows/creator_customer_delete_sync/) | Library API; no dedicated runner identified | Library API; deletes Creator records | [Contract](okf/creator-customer-delete-sync.md) |
 | Customer beat allocation | [creator_beat_allocation](src/workflows/creator_beat_allocation.py) | [allocate_customer_beats.py](apps/customers/allocate_customer_beats.py) | Review UI / write | [Contract](okf/creator-customer-delete-sync.md) |
 | Assigned Creator beats to Books contacts | [creator_beat_sync](src/workflows/creator_beat_sync.py) | [sync_creator_beats.py](apps/customers/sync_creator_beats.py) | Preview / write | [Contract](okf/creator-customer-delete-sync.md) |
 | Books-payment link backfill | [creator_books_payment_link](src/workflows/creator_books_payment_link.py) | [backfill_creator_matched_payments.py](apps/payments/backfill_creator_matched_payments.py) | Preview / write | [Contract](okf/workflow-helpers.md) |

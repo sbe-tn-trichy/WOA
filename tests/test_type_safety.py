@@ -174,21 +174,16 @@ def test_stock_transfer_rejects_malformed_nested_records(field, value):
 def test_checker_accepts_real_sdk_and_rejects_wrong_domain_types(tmp_path):
     if find_spec("mypy") is None:
         pytest.skip("Install the authorized typing extra to run checker contracts")
+    from mypy import api
     root = Path(__file__).resolve().parents[1]
-    command = [sys.executable, "-m", "mypy", "--cache-dir", str(tmp_path / "mypy")]
-    accepted = subprocess.run(
-        [*command, "tests/typecheck/renumber_contracts.py"], cwd=root,
-        capture_output=True, text=True, timeout=60,
-    )
-    assert accepted.returncode == 0, accepted.stdout + accepted.stderr
+    cache_arg = f"--cache-dir={tmp_path / 'mypy'}"
+    out, err, code = api.run([cache_arg, "tests/typecheck/renumber_contracts.py"])
+    assert code == 0, out + err
     rejected_file = tmp_path / "rejected_contract.py"
     rejected_file.write_text((root / "tests/typecheck/renumber_rejected.txt").read_text(encoding="utf-8"), encoding="utf-8")
-    rejected = subprocess.run(
-        [*command, str(rejected_file)],
-        cwd=root, capture_output=True, text=True, timeout=60,
-    )
-    assert rejected.returncode == 1, rejected.stdout + rejected.stderr
-    assert rejected.stdout.count("[arg-type]") == 1, rejected.stdout
-    assert rejected.stdout.count("[typeddict-item]") == 1, rejected.stdout
-    assert rejected.stdout.count("[assignment]") == 1, rejected.stdout
-    assert rejected.stdout.count("error:") == 3, rejected.stdout
+    out, err, code = api.run([cache_arg, str(rejected_file)])
+    assert code == 1, out + err
+    assert out.count("[arg-type]") == 1, out
+    assert out.count("[typeddict-item]") == 1, out
+    assert out.count("[assignment]") == 1, out
+    assert out.count("error:") == 3, out

@@ -44,10 +44,15 @@ correctness and data safety:
 
 - Library code lives in `src/zoho/` (low-level clients) and `src/workflows/`
   (domain workflows); permanent entry points live in `apps/`.
-- Maintain shallow nesting and a strict limit of $\le 10$ files per directory across
+- Read `project_structure.max_nested_folder_depth` from `config/config.yaml` for
+  the maximum directory depth beneath `apps/`, `src/workflows/`, and `output/`
+  (root depth 0; a direct child is depth 1). Use 1 if the local file or key is
+  absent; values must be non-negative integers (not booleans). This is an
+  organization policy, not automatic runtime enforcement.
+- Maintain nesting within that configured depth and a strict limit of $\le 10$ files per directory across
   `apps/`, domain packages, and output locations to prevent clutter and preserve
   maintainability.
-- Group operational scripts into shallow 1-level domain subdirectories under `apps/`
+- Group operational scripts into domain subdirectories within the configured depth under `apps/`
   (e.g., `apps/<domain>/`) alongside unified entry-point dispatchers at the `apps/`
   root. Transparent meta-path redirection in `apps/__init__.py` preserves
   backward-compatible imports for legacy script paths.

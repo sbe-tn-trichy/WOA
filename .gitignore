@@ -46,6 +46,8 @@ htmlcov/
 !.env.example
 zoho_config.json
 config.json
+/config/zoho_config.yaml
+/config/config.yaml
 /config/accounting-mapping.yaml
 /config/firm-reports.yaml
 /config/statement-schedules.yaml

@@ -1,0 +1,152 @@
+# Local project configuration. Copy config.example.yaml when setting up a machine.
+# Environment variables override runtime values in the selected profile.
+# Profiles are independent: sandbox does not inherit production settings.
+# Keep IDs quoted as strings. Keep deployment values in this ignored local file.
+# Configuration reference: ../okf/configuration.md
+
+# 1. Choose the runtime profile defined under profiles below.
+active_profile: production
+
+# 2. Repository organization rules, shared by all profiles.
+# Depth: apps/, src/workflows/, output/ = 0; their direct child folders = 1.
+# This guides file organization; it does not move files or enforce depth at runtime.
+project_structure:
+  max_nested_folder_depth: 1
+
+# 3. Runtime settings. Only the selected profile is loaded.
+profiles:
+
+  production:
+
+    # Connection, organization, default branch, and Books tax identifiers.
+    core:
+      # Display labels for GST registrations; these do not change location scope.
+      gstin_aliases:
+        <recipient-gstin>: <firm-alias>
+      # Token broker endpoint; localhost means this computer.
+      token_url: http://localhost:3000/server/new/tokens
+      # Books organization ID for this profile.
+      org_id: <your-zoho-organization-id>
+      # Analytics organization ID; configure separately from Books.
+      analytics_org_id: <your-analytics-organization-id>
+      # Zoho data-center suffix, for example in or com.
+      domain: in
+      # Default Books branch/location ID for scoped operations.
+      expected_location_id: <location-id>
+      # Human-readable name of that branch/location.
+      expected_location_name: <branch-name>
+      # Books tax-settings identifier.
+      zoho_tax_settings_id: <books-tax-settings-id>
+      # Books zero/out-of-scope tax identifier.
+      zoho_gst0_tax_id: <books-tax-id>
+
+    # Choose which workflows appear in the local operations dashboard.
+    dashboard:
+      # Empty include means all workflows; exclude takes precedence.
+      dashboard_workflows:
+        include: []
+        exclude: []
+        groups:
+          Reconciliation:
+          - collection_reconciliation
+          - vendor_ledger_reconciliation
+          - vendor_customer_offset
+          Audit:
+          - duplicate_payment_check
+          Inventory:
+          - neoseal_audit
+          - neoseal_stock_count
+          - stock_transfer
+          Customers:
+          - creator_customer_sync
+          Compliance:
+          - gstr1_verification
+          - gstr2_verification
+          Purchasing:
+          - polycab_credit_memos
+          Sales:
+          - polycab_rso
+
+    # GSTR-2: map each registration GSTIN to its Books location IDs.
+    gstr2:
+      gstr2_location_gstin_map:
+        <recipient-gstin>:
+        - <books-location-id>
+
+    # GSTR-1: explicitly confirmed financial credit-note exceptions.
+    gstr1:
+      gstr1_financial_credit_notes:
+        <confirmed-financial-credit-note-id>: Financial credit note; GST not applicable
+
+    # Creator customer/payment integration and collection-review defaults.
+    creator:
+      creator_owner_name: <your-creator-account-owner>
+      payment_creator_app_link_name: order-management-new
+      payment_travel_expense_account_id: <travel-expense-account-id>
+      payment_salary_expense_account_id: <salary-expense-account-id>
+      payment_cash_account_id: <cash-account-id>
+      # Creator report link names, not display titles.
+      payment_creator_reports:
+        online: Online_Payments
+        cheque: Cheques
+        cheque_detail: All_Cheque_Details
+        customer: All_Customers1
+        checkpoint: All_Payments
+
+    # Neoseal item scope and stock-count spreadsheet destinations.
+    neoseal:
+      # Inventory purchase-account filter; prevents cross-vendor item matches.
+      neoseal_purchase_account_id: <neoseal-purchase-account-id>
+      neoseal_price_list_google_sheet_id: <google-sheet-id>
+      neoseal_stock_count_sheet_id: <zoho-sheet-workbook-id>
+      neoseal_stock_count_worksheet: StockCount
+      neoseal_stock_count_flat_worksheet: Flat
+      neoseal_stock_count_mapping_worksheet: Mapping
+
+    # Polycab contacts, credit-note items, source files, and WorkDrive destination.
+    polycab:
+      polycab_vendor_id: <vendor-contact-id>
+      # Books customer used for Polycab return sales orders.
+      rso_customer_id: <customer-contact-id>
+      zoho_rso_cn_item_id: <books-item-id>
+      zoho_scheme_cn_item_id: <books-item-id>
+      # Directory containing Polycab credit-note source PDFs.
+      files_dir: input_files/polycab/cn
+      polycab_ledger_path: input_files/polycab/ledger/reconciliation-ledger.xls
+      # WorkDrive folder receiving Polycab uploads.
+      polycab_folder_id: <workdrive-folder-id>
+
+    # Fan catalog: purchase account used to scope Inventory items.
+    fan:
+      fan_purchase_account_id: <fan-purchase-account-id>
+
+    # Zeiss supplier and source ledger file.
+    zeiss:
+      zeiss_vendor_id: <vendor-contact-id>
+      zeiss_ledger_path: input_files/zeiss/statement.csv
+
+    # Books bank accounts and GSTIN-to-vendor associations.
+    banking:
+      bank_account_hdfc: <bank-account-id>
+      bank_account_hdfc_agencies: <bank-account-id>
+      bank_account_icici: <bank-account-id>
+      bank_account_idfc: <bank-account-id>
+      gstin_to_vendor_id: {}
+
+    # Google Sheets authentication overrides.
+    google:
+      google_sheets_access_token: <google-sheets-oauth-access-token>
+      google_application_credentials: <path-to-service-account-json>
+
+  sandbox:
+
+    # Connection, organization, default branch, and Books tax identifiers.
+    core:
+      # Token broker endpoint; localhost means this computer.
+      token_url: http://localhost:3000/server/new/tokens
+      # Books organization ID for this profile.
+      org_id: <sandbox-organization-id>
+      # Analytics organization ID; configure separately from Books.
+      analytics_org_id: <sandbox-analytics-organization-id>
+      # Zoho data-center suffix, for example in or com.
+      domain: in

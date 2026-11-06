@@ -9,6 +9,42 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-06
 
+### Clarify and rename the unified YAML configuration
+
+- **Why:** Give the unified configuration a neutral filename and make profile selection, project policy and workflow identifiers easier to understand.
+- **What:** Renamed local settings to `config/config.yaml` and the template to `config/config.example.yaml`. Ordered both as active profile, shared project structure, then independent runtime profiles; added section explanations and comments for ambiguous IDs, defaults and selection rules. Preserved every parsed value and existing profile/section names. Made the canonical filename highest priority, retaining legacy fallbacks, and updated setup/policy references and tests.
+- **Verification:** Both parsed YAML documents match their originals and effective runtime file configuration is unchanged. macOS / workspace CPython 3.14.10: 35 focused tests passed; full suite: 2889 passed, 4 subtests passed. Tests cover canonical-path precedence, invalid YAML and profile/template contracts. `git diff --check` passed; local settings remain ignored. No live calls. Annual rollover checked: root entries remain in 2026.
+
+### Merge directory policy into the runtime YAML configuration
+
+- **Why:** Keep local project settings in one YAML file instead of separate directory-policy and runtime files.
+- **What:** Merged `config/config.yaml` into `config/zoho_config.yaml` and removed the former after verifying preservation. Added top-level `project_structure.max_nested_folder_depth` to the example; policy is shared across profiles and runtime values remain in the active profile. Updated repository guidance and configuration ownership; the old path remains a supported loader fallback.
+- **Verification:** Parsed merged settings match both source documents and effective runtime file configuration is unchanged. macOS / workspace CPython 3.14.10: 35 focused tests passed, including the merged policy/profile layout and example setting; `git diff --check` passed. Full suite not repeated because no runtime code changed. Local settings remain ignored; no live calls. Annual rollover checked: root entries remain in 2026.
+
+### Migrate project configuration files to YAML
+
+- **Why:** Use YAML consistently for local settings and templates in `config/`.
+- **What:** Converted both local JSON settings files and the runtime template to `.yaml`, preserving parsed values. The runtime loader safely parses YAML before legacy JSON and fails closed for invalid or missing profiles; legacy JSON fallbacks remain supported. Updated ignore rules, policy, setup instructions, manual reader and template checks. PyYAML already belongs to the workflows extra; no environment changes.
+- **Verification:** Compared every converted document and effective runtime file configuration before/after without exposing values. macOS / workspace CPython 3.14.10: 35 focused tests passed; full suite: 2889 passed, 4 subtests passed. Coverage includes native YAML profiles, quoted identifiers, precedence, malformed/empty/non-object YAML, unsafe tags and legacy JSON. `git diff --check` passed; no JSON files remain in `config/`; local YAML settings remain ignored. No live calls. Annual rollover checked: root entries remain in 2026.
+
+### Consolidate local settings and templates under config
+
+- **Why:** Keep local project settings and configuration templates together as requested.
+- **What:** Moved the two local root JSON settings files and runtime example into `config/`; existing YAML templates remain there. Prioritized `config/zoho_config.json` ahead of `config/config.json` to preserve runtime profiles alongside directory policy, retaining legacy root fallbacks and fail-closed validation. Updated policy, setup/dashboard documentation, the manual reader and template tests. Local settings remain ignored.
+- **Verification:** All moved files preserved byte hashes and effective file configuration compared equal before/after without exposing values. macOS / workspace CPython 3.14.10: 28 focused tests passed; full suite: 2882 passed, 4 subtests passed. New precedence and invalid-profile fallback tests pass; `git diff --check` passed. No live API calls. Annual rollover checked: root entries remain in 2026.
+
+### Configure project directory nesting depth
+
+- **Why:** Make the nesting limit adjustable instead of hard-coding one level in repository guidance.
+- **What:** Added local Git-ignored root `config.json` with `project_structure.max_nested_folder_depth: 1`. Updated policy and its owning concept with organization roots, depth counting, non-negative integer requirements, and fallback 1. This guides organization without automatic enforcement or file moves.
+- **Verification:** Parsed the local JSON and checked the configured value/type; `git diff --check` passed. No runtime code changed, so tests were not rerun. Annual rollover checked: all root entries remain in 2026.
+
+### Remove obsolete Creator customer deletion-sync workflow
+
+- **Why:** Remove the requested obsolete workflow package, which only aliased full customer reconciliation.
+- **What:** Removed the compatibility package and root exports, removed its catalog entry and alias-only test, and migrated deletion-safety tests to the canonical customer sync API. Updated the owning concept; the active customer sync CLI and reconciliation remain available.
+- **Verification:** macOS / workspace CPython 3.14.10: 72 focused tests passed; full suite passed (2878 tests, 4 subtests). Initial sandboxed full run had six localhost-bind permission failures; permitted rerun passed. No remaining source/test references to the removed API; `git diff --check` passed. Annual rollover checked: root entries remain in 2026. No live API changes.
+
 ### Fix Windows cleanup test path comparison
 
 - **Why:** Hosted CI run [#67](https://github.com/sbe-tn-trichy/zoho_sdk/actions/runs/42202567269)

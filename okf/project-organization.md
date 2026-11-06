@@ -52,11 +52,27 @@ to the same parser and execution path; output wording is now shared.
 
 ## Directory structure and file limits
 
-Maintain shallow nesting and $\le 10$ files per directory across the repository
+`config/config.yaml` contains the directory nesting policy at the top level, alongside
+`active_profile` and `profiles` (the policy applies to every profile):
+
+```yaml
+project_structure:
+  max_nested_folder_depth: 1
+```
+
+Measure depth relative to each organization root (`apps/`, `src/workflows/`,
+`output/`): the root is 0, a direct child is 1, and its child is 2.
+The value must be a non-negative integer, excluding booleans. If the local file
+or key is absent, use 1. This setting guides repository organization; no runtime
+checker or automatic file movement is introduced. Existing deeper structures
+require review before reorganization. `config/config.yaml` remains Git-ignored local
+configuration; this documented default applies to fresh checkouts.
+
+Maintain nesting within the configured depth and $\le 10$ files per directory
 to keep navigation discoverable and project inspection clean:
 
-- **Apps hierarchy**: Primary domain operations are organized into shallow 1-level
-  subdirectories (e.g., `apps/bank_collections/`, `apps/customers/`, `apps/gst/`,
+- **Apps hierarchy**: Primary domain operations are organized into domain
+  subdirectories within the configured depth (e.g., `apps/bank_collections/`, `apps/customers/`, `apps/gst/`,
   `apps/inter_location_ops/`, `apps/inventory/`, `apps/neoseal_items/`, `apps/payments/`,
   `apps/statements/`, `apps/tools/`, and `apps/vendor_payments/`). Every directory
   under `apps/` (including root `apps/`) must contain $\le 10$ Python files.

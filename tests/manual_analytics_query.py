@@ -5,21 +5,20 @@ settings have safe development defaults and can be overridden with environment
 variables.
 """
 
-import json
 import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
 from zoho import HttpTokenProvider, ZohoAnalyticsAPI
+from workflows.core.config import _load_config_dict
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load_config() -> Dict[str, Any]:
-    path = PROJECT_ROOT / "zoho_config.json"
-    return json.loads(path.read_text()) if path.exists() else {}
+    return _load_config_dict(PROJECT_ROOT)
 
 
 def run_query() -> List[Dict[str, Any]]:

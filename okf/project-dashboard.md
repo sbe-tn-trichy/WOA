@@ -28,7 +28,7 @@ file-dependent workflows: entry 17 provides a JSON file field, validates the
 selected file, stores it only in a temporary file for the duration of the run,
 and deletes that temporary source after the verifier exits.
 
-Workflow visibility is configured in the active `zoho_config.json` profile:
+Workflow visibility is configured in the active `config/config.yaml` profile:
 
 ```json
 "dashboard_workflows": {

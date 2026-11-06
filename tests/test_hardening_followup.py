@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 
 from workflows.core.auth import get_creator_client
 from workflows.core.config import Config, _load_config_dict, _flatten_profile
@@ -166,9 +167,10 @@ def test_module_grouped_sections_load_into_config_dict(tmp_path: Path):
 
 def test_example_config_covers_public_config_keys():
     project_root = Path(__file__).resolve().parent.parent
-    example = json.loads(
-        (project_root / "zoho_config.example.json").read_text(encoding="utf-8")
+    example = yaml.safe_load(
+        (project_root / "config" / "config.example.yaml").read_text(encoding="utf-8")
     )
+    assert example["project_structure"] == {"max_nested_folder_depth": 1}
     profile = example["profiles"][example["active_profile"]]
     flattened = _flatten_profile(profile)
     example_keys = {key.upper() for key in flattened}
@@ -323,3 +325,56 @@ import workflows.core.auth
     )
 
     assert completed.returncode == 0, completed.stderr
+
+
+def test_moved_runtime_profile_precedes_structure_policy(tmp_path: Path):
+    folder = tmp_path / "config"
+    folder.mkdir()
+    (folder / "zoho_config.json").write_text(
+        json.dumps({"active_profile": "live", "profiles": {"live": {"org_id": "moved-org"}}})
+    )
+    (folder / "config.json").write_text(
+        json.dumps({"project_structure": {"max_nested_folder_depth": 1}})
+    )
+    assert _load_config_dict(tmp_path, tmp_path / "home")["org_id"] == "moved-org"
+
+
+@pytest.mark.parametrize("content", ["{invalid", "[]", '{"active_profile":"missing","profiles":{}}'])
+def test_invalid_moved_runtime_profile_does_not_fall_back(tmp_path: Path, content: str):
+    folder = tmp_path / "config"
+    folder.mkdir()
+    (folder / "zoho_config.json").write_text(content)
+    (folder / "config.json").write_text(json.dumps({"org_id": "wrong-org"}))
+    with pytest.raises(ValueError):
+        _load_config_dict(tmp_path, tmp_path / "home")
+
+
+def test_yaml_profile_precedes_json_and_preserves_identifiers(tmp_path: Path):
+    folder = tmp_path / "config"
+    folder.mkdir()
+    (folder / "config.yaml").write_text(
+        'project_structure:\n  max_nested_folder_depth: 2\nactive_profile: live\nprofiles:\n  live:\n    core:\n      org_id: "00123"\n      domain: "in"\n'
+    )
+    (folder / "zoho_config.yaml").write_text('core:\n  org_id: "legacy-org"\n')
+    (folder / "zoho_config.json").write_text('{"org_id":"wrong-org"}')
+    loaded = _load_config_dict(tmp_path, tmp_path / "home")
+    assert loaded["org_id"] == "00123"
+    assert loaded["domain"] == "in"
+    assert "project_structure" not in loaded
+
+
+@pytest.mark.parametrize("content", ["key: [", "[]", "", "active_profile: missing\nprofiles: {}", 'key: !!python/object:builtins.object {}'])
+def test_invalid_yaml_does_not_fall_back(tmp_path: Path, content: str):
+    folder = tmp_path / "config"
+    folder.mkdir()
+    (folder / "config.yaml").write_text(content)
+    (folder / "zoho_config.json").write_text('{"org_id":"wrong-org"}')
+    with pytest.raises(ValueError):
+        _load_config_dict(tmp_path, tmp_path / "home")
+
+
+def test_yaml_generic_config_without_runtime_profile(tmp_path: Path):
+    folder = tmp_path / "config"
+    folder.mkdir()
+    (folder / "config.yaml").write_text('core:\n  org_id: "yaml-org"\n')
+    assert _load_config_dict(tmp_path, tmp_path / "home")["org_id"] == "yaml-org"

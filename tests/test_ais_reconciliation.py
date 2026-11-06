@@ -145,7 +145,9 @@ def test_collection_stops_at_budget_without_mutations(master):
     books.locations.list.assert_not_called()
 
 
-def test_collection_rejects_missing_list(master):
+def test_collection_rejects_missing_list(master, monkeypatch):
+    import workflows.ais_reconciliation.sources as sources
+    monkeypatch.setattr(sources.time, "sleep", lambda seconds: None)
     books = SimpleNamespace(organization_id="org", organizations=SimpleNamespace(get=Mock(return_value={"code": 0})),
                             locations=SimpleNamespace(list=Mock(return_value={"code": 0, "page_context": {"has_more_page": False}})))
     with pytest.raises(ValueError, match="missing list"):

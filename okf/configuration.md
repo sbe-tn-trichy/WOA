@@ -18,24 +18,37 @@ Runtime configuration is loaded using a prioritized multi-tier hierarchy:
 
 1. **Environment Variables**: Explicit process environment variables (`os.environ`).
 2. **Project `.env` File**: Local `.env` in the repository root (not committed).
-3. **Project Configuration File**: `config/config.json` is preferred, followed by legacy root `zoho_config.json` and `config.json` (all ignored in `.gitignore`).
+3. **Project Configuration File**: `config/config.yaml` is preferred, followed by legacy `config/zoho_config.yaml`, `config/zoho_config.json` and
+   `config/config.json`, then legacy root `zoho_config.json` and `config.json` (all ignored in `.gitignore`).
 4. **User Home Config (`~/.config/zoho/config.json` or `~/.zoho/config.json`)**: User-level global configuration profiles.
 
-The first existing JSON file in that order is authoritative. Invalid JSON,
+The first existing configuration file in that order is authoritative. The top-level `project_structure` section in `config/config.yaml` holds
+repository organization policy shared by all profiles. Runtime values remain
+in the selected `profiles` entry; policy is read directly from the top-level
+section by repository guidance. `config/zoho_config.yaml` is a legacy fallback only. Invalid YAML/JSON,
 non-object configuration, and missing active profiles fail closed instead of
 falling through to a lower-priority file, preventing accidental cross-tenant
 identifier selection.
 
-A configuration template is provided in `zoho_config.example.json`. Profiles
+YAML uses safe loading and requires the existing workflows extra (PyYAML).
+Quote identifiers and string values such as `"00123"` or `"on"` to preserve their
+types. YAML files take precedence over legacy JSON; invalid higher-priority
+files never fall through. Environment-variable object values remain JSON.
+
+The file is ordered as profile selection, shared project rules, then independent
+runtime profiles. Comments describe each workflow section and ambiguous IDs.
+Switching profiles does not inherit settings from another profile.
+
+A configuration template is provided in `config/config.example.yaml`. Profiles
 can organize settings into readable module and workflow sections (`core`,
 `dashboard`, `creator`, `neoseal`, `polycab`, `fan`, `zeiss`, `banking`), or
 declare flat keys directly; grouped keys are automatically flattened for runtime lookup.
 
 Keep the local accounting mapping in `config/accounting-mapping.yaml` alongside
-the runtime JSON. `config/accounting-mapping.example.yaml` documents calculation
+the runtime YAML. `config/accounting-mapping.example.yaml` documents calculation
 coefficients, report paths, and spreadsheet-row account mappings with generic
 account names. Copy and adapt the example to the exact Books account names and
-target workbook rows. The mapping is separate from runtime JSON configuration;
+target workbook rows. The mapping is separate from runtime YAML configuration;
 the Books statement sheet updater uses this path by default, including its
 spreadsheet ID, location scope, statement mappings, equity, and P&L notes.
 Other accounting report tooling can accept its path explicitly. Local mapping data is
@@ -138,7 +151,7 @@ Documented APIs may honor an explicit absolute caller path. In both cases,
 `resolve_output_path()` and `sanitize_filename()` prevent directory traversal and
 unsafe derived filenames.
 
-`.env` and `zoho_config.json` are intended for local execution only and must not be committed. Prefer explicit environment or user home (`~/.config/zoho/config.json`) configuration for deployed workloads. Treat organization, vendor, item, tax, bank-account, location, and WorkDrive folder IDs as deployment-specific values without hardcoding tenant defaults in library code.
+`.env` and `config/config.yaml` are intended for local execution only and must not be committed. Prefer explicit environment or user home (`~/.config/zoho/config.json`) configuration for deployed workloads. Treat organization, vendor, item, tax, bank-account, location, and WorkDrive folder IDs as deployment-specific values without hardcoding tenant defaults in library code.
 
 Polycab vendor-credit creation passes `EXPECTED_LOCATION_ID` explicitly in
 the Zoho Books payload. Callers may override the location for a single credit
@@ -167,7 +180,7 @@ entry point.
 
 The payment-review application reads all Creator report link names from the
 same configuration hierarchy. Set entries within the grouped
-`payment_creator_reports` object in the active `zoho_config.json` profile to
+`payment_creator_reports` object in the active `config/config.yaml` profile to
 override them without changing Python or HTML. The environment-variable form
 accepts the same object encoded as JSON in `PAYMENT_CREATOR_REPORTS`.
 

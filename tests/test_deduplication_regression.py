@@ -5,7 +5,6 @@ Covers:
 - Payment reference normalization across variations of case, punctuation, whitespace.
 - Missing, malformed, non-finite, and rounded amounts in matching/coercion.
 - Checkpoint resume and atomic write failure handling.
-- Legacy compatibility imports (creator_customer_delete_sync).
 """
 
 from __future__ import annotations
@@ -34,8 +33,6 @@ from workflows.vendor_customer_offset.processor import (
     run_vendor_customer_offset,
     VendorCustomerOffsetConfig,
 )
-import workflows.creator_customer_delete_sync as legacy_delete_sync
-import workflows.creator_customer_sync as canonical_customer_sync
 
 
 class TestGSTINRegression:
@@ -133,13 +130,3 @@ class TestAmountCoercionRegression:
         assert parse_date("invalid-date") is None
         assert parse_date(None) is None
         assert parse_date("") is None
-
-
-class TestCompatibilityImportsRegression:
-    def test_creator_customer_delete_sync_alias_integrity(self):
-        assert hasattr(legacy_delete_sync, "CreatorCustomerDeleteSyncConfig")
-        assert hasattr(legacy_delete_sync, "CreatorCustomerDeleteSyncer")
-        assert hasattr(legacy_delete_sync, "sync_creator_customer_deletions")
-        assert legacy_delete_sync.CreatorCustomerDeleteSyncer is canonical_customer_sync.CreatorCustomerSyncer
-        assert legacy_delete_sync.CreatorCustomerDeleteSyncConfig is canonical_customer_sync.CreatorCustomerSyncConfig
-        assert legacy_delete_sync.sync_creator_customer_deletions is canonical_customer_sync.sync_creator_customers

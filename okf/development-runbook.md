@@ -87,7 +87,7 @@ restrictions must be reported separately from product failures.
 
 ## Machine configuration and recovery state
 
-- Copy `zoho_config.example.json` to ignored `config/config.json` and adapt the
+- Copy `config/config.example.yaml` to ignored `config/config.yaml` and adapt the
   active profile. Follow the [configuration reference](configuration.md) for
   mappings and credentials. Check process environment and home configuration:
   they can change effective settings even with the same project files.

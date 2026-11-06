@@ -6,10 +6,10 @@ import pytest
 
 
 from workflows.core.exceptions import ReconciliationError
-from workflows.creator_customer_delete_sync import (
-    CreatorCustomerDeleteSyncConfig,
-    CreatorCustomerDeleteSyncer,
-    sync_creator_customer_deletions,
+from workflows.creator_customer_sync import (
+    CreatorCustomerSyncConfig,
+    CreatorCustomerSyncer,
+    sync_creator_customers,
 )
 
 
@@ -38,7 +38,7 @@ def mock_creator_client():
 
 
 def test_dry_run_mode(mock_books_client, mock_creator_client, tmp_path):
-    config = CreatorCustomerDeleteSyncConfig(
+    config = CreatorCustomerSyncConfig(
         app_link_name="customer_app",
         report_link_name="All_Customers",
         dry_run=True,
@@ -46,7 +46,7 @@ def test_dry_run_mode(mock_books_client, mock_creator_client, tmp_path):
         output_dir=tmp_path,
     )
     
-    syncer = CreatorCustomerDeleteSyncer(
+    syncer = CreatorCustomerSyncer(
         books_client=mock_books_client,
         creator_client=mock_creator_client,
         config=config,
@@ -67,7 +67,7 @@ def test_dry_run_mode(mock_books_client, mock_creator_client, tmp_path):
 
 
 def test_execute_live_deletions(mock_books_client, mock_creator_client, tmp_path):
-    config = CreatorCustomerDeleteSyncConfig(
+    config = CreatorCustomerSyncConfig(
         app_link_name="customer_app",
         report_link_name="All_Customers",
         dry_run=False,
@@ -75,7 +75,7 @@ def test_execute_live_deletions(mock_books_client, mock_creator_client, tmp_path
         output_dir=tmp_path,
     )
     
-    summary = sync_creator_customer_deletions(
+    summary = sync_creator_customers(
         books_client=mock_books_client,
         creator_client=mock_creator_client,
         config=config,
@@ -91,7 +91,7 @@ def test_execute_live_deletions(mock_books_client, mock_creator_client, tmp_path
 
 
 def test_soft_delete_mode(mock_books_client, mock_creator_client, tmp_path):
-    config = CreatorCustomerDeleteSyncConfig(
+    config = CreatorCustomerSyncConfig(
         app_link_name="customer_app",
         report_link_name="All_Customers",
         dry_run=False,
@@ -101,7 +101,7 @@ def test_soft_delete_mode(mock_books_client, mock_creator_client, tmp_path):
         output_dir=tmp_path,
     )
     
-    syncer = CreatorCustomerDeleteSyncer(
+    syncer = CreatorCustomerSyncer(
         books_client=mock_books_client,
         creator_client=mock_creator_client,
         config=config,
@@ -120,7 +120,7 @@ def test_soft_delete_mode(mock_books_client, mock_creator_client, tmp_path):
 
 
 def test_safety_limit_max_deletions(mock_books_client, mock_creator_client, tmp_path):
-    config = CreatorCustomerDeleteSyncConfig(
+    config = CreatorCustomerSyncConfig(
         app_link_name="customer_app",
         report_link_name="All_Customers",
         max_deletion_limit=0,  # 0 limit will trigger exception if candidate count > 0
@@ -128,7 +128,7 @@ def test_safety_limit_max_deletions(mock_books_client, mock_creator_client, tmp_
         output_dir=tmp_path,
     )
     
-    syncer = CreatorCustomerDeleteSyncer(
+    syncer = CreatorCustomerSyncer(
         books_client=mock_books_client,
         creator_client=mock_creator_client,
         config=config,
@@ -139,14 +139,14 @@ def test_safety_limit_max_deletions(mock_books_client, mock_creator_client, tmp_
 
 
 def test_safety_limit_percentage(mock_books_client, mock_creator_client, tmp_path):
-    config = CreatorCustomerDeleteSyncConfig(
+    config = CreatorCustomerSyncConfig(
         app_link_name="customer_app",
         report_link_name="All_Customers",
         max_deletion_percentage=10.0,  # 1 candidate out of 3 = 33.3% > 10.0%
         output_dir=tmp_path,
     )
     
-    syncer = CreatorCustomerDeleteSyncer(
+    syncer = CreatorCustomerSyncer(
         books_client=mock_books_client,
         creator_client=mock_creator_client,
         config=config,
@@ -157,7 +157,7 @@ def test_safety_limit_percentage(mock_books_client, mock_creator_client, tmp_pat
 
 
 def test_report_json_file_creation(mock_books_client, mock_creator_client, tmp_path):
-    config = CreatorCustomerDeleteSyncConfig(
+    config = CreatorCustomerSyncConfig(
         app_link_name="customer_app",
         report_link_name="All_Customers",
         max_deletion_percentage=50.0,
@@ -165,7 +165,7 @@ def test_report_json_file_creation(mock_books_client, mock_creator_client, tmp_p
     )
 
     
-    syncer = CreatorCustomerDeleteSyncer(
+    syncer = CreatorCustomerSyncer(
         books_client=mock_books_client,
         creator_client=mock_creator_client,
         config=config,

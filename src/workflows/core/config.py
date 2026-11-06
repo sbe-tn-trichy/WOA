@@ -53,7 +53,7 @@ def _load_config_dict(
     project_root: Optional[Path] = None,
     home: Optional[Path] = None,
 ) -> Dict[str, Any]:
-    """Load the highest-priority JSON configuration file.
+    """Load the highest-priority YAML or legacy JSON configuration file.
 
     Project configuration intentionally takes precedence over user-level
     defaults. An existing but invalid file is an error: silently falling back
@@ -62,6 +62,9 @@ def _load_config_dict(
     project_root = project_root or root_dir
     home = home or Path.home()
     candidate_paths = [
+        project_root / "config" / "config.yaml",
+        project_root / "config" / "zoho_config.yaml",
+        project_root / "config" / "zoho_config.json",
         project_root / "config" / "config.json",
         project_root / "zoho_config.json",
         project_root / "config.json",
@@ -72,11 +75,23 @@ def _load_config_dict(
         if path.exists() and path.is_file():
             try:
                 with open(path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
+                    if path.suffix == ".yaml":
+                        try:
+                            import yaml
+                        except ImportError as exc:
+                            raise ValueError(
+                                f"Reading YAML configuration from {path} requires the workflows extra (PyYAML)."
+                            ) from exc
+                        try:
+                            data = yaml.safe_load(f)
+                        except yaml.YAMLError as exc:
+                            raise ValueError(f"Unable to load Zoho configuration from {path}.") from exc
+                    else:
+                        data = json.load(f)
             except (OSError, UnicodeError, json.JSONDecodeError) as exc:
                 raise ValueError(f"Unable to load Zoho configuration from {path}.") from exc
             if not isinstance(data, dict):
-                raise ValueError(f"Zoho configuration in {path} must be a JSON object.")
+                raise ValueError(f"Zoho configuration in {path} must be a configuration object.")
             active_profile = data.get("active_profile")
             if active_profile:
                 profiles = data.get("profiles")

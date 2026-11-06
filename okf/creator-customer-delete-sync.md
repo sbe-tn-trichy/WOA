@@ -65,9 +65,8 @@ python apps/sync_creator_customers.py --apply
 
 The operations dashboard exposes this workflow as entry 10 (`creator_customer_sync`).
 
-The former `creator_customer_delete_sync` module and exported names remain aliases
-for compatibility and now perform full reconciliation, so existing callers must configure
-the creation form when customers are missing. The new helper is `sync_creator_customers`.
+Use `workflows.creator_customer_sync` and its public exports for reconciliation.
+The former deletion-sync compatibility package and exported aliases have been removed.
 
 ## Customer scope
 

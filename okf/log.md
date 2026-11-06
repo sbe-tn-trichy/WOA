@@ -2,6 +2,18 @@
 
 ## 2026-11-06
 
+- Renamed the canonical settings/template to `config/config.yaml` and `config/config.example.yaml`, with explained sections and profile selection; documented priority and independent profiles in [configuration](configuration.md). See [project change](../CHANGELOG.md#clarify-and-rename-the-unified-yaml-configuration).
+
+- Unified directory policy and runtime profiles in `config/zoho_config.yaml`, with a matching example and top-level policy shared across profiles. Updated [configuration](configuration.md) and [organization](project-organization.md). See [project change](../CHANGELOG.md#merge-directory-policy-into-the-runtime-yaml-configuration).
+
+- Migrated local settings and runtime template to YAML; documented safe parsing, profile priority, quoted identifiers, legacy JSON compatibility and the existing PyYAML requirement in [configuration](configuration.md). See [project change](../CHANGELOG.md#migrate-project-configuration-files-to-yaml).
+
+- Consolidated local JSON settings and runtime template under `config/`; documented runtime-profile priority over directory policy and retained root fallbacks in [configuration](configuration.md). See [project change](../CHANGELOG.md#consolidate-local-settings-and-templates-under-config).
+
+- Made directory nesting policy configurable through local root `config.json`; documented depth counting, validation and fallback in [project organization](project-organization.md#directory-structure-and-file-limits). See [project change](../CHANGELOG.md#configure-project-directory-nesting-depth).
+
+- Removed the obsolete Creator customer deletion-sync compatibility package and exports; retained canonical reconciliation and deletion-safety coverage. See [project change](../CHANGELOG.md#remove-obsolete-creator-customer-deletion-sync-workflow).
+
 - Reorganized `output/` and archived completed runs with manifest tracking, ensuring all directories strictly contain $\le 10$ files and maintain shallow hierarchy. See [project change](../CHANGELOG.md#reorganize-output-folder-adhering-to-file-count-limits-and-shallow-nesting).
 
 - Added the generic [item catalog export](item-catalog.md) owner and documented
