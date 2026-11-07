@@ -164,7 +164,7 @@ def test_record_validation_preserves_extra_fields_and_empty_lists():
 @pytest.mark.parametrize("field,value", [("locations", {}), ("locations", [None]), ("item_tax_preferences", [None])])
 def test_stock_transfer_rejects_malformed_nested_records(field, value):
     from workflows.stock_transfer import build_plan
-    from tests.test_stock_transfer import item
+    from tests.workflows.stock_transfer.test_stock_transfer import item
     data = item()
     data[field] = value
     with pytest.raises(ValueError):
@@ -175,7 +175,7 @@ def test_checker_accepts_real_sdk_and_rejects_wrong_domain_types(tmp_path):
     if find_spec("mypy") is None:
         pytest.skip("Install the authorized typing extra to run checker contracts")
     from mypy import api
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[3]
     cache_arg = f"--cache-dir={tmp_path / 'mypy'}"
     out, err, code = api.run([cache_arg, "tests/typecheck/renumber_contracts.py"])
     assert code == 0, out + err

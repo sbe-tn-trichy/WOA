@@ -138,7 +138,9 @@ GEMINI, CHANGELOG and `okf/*.md`, plus OKF frontmatter rules (`type:` required
 on concept files; no frontmatter on `okf/log.md`). It reports explicit mypy target
 coverage separately from transitive checking. Syntax/read failures are incomplete
 inspections. In-page anchors, full CommonMark parsing, dynamic imports and
-financial safety are outside these checks.
+financial safety are outside these checks. Directory file-count/depth policy is also
+not enforced by this analyzer; see APPS-006 in the
+[finding register](../PROJECT_ANALYSIS.md).
 
 `--since COMMIT` compares the resolved commit with HEAD and separately lists staged,
 unstaged and untracked changes, including renamed/deleted paths. Review candidates
@@ -180,3 +182,16 @@ visible when simplifying the catalog or adding a unified command.
 
 Related: [Architecture](architecture.md), [shared helpers](workflow-helpers.md),
 [workflow catalog](../WORKFLOWS.md).
+
+## Test ownership
+
+All automated tests live under root `tests/`: `zoho/` and `google_sheets/`
+mirror SDK ownership, `workflows/` mirrors canonical domain packages, and
+`apps/` follows application domains. Cross-layer regression and packaging checks
+live under `contracts/`; compiler fixtures remain in `typecheck/`. Keep each
+directory within ten files using meaningful responsibility groups as needed.
+Source packages contain no test directories. Pytest searches `tests/` with
+importlib mode, preserving same-named tests in separate domains. The metadata
+module remains excluded by default and can be run explicitly as documented in
+the [runbook](development-runbook.md). The
+[migration record](test-organization-plan.md) maps previous paths to current paths.

@@ -7,7 +7,47 @@ available; never invent a commit or claim checks that were not run.
 This file keeps the current year's entries; older years are archived under
 `changelog/YYYY.md` and linked here when created. Check rollover with each change.
 
+## 2026-11-07
+
+### Centralize tests by source ownership
+
+- **Why:** Align test navigation with SDK, workflow and application owners and remove nested source test directories (APPS-006).
+- **What:** Moved 135 test/support files into categorized root test folders; repaired cross-test imports and asset paths; updated pytest discovery, metadata exclusion, CI and operational references. Preserved a [complete path mapping](okf/test-organization-plan.md#implemented-path-mapping). Every destination directory has at most ten files; other APPS-006 issues remain open.
+- **Verification:** Windows AMD64 CPython 3.14.10: exact collection parity (2,876 default cases and 13 explicit metadata cases); default suite 2,874 passed, 2 skipped, 4 subtests passed (12.08s); metadata 13 passed (4.59s). API-reference and mypy passed; documentation/whitespace checks run. macOS/hosted CI not run. Annual rollover checked: root entries remain in 2026.
+
+
+### Prepare centralized test migration
+
+- **Why:** User requested preparation to centralize tests and match source ownership.
+- **What:** Added a destination structure, static root-test import inventory and migration/acceptance steps in the [plan](okf/test-organization-plan.md). Linked from OKF navigation. No test moves performed.
+- **Verification:** Inspected canonical source packages, root-test imports, fixture/path patterns and pytest configuration. Documentation analysis and whitespace checks run; runtime tests unnecessary for this planning-only change. Annual rollover checked: existing root entries remain in 2026. Implementation still requires collection parity and full-suite verification.
+
+
+### Review structure, maintainability, performance and security
+
+- **Why:** Requested project-wide assessment with reproducible evidence.
+- **What:** Recorded sampled review, SDK-003 URL-log disclosure, APPS-006 layout-policy mismatch and APPS-007 temporary-directory test assumption in [the finding register](PROJECT_ANALYSIS.md#2026-11-07-structure-readability-performance-and-security-review). Documented analyzer limitations; application behavior unchanged.
+- **Verification:** Windows AMD64 CPython 3.14.10: analyzer/API-reference/mypy passed; default suite 2,874 passed, 2 skipped, 4 subtests passed (12.48s); separately excluded metadata module 13 passed (1.84s). Mocked URL-secret reproduction confirmed. Sandbox failures and platform/live/advisory limitations recorded in the register. Rollover checked: root entries are all 2026.
+
 ## 2026-11-06
+
+### Exclude metadata module from default test collection
+
+- **Why:** User requested removal of metadata tests from the default suite.
+- **What:** Ignore `tests/test_analytics_metadata.py` during default discovery; preserve explicit module execution and Analytics catalog coverage. Updated runbook and performance-plan scope.
+- **Verification:** Windows CPython 3.14.10: default suite 2874 passed, 2 skipped, 4 subtests passed in 11.96s; explicit module collection still finds 13 tests. Diff whitespace check passed. Annual rollover checked: root entries remain in 2026.
+
+### Increase default test workers to eight
+
+- **Why:** Evaluate and adopt the requested higher parallelism.
+- **What:** Set pytest and manual CI defaults to eight workers; retain lower CI choices and update the runbook and performance plan.
+- **Verification:** Windows CPython 3.14.10 full runs: 13.58s and 14.48s, each 2887 passed, 2 skipped, 4 subtests passed. Improvement over four workers is not consistent across these samples; macOS/CI unverified. Isolated metadata profiling identified SQLite as the dominant cost (6 passed in 3.15s). Annual rollover checked: root entries remain in 2026.
+
+### Plan four-second full-suite performance
+
+- **Why:** Establish an evidence-based route to the requested four-second full test run.
+- **What:** Added a phased [implementation plan](okf/test-performance-plan.md) covering waits, Analytics persistence fixtures, scheduling, compiler overhead and strict full-suite acceptance. Related APPS-003 remains open.
+- **Verification:** Windows AMD64 CPython 3.14.10: profiled full suite 2887 passed, 2 skipped, 4 subtests passed in 15.24s; serial collection 2889 cases in 1.01s. Four-second feasibility remains unproven; no optimization applied. Annual rollover checked: root entries remain in 2026.
 
 ### Handle unavailable Windows symlink privilege in cleanup tests
 

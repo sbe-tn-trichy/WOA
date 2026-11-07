@@ -70,6 +70,11 @@ okf_version: "0.2"
 
 ## Operations
 
+* [Test Organization Plan](test-organization-plan.md) - Centralized tests mirroring canonical SDK, workflow and app ownership.
+
+
+* [Test Performance Plan](test-performance-plan.md) - Measured bottlenecks and the four-second full-suite target.
+
 * [Local Metabase](metabase-local.md) - App, image and settings volume removed.
 
 * [Development Runbook](development-runbook.md) - Local virtual environment setup, default parallel pytest execution and serial debugging, and safe workflow development guidelines.

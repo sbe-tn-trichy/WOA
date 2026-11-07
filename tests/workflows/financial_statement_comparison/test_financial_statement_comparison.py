@@ -119,7 +119,7 @@ def test_opening_period_rejects_pnl_source():
 
 def test_default_opening_stock_uses_requested_31_march_2025():
     from pathlib import Path
-    config = json.loads((Path(__file__).resolve().parents[1] /
+    config = json.loads((Path(__file__).resolve().parents[3] /
         "examples/financial_statement_fy2425.mapping.json").read_text(encoding="utf-8"))
     line = next(line for line in config["lines"] if line["label"].endswith(": Opening Stock"))
     assert line["terms"][0]["period"] == "current"
@@ -136,7 +136,7 @@ def test_default_opening_stock_uses_requested_31_march_2025():
 
 def test_audited_profit_is_compared_before_tax():
     from pathlib import Path
-    config = json.loads((Path(__file__).resolve().parents[1] /
+    config = json.loads((Path(__file__).resolve().parents[3] /
         "examples/financial_statement_fy2425.mapping.json").read_text(encoding="utf-8"))
     line = next(line for line in config["lines"] if line["cell"] == "'Trading & P&L A/c'!B20")
     reports = {"profitandloss": {"schedule_profit_and_loss": [

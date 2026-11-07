@@ -58,7 +58,7 @@ declared workflow PyYAML dependency available:
 
 ```powershell
 .\.venv\Scripts\python.exe apps/generate_erp_sdk.py D:\path\to\zoho_erp_api_doc
-.\.venv\Scripts\python.exe -m pytest tests/test_erp_sdk.py -q
+.\.venv\Scripts\python.exe -m pytest tests/zoho/erp/test_erp_sdk.py -q
 ```
 
 The generator parses all files and compiles the generated Python before writing

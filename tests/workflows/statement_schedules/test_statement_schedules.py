@@ -82,7 +82,7 @@ def test_bad_history_fails_closed(mutation):
 
 
 def config_and_sources():
-    config = yaml.safe_load((Path(__file__).parents[1] / "config/statement-schedules.example.yaml").read_text())
+    config = yaml.safe_load((Path(__file__).parents[3] / "config/statement-schedules.example.yaml").read_text())
     config["excluded_location_id"] = "excluded"
     reports = {}
     for period in config["periods"]:

@@ -1,6 +1,21 @@
 # Knowledge Change Log
 
+## 2026-11-07
+
+- Established centralized [test ownership](project-organization.md#test-ownership) and recorded path mapping and verification. See [project entry](../CHANGELOG.md#centralize-tests-by-source-ownership).
+
+
+- Prepared the [test organization plan](test-organization-plan.md); see [project entry](../CHANGELOG.md#prepare-centralized-test-migration).
+
+- Clarified that structure-policy compliance is outside the analyzer checks; linked APPS-006. See [project review](../CHANGELOG.md#review-structure-maintainability-performance-and-security).
+
 ## 2026-11-06
+
+- Documented default metadata-module exclusion and explicit execution in the [runbook](development-runbook.md). See [project change](../CHANGELOG.md#exclude-metadata-module-from-default-test-collection).
+
+- Updated eight-worker defaults and recorded SQLite profiling in the [performance plan](test-performance-plan.md). See [project change](../CHANGELOG.md#increase-default-test-workers-to-eight).
+
+- Added the [test performance plan](test-performance-plan.md), with measured bottlenecks and acceptance gates. See [project change](../CHANGELOG.md#plan-four-second-full-suite-performance).
 
 - Documented the Windows symlink-privilege skip and remaining integration verification requirement in the [runbook](development-runbook.md). See [project change](../CHANGELOG.md#handle-unavailable-windows-symlink-privilege-in-cleanup-tests).
 

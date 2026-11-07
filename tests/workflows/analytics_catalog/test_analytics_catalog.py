@@ -6,7 +6,7 @@ from workflows.analytics_catalog import AnalyticsCatalog, MetadataSyncError, Wor
 from zoho.analytics import WorkspaceMetadataStore
 from zoho.analytics.exceptions import ZohoAnalyticsError
 from zoho.analytics.metadata import Metadata
-from tests import test_analytics_metadata as _metadata_tests
+from tests.zoho.analytics import test_analytics_metadata as _metadata_tests
 
 
 def make_store(root):

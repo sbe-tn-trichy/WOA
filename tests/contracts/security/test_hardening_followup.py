@@ -166,7 +166,7 @@ def test_module_grouped_sections_load_into_config_dict(tmp_path: Path):
 
 
 def test_example_config_covers_public_config_keys():
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = Path(__file__).resolve().parents[3]
     example = yaml.safe_load(
         (project_root / "config" / "config.example.yaml").read_text(encoding="utf-8")
     )

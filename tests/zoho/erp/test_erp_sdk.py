@@ -10,7 +10,7 @@ import requests
 from zoho import ZohoERPAPI, ZohoERPError
 from zoho.erp.generated import RESOURCE_TYPES
 
-MANIFEST = json.loads((Path(__file__).parents[1] / "src/zoho/erp/manifest.json").read_text(encoding="utf-8"))
+MANIFEST = json.loads((Path(__file__).parents[3] / "src/zoho/erp/manifest.json").read_text(encoding="utf-8"))
 OPERATIONS = [(resource, operation) for resource, definition in MANIFEST.items()
               for operation in definition["operations"]]
 
@@ -135,7 +135,7 @@ def test_factory_uses_erp_token():
 
 
 def test_generation_is_deterministic_and_rejects_invalid_specs(tmp_path):
-    location = Path(__file__).parents[1] / "apps/generate_erp_sdk.py"
+    location = Path(__file__).parents[3] / "apps/generate_erp_sdk.py"
     spec = importlib.util.spec_from_file_location("generate_erp_sdk", location)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

@@ -14,7 +14,7 @@ from zoho import HttpTokenProvider, ZohoAnalyticsAPI
 from workflows.core.config import _load_config_dict
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _load_config() -> Dict[str, Any]:

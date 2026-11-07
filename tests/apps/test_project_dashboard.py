@@ -251,7 +251,7 @@ def test_dashboard_tabs_favorites_and_search():
     if not node:
         pytest.skip("Node.js is needed to exercise the dashboard JavaScript")
 
-    html = (Path(__file__).resolve().parents[1] / "apps/static/dashboard.html").read_text()
+    html = (Path(__file__).resolve().parents[2] / "apps/static/dashboard.html").read_text()
     script = re.search(r"<script>(.*?)</script>", html, re.DOTALL).group(1)
     harness = r"""
 const vm = require('node:vm');

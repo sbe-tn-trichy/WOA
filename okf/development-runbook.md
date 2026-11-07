@@ -116,13 +116,19 @@ privileges, to execute its assertions.
 
 ## Default parallel tests
 
+Default collection excludes `tests/zoho/analytics/test_analytics_metadata.py` at user request.
+Analytics catalog tests remain included. Run the excluded module explicitly with
+`.\.venv\Scripts\python.exe -m pytest -q tests/zoho/analytics/test_analytics_metadata.py`
+(on macOS use `.venv/bin/python`). Default-suite results do not establish
+metadata endpoint, downloader, pacing or authentication coverage from that module.
+
 Run the suite with the workspace interpreter:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-On macOS use `.venv/bin/python`. `pyproject.toml` owns the default: four
+On macOS use `.venv/bin/python`. `pyproject.toml` owns the default: eight
 pytest-xdist worker processes, `--dist=loadfile`, and no automatic worker restart.
 Base dependencies include pytest and pinned `pytest-xdist==3.8.0`, so every
 project installation includes the configured test runner. The empty `test` extra
@@ -153,8 +159,8 @@ Compiler contract tests already use temporary mypy caches and API-generation tes
 write generated files to temporary destinations.
 
 Push and pull-request CI jobs use the configured default, including type-check
-regression tests. Manual **Run workflow → test_workers** defaults to 4 and allows
-0 (serial) or 2. Base dependencies supply pytest and xdist in all installation and test jobs.
+regression tests. Manual **Run workflow → test_workers** defaults to 8 and allows
+0 (serial), 2 or 4. Base dependencies supply pytest and xdist in all installation and test jobs.
 
 When changing workers or distribution, record OS/architecture, interpreter/plugin
 versions, revision/local changes and comparable serial/parallel wall times. Repeat
@@ -172,7 +178,7 @@ From the repository root on Windows:
 ```powershell
 .\.venv\Scripts\python.exe apps/analyze_project.py
 .\.venv\Scripts\python.exe apps/analyze_project.py --since HEAD --verify
-.\.venv\Scripts\python.exe -m pytest -q tests/test_project_analysis.py tests/test_api_reference_generator.py
+.\.venv\Scripts\python.exe -m pytest -q tests/apps/tools/test_project_analysis.py tests/apps/tools/test_api_reference_generator.py
 ```
 
 On macOS use `.venv/bin/python` for the same arguments. Select a known reviewed
@@ -223,7 +229,7 @@ Run the blocking scope from the repository root:
 
 ```powershell
 .\.venv\Scripts\python.exe -m mypy
-.\.venv\Scripts\python.exe -m pytest -q tests/test_type_safety.py tests/test_resource_validation.py
+.\.venv\Scripts\python.exe -m pytest -q tests/contracts/architecture/test_type_safety.py tests/zoho/test_resource_validation.py
 ```
 
 On macOS/Linux use `.venv/bin/python` for both commands. `tool.mypy.files` in

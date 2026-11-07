@@ -8,11 +8,12 @@ on:
       test_workers:
         description: "Full-suite worker processes (0 keeps serial execution)"
         type: choice
-        default: "4"
+        default: "8"
         options:
           - "0"
           - "2"
           - "4"
+          - "8"
 
 jobs:
   type-check:
@@ -31,7 +32,7 @@ jobs:
       - run: python -m mypy
       - run: python apps/analyze_project.py
       - run: python apps/generate_api_reference.py --check
-      - run: python -m pytest -q tests/test_type_safety.py
+      - run: python -m pytest -q tests/contracts/architecture/test_type_safety.py
 
   full-suite:
     runs-on: ${{ matrix.os }}
