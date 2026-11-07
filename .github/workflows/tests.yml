@@ -27,12 +27,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version-file: .python-version
-          cache: pip
-      - run: python -m pip install -c constraints.txt -e ".[workflows,test,typing]"
-      - run: python -m mypy
-      - run: python apps/analyze_project.py
-      - run: python apps/generate_api_reference.py --check
-      - run: python -m pytest -q tests/contracts/architecture/test_type_safety.py
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.12"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            constraints.txt
+      - run: uv venv --python 3.14.10
+      - run: uv pip install --python .venv -c constraints.txt -e ".[workflows,test,typing]"
+      - run: uv pip check --python .venv
+      - run: uv run --no-sync python -m ty check
+      - run: uv run --no-sync python apps/analyze_project.py
+      - run: uv run --no-sync python apps/generate_api_reference.py --check
+      - run: uv run --no-sync python -m pytest -q tests/contracts/architecture/test_type_safety.py
 
   full-suite:
     runs-on: ${{ matrix.os }}
@@ -49,18 +57,24 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install -c constraints.txt -e ".[workflows,test]"
-      - run: python -m pip check
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.12"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            constraints.txt
+      - run: uv venv --python 3.14.10
+      - run: uv pip install --python .venv -c constraints.txt -e ".[workflows,test]"
+      - run: uv pip check --python .venv
       - name: Run default parallel suite
         if: github.event_name != 'workflow_dispatch'
-        run: python -m pytest -q
+        run: uv run --no-sync python -m pytest -q
       - name: Run selected worker count
         if: github.event_name == 'workflow_dispatch'
         env:
           PYTEST_ADDOPTS: "-n ${{ inputs.test_workers }}"
-        run: python -m pytest -q
+        run: uv run --no-sync python -m pytest -q
 
   base-install:
     runs-on: ${{ matrix.os }}
@@ -73,8 +87,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version-file: .python-version
-          cache: pip
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install -c constraints.txt -e .
-      - run: python -m pip check
-      - run: python -c "import zoho; import workflows.core.auth"
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.12"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            constraints.txt
+      - run: uv venv --python 3.14.10
+      - run: uv pip install --python .venv -c constraints.txt -e .
+      - run: uv pip check --python .venv
+      - run: uv run --no-sync python -c "import zoho; import workflows.core.auth"

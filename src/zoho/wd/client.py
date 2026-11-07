@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 from zoho.base_client import BaseZohoClient
 from .exceptions import ZohoWorkdriveError
 from .resources.files import Files
@@ -13,8 +13,8 @@ class ZohoWorkdriveAPI(BaseZohoClient):
         self,
         access_token: str,
         domain: str = "in",
-        team_id: Optional[str] = None,
-        token_refresh_callback: Optional[Any] = None
+        team_id: str | None = None,
+        token_refresh_callback: Any | None = None
     ):
         """
         Initialize the Zoho Workdrive API client.
@@ -50,15 +50,15 @@ class ZohoWorkdriveAPI(BaseZohoClient):
         self,
         method: str,
         endpoint: str,
-        json: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        json: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, Any] | None = None,
         stream: bool = False,
-        override_url: Optional[str] = None,
-        files: Optional[Dict[str, Any]] = None,
-        is_mutation: Optional[bool] = None,
-        timeout: Optional[int] = None,
+        override_url: str | None = None,
+        files: dict[str, Any] | None = None,
+        is_mutation: bool | None = None,
+        timeout: int | None = None,
     ) -> Any:
         """
         Internal HTTP request handler.

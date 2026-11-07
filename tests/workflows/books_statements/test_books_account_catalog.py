@@ -57,7 +57,7 @@ def test_refresh_mapping_names_rejects_unknown_account_id():
 
 @pytest.mark.parametrize("suffix", [".yaml", ".yml", ".json"])
 def test_mapping_refresh_preserves_other_accounting_sections(tmp_path, suffix):
-    import yaml
+    from utils import yaml
     from workflows.books_account_catalog import write_mapping_config
     path = tmp_path / ("mapping" + suffix)
     config = {"calculations": {"sales": {"accounts": {"Sales": 1}}},

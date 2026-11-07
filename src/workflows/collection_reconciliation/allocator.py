@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
 from zoho.validation import require_records, require_text
 from .types import InvoiceAllocation

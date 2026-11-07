@@ -9,6 +9,71 @@ description: Public resource access patterns for the Zoho Books client.
 Resources inherit standard CRUD operations and the paginated `list_all()` helper
 from `BaseResource`.
 
+## OpenAPI operation coverage
+
+The 44 supplied non-item OpenAPI files contain 854 operation records describing
+843 distinct HTTP method/path pairs. Each pair has one canonical wrapper:
+629 generated implementations in `openapi/` and 214 existing implementations
+in `custom/` or inherited from shared `BaseResource`/mixins. Path parameter
+names do not distinguish routes. The 31 operations in `items.yml` remain
+excluded: item/catalog work uses [Inventory](zoho-inventory.md).
+
+`custom/` is parallel to `openapi/` and owns existing resource behavior,
+validation, reporting and business helpers. Existing canonical names are
+retained: `invoices.get()`, `invoices.create()` and `bills.update()`, for example.
+Generated synonyms such as `get_invoice()`, `create_invoice()` and
+`update_bill()` are not emitted. Repeated routes across source files, including
+customer debit notes and self-billed invoices, use the same canonical owner.
+
+```python
+api.invoices.get("invoice-id")
+api.recurring_invoices.list(params={"page": 1})
+api.invoices.get_invoice_email("invoice-id")
+```
+
+The [manifest](../src/zoho/books/openapi/manifest.json) records every source
+operation and its `wrapper_resource` and `wrapper_name`, plus whether that
+operation emits a new wrapper. Use that mapping rather than assuming every
+source `operationId` becomes a method. Existing CRUD/action names remain;
+generated methods accept explicit path identifiers and keyword arguments
+`body`, `params`, `headers`, `files`, `stream` and `timeout`. Their docstrings
+include OAuth scopes. Payload schema and plan/edition support are not fully
+validated locally.
+
+Download and pagination helpers may call a canonical wrapper, but do not
+implement a second HTTP route. Number-series helpers validate and construct
+multipart payment updates before delegating to the sole `update()` wrapper.
+Task `create()` accepts an array as well as a mapping. Existing bill creation
+requirements/defaults and fixed-asset/report response checks remain intact.
+
+Generated operations quote path identifiers, reject empty identifiers and
+cross-organization query overrides, and check required query/header values
+before HTTP. Explicit multipart bodies become form fields; JSON accompanying
+files uses `JSONString`. Attachment write routes accept files even when the
+source omits multipart metadata. Shared transport handles OAuth and retries;
+callers close streaming responses.
+
+Regenerate offline using the workspace interpreter:
+
+```bash
+.venv/bin/python apps/tools/generate_books_sdk.py /absolute/path/to/openapi-folder
+```
+
+Generation discovers inherited/custom route owners and deduplicates all source
+files before emitting methods. It rejects conflicting custom wrappers within a
+resource. SHA-256 source hashes are recorded in the manifest. Generation needs
+YAMLRocks from the base dependencies; normal SDK imports do not parse YAML.
+
+The old `zoho.books.resources.*` imports moved to `zoho.books.custom.*`, and
+mixins moved to `zoho.books.custom.mixins`. Settings classes (`Locations`,
+`CustomFields`) now live in `custom.contacts`; `FixedAssets` lives in
+`custom.ledger`. Repository callers/tests/docs use these locations; old imports
+and generated method synonyms have no compatibility forwarders.
+
+Tests cover generated routing, one canonical owner per method/path, existing
+custom behavior, helper delegation, upload encoding and invalid inputs.
+Coverage describes the supplied bundle, not live or future API completeness.
+
 Shared Books/Inventory pagination validates the resource list, each record and
 pagination field types before yielding a page. Missing resource keys, malformed
 page metadata, wrong echoed page numbers and empty pages claiming more results

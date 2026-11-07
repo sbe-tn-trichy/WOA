@@ -8,7 +8,7 @@ variables.
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from zoho import HttpTokenProvider, ZohoAnalyticsAPI
 from workflows.core.config import _load_config_dict
@@ -17,11 +17,11 @@ from workflows.core.config import _load_config_dict
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
-def _load_config() -> Dict[str, Any]:
+def _load_config() -> dict[str, Any]:
     return _load_config_dict(PROJECT_ROOT)
 
 
-def run_query() -> List[Dict[str, Any]]:
+def run_query() -> list[dict[str, Any]]:
     config = _load_config()
     token_url = os.environ.get(
         "TOKEN_URL", "http://localhost:3000/server/new/tokens"

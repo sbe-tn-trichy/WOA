@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import date
-import json
+from utils import json
 from pathlib import Path
 import re
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from workflows.core.matching import parse_date
 from zoho.validation import require_record

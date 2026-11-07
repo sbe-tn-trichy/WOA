@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from zoho.books.resources.reports import Reports
+from zoho.books.custom.reports import Reports
 from zoho.helpers import fetch_profit_and_loss_schedule_format
 
 

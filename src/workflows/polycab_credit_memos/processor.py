@@ -1,9 +1,9 @@
 import os
 import re
-import pdfplumber
+from utils.pdf import read_pdf_pages
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional, List
+from typing import Any
 from zoho.helpers import (
     attach_file_to_books_resource,
     find_bill_by_number,
@@ -15,9 +15,9 @@ from ..vendor_ledger_reconciliation.matcher import fetch_vendor_credits
 logger = logging.getLogger(__name__)
 
 
-def parse_polycab_credit_memo(pdf_path: str) -> Dict[str, Any]:
+def parse_polycab_credit_memo(pdf_path: str) -> dict[str, Any]:
     """
-    Parses a Polycab credit memo PDF using pdfplumber and extracts Credit Note details:
+    Parses a Polycab credit memo PDF using pypdfium2 and extracts Credit Note details:
       - Credit Note Number (AR Invoice Number)
       - Date (Invoice Date) formatted as YYYY-MM-DD
       - Total Amount (reconciled correctly for single and multi-page layouts)
@@ -28,8 +28,7 @@ def parse_polycab_credit_memo(pdf_path: str) -> Dict[str, Any]:
         raise FileNotFoundError(f"File not found: {pdf_path}")
         
     logger.info(f"Parsing credit memo PDF: {pdf_path}")
-    with pdfplumber.open(pdf_path) as pdf:
-        all_text = "\n".join((page.extract_text() or "") for page in pdf.pages)
+    all_text = "\n".join(read_pdf_pages(pdf_path))
     if not all_text.strip():
         raise ValueError(f"No extractable text found in PDF: {pdf_path}")
         
@@ -147,7 +146,7 @@ def parse_polycab_credit_memo(pdf_path: str) -> Dict[str, Any]:
 _VENDOR_CACHE = {}
 _CHART_OF_ACCOUNTS_CACHE = None
 
-def resolve_vendor_id(books_client: Any, name: str) -> Optional[str]:
+def resolve_vendor_id(books_client: Any, name: str) -> str | None:
     """Finds contact ID for a vendor by name in Zoho Books."""
     if name in _VENDOR_CACHE:
         return _VENDOR_CACHE[name]
@@ -161,7 +160,7 @@ def resolve_vendor_id(books_client: Any, name: str) -> Optional[str]:
         return Config.POLYCAB_VENDOR_ID
     return None
 
-def resolve_account_id(books_client: Any, name: str) -> Optional[str]:
+def resolve_account_id(books_client: Any, name: str) -> str | None:
     """Finds account ID by name query in Zoho Books chart of accounts."""
     global _CHART_OF_ACCOUNTS_CACHE
     if _CHART_OF_ACCOUNTS_CACHE is None:
@@ -194,7 +193,7 @@ def resolve_item_id(pdf_text: str) -> str:
         return Config.ZOHO_RSO_CN_ITEM_ID
     return Config.ZOHO_SCHEME_CN_ITEM_ID
 
-def resolve_bill_id_by_number(books_client: Any, vendor_id: str, bill_number: str) -> Optional[str]:
+def resolve_bill_id_by_number(books_client: Any, vendor_id: str, bill_number: str) -> str | None:
     """Finds the bill ID for a specific bill number under this vendor in Zoho Books."""
     bill = find_bill_by_number(books_client, vendor_id, bill_number)
     if bill:
@@ -213,9 +212,9 @@ def create_vendor_credit_from_pdf(
     pdf_path: str, 
     vendor_name: str = "Polycab",
     account_name: str = "Polycab Kitty",
-    vendor_id: Optional[str] = None,
+    vendor_id: str | None = None,
     location_id: str = Config.EXPECTED_LOCATION_ID,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Parses PDF and posts a new Vendor Credit transaction to Zoho Books.
     Omit bill_id and uses registered invoice type unless explicitly given. Sets GST Out of Scope.
@@ -268,13 +267,13 @@ def create_vendor_credit_from_pdf(
     res = books_client.vendor_credits.create(payload)
     return res.get("vendor_credit", res.get("vendorcredit", res))
 
-def upload_vendor_credit_attachment(books_client: Any, vendor_credit_id: str, pdf_path: str) -> Dict[str, Any]:
+def upload_vendor_credit_attachment(books_client: Any, vendor_credit_id: str, pdf_path: str) -> dict[str, Any]:
     """Attaches PDF file to a Vendor Credit in Zoho Books."""
     if hasattr(books_client, "vendor_credits") and hasattr(books_client.vendor_credits, "add_attachment"):
         return books_client.vendor_credits.add_attachment(vendor_credit_id, pdf_path)
     return attach_file_to_books_resource(books_client, "vendorcredits", vendor_credit_id, pdf_path)
 
-def upload_to_workdrive(wd_client: Any, folder_id: str, pdf_path: str) -> Dict[str, Any]:
+def upload_to_workdrive(wd_client: Any, folder_id: str, pdf_path: str) -> dict[str, Any]:
     """Uploads PDF file to Zoho WorkDrive folder."""
     if hasattr(wd_client, "files") and hasattr(wd_client.files, "upload"):
         return wd_client.files.upload(folder_id, pdf_path)
@@ -283,13 +282,13 @@ def upload_to_workdrive(wd_client: Any, folder_id: str, pdf_path: str) -> Dict[s
 
 
 def process_polycab_credit_memos(
-    books_client: Optional[Any] = None,
-    wd_client: Optional[Any] = None,
+    books_client: Any | None = None,
+    wd_client: Any | None = None,
     files_dir: str = Config.FILES_DIR,
     folder_id: str = Config.POLYCAB_FOLDER_ID,
     vendor_id: str = Config.POLYCAB_VENDOR_ID,
     location_id: str = Config.EXPECTED_LOCATION_ID,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Processes all Polycab credit memo PDFs in the files_dir.
     Creates vendor credits in Zoho Books and uploads the PDFs to WorkDrive.
@@ -431,10 +430,10 @@ def process_polycab_credit_memos(
     return summary
 
 def check_vendor_credits_location(
-    books_client: Optional[Any] = None,
+    books_client: Any | None = None,
     vendor_id: str = Config.POLYCAB_VENDOR_ID,
     expected_location_id: str = Config.EXPECTED_LOCATION_ID
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Fetches all vendor credits for a vendor and audits them to find ones with incorrect
     location/branch ID or no location set.

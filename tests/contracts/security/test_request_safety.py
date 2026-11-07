@@ -68,7 +68,7 @@ def test_missing_refreshed_token_does_not_expose_response():
     manager = ZohoOAuth2Manager("client", "secret", "refresh")
     response = MagicMock()
     response.json.return_value = {"error": "invalid", "access_token_hint": "must-not-leak"}
-    with patch("requests.post", return_value=response):
+    with patch("utils.http_transport.post", return_value=response):
         with pytest.raises(ValueError) as caught:
             manager.refresh_access_token()
     assert "must-not-leak" not in str(caught.value)

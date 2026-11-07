@@ -4,7 +4,8 @@ from __future__ import annotations
 import hashlib
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any, Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any
 
 from ..core.exceptions import ReconciliationError
 from ..core.matching import get_bank_reference, parse_date, to_decimal, to_text

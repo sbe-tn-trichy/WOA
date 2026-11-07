@@ -1,13 +1,23 @@
 import os
-import json
+from utils import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 try:
-    from dotenv import load_dotenv
-except ImportError:  # The base SDK can still use dependency-light workflows.
-    def load_dotenv(*args, **kwargs):
+    import dotenvy_py
+
+    def load_dotenv(dotenv_path=None, **kwargs):
+        target = dotenv_path or ".env"
+        if Path(target).exists():
+            dotenvy_py.from_filename(str(target))
+            return True
         return False
+except ImportError:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:  # The base SDK can still use dependency-light workflows.
+        def load_dotenv(*args, **kwargs):
+            return False
 
 # 1. Project root & .env loading
 root_dir = Path(__file__).resolve().parent.parent.parent.parent
@@ -18,7 +28,7 @@ else:
     load_dotenv()
 
 
-def _flatten_profile(data: Dict[str, Any]) -> Dict[str, Any]:
+def _flatten_profile(data: dict[str, Any]) -> dict[str, Any]:
     """Flatten section/workflow-grouped profile dictionaries for key lookup."""
     non_section_mappings = {
         "payment_creator_reports",
@@ -30,7 +40,7 @@ def _flatten_profile(data: Dict[str, Any]) -> Dict[str, Any]:
         "gstin_aliases",
         "neoseal_stock_count_worksheets",
     }
-    result: Dict[str, Any] = {}
+    result: dict[str, Any] = {}
     for key, val in data.items():
         key_lower = key.lower()
         if isinstance(val, dict) and key_lower not in non_section_mappings:
@@ -50,9 +60,9 @@ def _flatten_profile(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _load_config_dict(
-    project_root: Optional[Path] = None,
-    home: Optional[Path] = None,
-) -> Dict[str, Any]:
+    project_root: Path | None = None,
+    home: Path | None = None,
+) -> dict[str, Any]:
     """Load the highest-priority YAML or legacy JSON configuration file.
 
     Project configuration intentionally takes precedence over user-level
@@ -77,10 +87,10 @@ def _load_config_dict(
                 with open(path, "r", encoding="utf-8") as f:
                     if path.suffix == ".yaml":
                         try:
-                            import yaml
+                            from utils import yaml
                         except ImportError as exc:
                             raise ValueError(
-                                f"Reading YAML configuration from {path} requires the workflows extra (PyYAML)."
+                                f"Reading YAML configuration from {path} requires YAMLRocks; install the declared dependencies with uv."
                             ) from exc
                         try:
                             data = yaml.safe_load(f)
@@ -128,8 +138,8 @@ def get_config(key: str, default: Any = "") -> Any:
 
 def get_mapping_config(
     key: str,
-    default: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    default: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Resolve a JSON object configuration value from files or the environment."""
     value = get_config(key, default or {})
     if isinstance(value, str):

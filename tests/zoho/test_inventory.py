@@ -20,7 +20,7 @@ class TestZohoInventoryAPI(unittest.TestCase):
         with self.assertRaises(ValueError):
             ZohoInventoryAPI(access_token=self.access_token, organization_id="")
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_success(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -43,7 +43,7 @@ class TestZohoInventoryAPI(unittest.TestCase):
             timeout=30
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_token_refresh(self, mock_request):
         token_callback = MagicMock(return_value="new_token")
         client = ZohoInventoryAPI(access_token="old_token", organization_id="org123", token_refresh_callback=token_callback)
@@ -190,8 +190,8 @@ class TestItemGroups(unittest.TestCase):
 
 
 class TestInventoryCatalystAuth(unittest.TestCase):
-    @patch("requests.request")
-    @patch("requests.post")
+    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_transport.post")
     def test_catalyst_auth_all_mutations(self, mock_post, mock_request):
         mock_response_catalyst = MagicMock()
         mock_response_catalyst.status_code = 200
@@ -285,7 +285,7 @@ class TestItems(unittest.TestCase):
         
         items.group_items(grouping_data)
         
-        import json
+        import rapidjson as json
         client.request.assert_called_once_with(
             'POST',
             'items/grouping',

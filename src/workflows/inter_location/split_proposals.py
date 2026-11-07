@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 from decimal import Decimal
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from .payment_proposals import expected_payment_prefix
 

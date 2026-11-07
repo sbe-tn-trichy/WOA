@@ -1,32 +1,31 @@
 from __future__ import annotations
 
+import builtins
 import logging
-from typing import Dict, Iterator, List, Optional, Type
-from .exceptions import ZohoError
+from collections.abc import Iterator
+
 from .base_client import BaseZohoClient
+from .exceptions import ZohoError
 from .validation import require_record, require_records
 
 
 class BaseResource:
     """Shared base class for Zoho API modules providing standard CRUD and pagination."""
 
-    required_fields: List[str] = []
-    defaults: Dict[str, object] = {}
-    line_item_required_fields: List[str] = []
-    line_item_defaults: Dict[str, object] = {}
-    error_class: Type[ZohoError] = ZohoError
+    required_fields: builtins.list[str] = []
+    defaults: dict[str, object] = {}
+    line_item_required_fields: builtins.list[str] = []
+    line_item_defaults: dict[str, object] = {}
+    error_class: type[ZohoError] = ZohoError
     logger_name: str = "zoho.api"
 
     def __init__(self, client: BaseZohoClient, endpoint: str) -> None:
         self.client = client
         self.endpoint = endpoint
 
-    def _prepare_payload(self, data: Dict[str, object], check_required: bool = True) -> Dict[str, object]:
+    def _prepare_payload(self, data: dict[str, object], check_required: bool = True) -> dict[str, object]:
         """Merge defaults (if creating) and check if all required fields are present."""
-        if check_required:
-            payload = {**self.defaults, **data}
-        else:
-            payload = data.copy()
+        payload = {**self.defaults, **data} if check_required else data.copy()
 
         logger = logging.getLogger(self.logger_name)
 
@@ -56,16 +55,16 @@ class BaseResource:
 
         return payload
 
-    def list(self, params: Optional[Dict[str, object]] = None) -> object:
+    def list(self, params: dict[str, object] | None = None) -> object:
         response: object = self.client.request("GET", self.endpoint, params=params)
         return response
 
     def list_iter(
         self,
-        params: Optional[Dict[str, object]] = None,
-        resource_key: Optional[str] = None,
+        params: dict[str, object] | None = None,
+        resource_key: str | None = None,
         per_page: int = 200,
-    ) -> Iterator[Dict[str, object]]:
+    ) -> Iterator[dict[str, object]]:
         """Generator yielding records item-by-item across pages without buffering all in memory."""
         if type(per_page) is not int or per_page <= 0:
             raise ValueError("per_page must be a positive integer")
@@ -99,21 +98,21 @@ class BaseResource:
 
     def list_all(
         self,
-        params: Optional[Dict[str, object]] = None,
-        resource_key: Optional[str] = None,
-    ) -> List[Dict[str, object]]:
+        params: dict[str, object] | None = None,
+        resource_key: str | None = None,
+    ) -> builtins.list[dict[str, object]]:
         """Helper to fetch all records across all pages."""
         return list(self.list_iter(params=params, resource_key=resource_key))
 
-    def get(self, resource_id: str, params: Optional[Dict[str, object]] = None) -> object:
+    def get(self, resource_id: str, params: dict[str, object] | None = None) -> object:
         response: object = self.client.request("GET", f"{self.endpoint}/{resource_id}", params=params)
         return response
 
     def create(
         self,
-        data: Dict[str, object],
-        params: Optional[Dict[str, object]] = None,
-        files: Optional[Dict[str, object]] = None,
+        data: dict[str, object],
+        params: dict[str, object] | None = None,
+        files: dict[str, object] | None = None,
     ) -> object:
         payload = self._prepare_payload(data, check_required=True)
         response: object = self.client.request("POST", self.endpoint, json=payload, params=params, files=files)
@@ -122,25 +121,25 @@ class BaseResource:
     def update(
         self,
         resource_id: str,
-        data: Dict[str, object],
-        params: Optional[Dict[str, object]] = None,
-        files: Optional[Dict[str, object]] = None,
+        data: dict[str, object],
+        params: dict[str, object] | None = None,
+        files: dict[str, object] | None = None,
     ) -> object:
         payload = self._prepare_payload(data, check_required=False)
         response: object = self.client.request("PUT", f"{self.endpoint}/{resource_id}", json=payload, params=params, files=files)
         return response
 
-    def delete(self, resource_id: str, params: Optional[Dict[str, object]] = None) -> object:
+    def delete(self, resource_id: str, params: dict[str, object] | None = None) -> object:
         response: object = self.client.request("DELETE", f"{self.endpoint}/{resource_id}", params=params)
         return response
 
     def _action(
         self,
         method: str,
-        resource_id: Optional[str],
+        resource_id: str | None,
         action: str,
-        data: Optional[Dict[str, object]] = None,
-        params: Optional[Dict[str, object]] = None,
+        data: dict[str, object] | None = None,
+        params: dict[str, object] | None = None,
     ) -> object:
         """Helper for action endpoints like /invoices/{id}/status/sent."""
         url = f"{self.endpoint}/{resource_id}/{action}" if resource_id else f"{self.endpoint}/{action}"

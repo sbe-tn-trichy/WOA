@@ -3,7 +3,7 @@ from decimal import Decimal
 from unittest.mock import Mock
 
 import pytest
-import yaml
+from utils import yaml
 
 from apps import update_books_statement_sheet as app
 from workflows.books_pnl_notes import NOTE_INPUTS, NOTE_SHEET
@@ -118,11 +118,11 @@ def test_equity_only_previews_and_applies_without_touching_other_mappings(monkey
     ]}
     post_response = Mock()
     post_response.json.return_value = {"totalUpdatedCells": 6}
-    monkeypatch.setattr(app.requests, "get", Mock(return_value=get_response))
-    monkeypatch.setattr(app.requests, "post", Mock(return_value=post_response))
+    monkeypatch.setattr(app.http_transport, "get", Mock(return_value=get_response))
+    monkeypatch.setattr(app.http_transport, "post", Mock(return_value=post_response))
 
     assert app.main([str(mapping_path), "--equity-only", "--apply"]) == 0
-    payload = app.requests.post.call_args.kwargs["json"]
+    payload = app.http_transport.post.call_args.kwargs["json"]
     assert {entry["range"]: entry["values"][0][0] for entry in payload["data"]} == {
         "'Note 1 to 3'!B13": "Owner A",
         "'Note 1 to 3'!D13": 100.0,
@@ -155,12 +155,12 @@ def test_equity_apply_requires_closing_formula(monkeypatch, tmp_path):
         {"range": "'Note'!I12", "values": [["Old heading"]]},
         {"range": "'Note'!J13", "values": [[0]]},
     ]}
-    monkeypatch.setattr(app.requests, "get", Mock(return_value=response))
-    monkeypatch.setattr(app.requests, "post", Mock())
+    monkeypatch.setattr(app.http_transport, "get", Mock(return_value=response))
+    monkeypatch.setattr(app.http_transport, "post", Mock())
 
     with pytest.raises(ValueError, match="Expected closing-balance formula"):
         app.main([str(path), "--equity-only", "--apply"])
-    app.requests.post.assert_not_called()
+    app.http_transport.post.assert_not_called()
 
 
 @pytest.mark.parametrize("content", ["mappings: [", "- invalid-root"])

@@ -1,11 +1,11 @@
 """Find and analyze unique transaction number series for customer payments in Zoho Books using Zoho Analytics with FY filtering."""
 
 import argparse
-import json
+from utils import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 try:
     from . import _bootstrap
@@ -19,7 +19,7 @@ from workflows.payment_inspection import fetch_customer_payments, extract_series
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
-def display_results(series_list: List[Dict[str, Any]], total_records: int, filter_title: str):
+def display_results(series_list: list[dict[str, Any]], total_records: int, filter_title: str):
     """Print results formatted as a table."""
     print("=" * 115)
     print(f" ZOHO BOOKS CUSTOMER PAYMENTS - {filter_title.upper()}")

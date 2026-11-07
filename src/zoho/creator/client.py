@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from zoho.base_client import BaseZohoClient
 from .exceptions import ZohoCreatorError
 
@@ -16,7 +16,7 @@ class ZohoCreatorAPI(BaseZohoClient):
         domain: str = "com",
         environment: str = "production",
         send_environment_header: bool = True,
-        token_refresh_callback: Optional[Any] = None
+        token_refresh_callback: Any | None = None
     ):
         base_url = f"https://www.zohoapis.{domain or 'com'}/creator/v2.1"
         super().__init__(
@@ -35,15 +35,15 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         method: str,
         endpoint: str,
-        json: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
-        files: Optional[Dict[str, Any]] = None,
+        json: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
         stream: bool = False,
-        override_url: Optional[str] = None,
-        is_mutation: Optional[bool] = None,
-        timeout: Optional[int] = None,
+        override_url: str | None = None,
+        is_mutation: bool | None = None,
+        timeout: int | None = None,
     ) -> Any:
         req_headers = {}
         if self.send_environment_header:
@@ -67,19 +67,19 @@ class ZohoCreatorAPI(BaseZohoClient):
     # ==========================================
     # 1. Native Metadata APIs
     # ==========================================
-    def list_applications(self) -> Dict[str, Any]:
+    def list_applications(self) -> dict[str, Any]:
         """Gets metadata of all applications."""
         return self.request("GET", f"meta/{self.account_owner_name}/applications")
 
-    def list_forms(self, app_link_name: str) -> Dict[str, Any]:
+    def list_forms(self, app_link_name: str) -> dict[str, Any]:
         """Gets metadata of all forms in an application."""
         return self.request("GET", f"meta/{self.account_owner_name}/{app_link_name}/forms")
 
-    def list_reports(self, app_link_name: str) -> Dict[str, Any]:
+    def list_reports(self, app_link_name: str) -> dict[str, Any]:
         """Gets metadata of all reports in an application."""
         return self.request("GET", f"meta/{self.account_owner_name}/{app_link_name}/reports")
 
-    def get_fields(self, app_link_name: str, form_link_name: str) -> Dict[str, Any]:
+    def get_fields(self, app_link_name: str, form_link_name: str) -> dict[str, Any]:
         """Gets metadata of all fields in a form."""
         return self.request("GET", f"meta/{self.account_owner_name}/{app_link_name}/form/{form_link_name}/fields")
 
@@ -90,9 +90,9 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         app_link_name: str,
         report_link_name: str,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        params: dict[str, Any] | None = None,
+        headers: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Fetches records from a report (up to 1000 records)."""
         kwargs = {}
         if params is not None:
@@ -109,7 +109,7 @@ class ZohoCreatorAPI(BaseZohoClient):
         field_link_name: str,
         destination: str,
         *,
-        filepath: Optional[str] = None,
+        filepath: str | None = None,
     ) -> str:
         """Download one report attachment to a caller-selected local path.
 
@@ -117,7 +117,7 @@ class ZohoCreatorAPI(BaseZohoClient):
         Attachment URLs are never followed, keeping OAuth on the API host.
         """
         from urllib.parse import quote
-        from zoho.downloads import write_response_to_file
+        from utils.http import write_response_to_file
 
         parts = (self.account_owner_name, app_link_name, report_link_name,
                  record_id, field_link_name)
@@ -134,9 +134,9 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         app_link_name: str,
         form_link_name: str,
-        payload: Dict[str, Any],
-        params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        payload: dict[str, Any],
+        params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Adds record(s) to a form (payload format: {"data": [...]})."""
         return self.request("POST", f"data/{self.account_owner_name}/{app_link_name}/form/{form_link_name}", json=payload, params=params)
 
@@ -144,10 +144,10 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         app_link_name: str,
         report_link_name: str,
-        payload: Dict[str, Any],
-        record_id: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        payload: dict[str, Any],
+        record_id: str | None = None,
+        params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Updates record(s) in a report by ID or criteria (payload: {"data": {...}})."""
         endpoint = f"data/{self.account_owner_name}/{app_link_name}/report/{report_link_name}"
         if record_id:
@@ -158,9 +158,9 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         app_link_name: str,
         report_link_name: str,
-        record_id: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        record_id: str | None = None,
+        params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Deletes record(s) in a report by ID or criteria."""
         endpoint = f"data/{self.account_owner_name}/{app_link_name}/report/{report_link_name}"
         if record_id:
@@ -174,10 +174,10 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         app_link_name: str,
         report_link_name: str,
-        criteria: Optional[str] = None,
+        criteria: str | None = None,
         *,
-        field_config: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        field_config: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         Custom function: Auto-paginates using record_cursor to fetch all records.
         """
@@ -221,9 +221,9 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         app_link_name: str,
         form_link_name: str,
-        records: List[Dict[str, Any]],
-        skip_workflow: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+        records: list[dict[str, Any]],
+        skip_workflow: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Custom function: Bulk adds records by chunking them into batches of 200.
         """

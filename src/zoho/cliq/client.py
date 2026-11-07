@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 from zoho.base_client import BaseZohoClient
 
 logger = logging.getLogger("zoho_cliq")
@@ -21,9 +21,9 @@ class ZohoCliqAPI(BaseZohoClient):
     def send_notification(
         self,
         message: str,
-        channel: Optional[str] = None,
+        channel: str | None = None,
         raise_on_error: bool = False,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Sends a summary message via direct Zoho Cliq API (v2)."""
         if not self.access_token:
             logger.warning("Cliq Access Token not provided. Skipping notification.")

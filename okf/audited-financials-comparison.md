@@ -43,7 +43,10 @@ including saved-data reruns; Books retrieval provenance remains separate.
 The supported audited workbook layout is the reviewed `Trading & P&L` and
 `Balance Sheet` tabs with current values in column B. Core statement row numbers
 are fixed to that template; another layout needs an explicit adapter. Cached
-formula values are read without recalculating or modifying the workbook.
+formula values are read through python-calamine without recalculating or modifying
+the workbook. Leading empty rows/columns retain their coordinates; blank cells
+are returned as `None`. Calamine is a reader and does not replace workbook-writing
+functionality.
 
 Run with the workspace Python:
 

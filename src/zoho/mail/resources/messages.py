@@ -1,8 +1,8 @@
 from ..base import BaseResource
-from typing import Any, Dict, Optional, List
+from typing import Any
 import os
 from pathlib import Path
-from zoho.downloads import write_response_to_file
+from utils.http import write_response_to_file
 from zoho.security import sanitize_filename, resolve_output_path
 
 class Messages(BaseResource):
@@ -10,7 +10,7 @@ class Messages(BaseResource):
         super().__init__(client, f"accounts/{account_id}/messages")
         self.account_id = account_id
 
-    def list(self, folder_id: Optional[str] = None, page: int = 1, limit: int = 50, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def list(self, folder_id: str | None = None, page: int = 1, limit: int = 50, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         List messages summary.
         :param folder_id: Optional folder ID to filter messages.
@@ -30,11 +30,11 @@ class Messages(BaseResource):
             
         return self.client.request('GET', f"{self.endpoint}/view", params=query_params)
 
-    def get_content(self, message_id: str) -> Dict[str, Any]:
+    def get_content(self, message_id: str) -> dict[str, Any]:
         """Get full message content."""
         return self.client.request('GET', f"{self.endpoint}/{message_id}/content")
 
-    def send(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> Dict[str, Any]:
+    def send(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> dict[str, Any]:
         """Send an email."""
         data = {
             "fromAddress": from_address,
@@ -46,7 +46,7 @@ class Messages(BaseResource):
         data.update(kwargs)
         return self.create(data)
 
-    def save_draft(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> Dict[str, Any]:
+    def save_draft(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> dict[str, Any]:
         """Save a draft email."""
         data = {
             "fromAddress": from_address,
@@ -58,15 +58,15 @@ class Messages(BaseResource):
         data.update(kwargs)
         return self.create(data)
 
-    def mark_as_read(self, message_id: str) -> Dict[str, Any]:
+    def mark_as_read(self, message_id: str) -> dict[str, Any]:
         """Mark message as read."""
         return self.update(message_id, {"status": "read"})
 
-    def mark_as_unread(self, message_id: str) -> Dict[str, Any]:
+    def mark_as_unread(self, message_id: str) -> dict[str, Any]:
         """Mark message as unread."""
         return self.update(message_id, {"status": "unread"})
 
-    def get_attachments_info(self, folder_id: str, message_id: str) -> Dict[str, Any]:
+    def get_attachments_info(self, folder_id: str, message_id: str) -> dict[str, Any]:
         """Get attachment information for a message."""
         # The endpoint for listing attachments requires the folder ID and message ID
         endpoint = f"accounts/{self.account_id}/folders/{folder_id}/messages/{message_id}/attachmentinfo"
@@ -93,7 +93,7 @@ class Messages(BaseResource):
         return write_response_to_file(response, download_path)
 
 
-    def list_iter(self, folder_id: Optional[str] = None, start: int = 1, limit: int = 50):
+    def list_iter(self, folder_id: str | None = None, start: int = 1, limit: int = 50):
         """
         Iterator for messages in a folder.
         """
@@ -113,11 +113,11 @@ class Messages(BaseResource):
                 break
             current_start += limit
 
-    def message_has_attachment(self, message: Dict[str, Any]) -> bool:
+    def message_has_attachment(self, message: dict[str, Any]) -> bool:
         """Return True when a Zoho message summary indicates attachments."""
         return str(message.get('hasAttachment', '')).lower() in ('1', 'true', 'yes')
 
-    def extract_attachments(self, response: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def extract_attachments(self, response: dict[str, Any]) -> list[dict[str, Any]]:
         """Normalize Zoho attachment metadata response shapes."""
         data = response.get('data', [])
         if isinstance(data, dict):
@@ -129,7 +129,7 @@ class Messages(BaseResource):
 
         return [att for att in attachments if isinstance(att, dict)]
 
-    def resolve_download_path(self, download_dir: str, attachment_name: str, sequence_index: Optional[int] = None) -> str:
+    def resolve_download_path(self, download_dir: str, attachment_name: str, sequence_index: int | None = None) -> str:
         """Return a collision-safe path for an attachment in the target directory."""
         safe_name = sanitize_filename(attachment_name, fallback="attachment")
         base_name, extension = os.path.splitext(safe_name)
@@ -145,7 +145,7 @@ class Messages(BaseResource):
             counter += 1
         return str(target_path)
 
-    def download_folder_attachments(self, folder_id: str, download_dir: str, filename: Optional[str] = None) -> List[str]:
+    def download_folder_attachments(self, folder_id: str, download_dir: str, filename: str | None = None) -> list[str]:
         """
         Downloads all attachments from all messages in a specific folder.
         

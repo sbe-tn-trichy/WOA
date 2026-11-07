@@ -21,15 +21,10 @@ class TestZeissPdf(unittest.TestCase):
         self.assertEqual(format_amount("0.0"), "0")
         self.assertEqual(format_amount("abc"), "abc")
         
-    @patch("pdfplumber.open")
+    @patch("workflows.vendor_ledger_reconciliation.zeiss_pdf.read_pdf_pages")
     @patch("os.path.exists")
     def test_parse_zeiss_pdf_statement(self, mock_exists, mock_pdf_open):
         mock_exists.return_value = True
-        
-        mock_pdf = MagicMock()
-        mock_page = MagicMock()
-        mock_pdf_open.return_value.__enter__.return_value = mock_pdf
-        mock_pdf.pages = [mock_page]
         
         mock_text = (
             "Statement details\n"
@@ -37,7 +32,7 @@ class TestZeissPdf(unittest.TestCase):
             "02.12.2024 doc002 inv002 Credit Note 0.00 50.00 50.00\n"
             "03.12.2024 doc003 Receipts 0.00 75.00 -25.00\n"
         )
-        mock_page.extract_text.return_value = mock_text
+        mock_pdf_open.return_value = [mock_text]
         
         rows = parse_zeiss_pdf_statement("Dec 2024.pdf")
         self.assertEqual(len(rows), 3)

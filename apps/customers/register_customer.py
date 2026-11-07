@@ -2,7 +2,7 @@
 """Inspect Creator fields or register a customer in Books and Creator."""
 import argparse
 from dataclasses import asdict
-import json
+from utils import json
 from typing import Any
 
 try:

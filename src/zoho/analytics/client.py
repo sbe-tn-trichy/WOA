@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from zoho.auth import HttpTokenProvider
 from zoho.base_client import BaseZohoClient
@@ -15,7 +15,7 @@ class ZohoAnalyticsAPI(BaseZohoClient):
         access_token: str,
         organization_id: str,
         domain: str = "com",
-        token_refresh_callback: Optional[Any] = None,
+        token_refresh_callback: Any | None = None,
     ):
         if not organization_id:
             raise ValueError("organization_id is required.")
@@ -36,10 +36,10 @@ class ZohoAnalyticsAPI(BaseZohoClient):
     def from_token_provider(
         cls,
         token_url: str = "http://localhost:3000/server/new/tokens",
-        organization_id: Optional[str] = None,
+        organization_id: str | None = None,
         domain: str = "com",
         token_service_key: str = "zoho_analytics_conn",
-        token_refresh_callback: Optional[Any] = None,
+        token_refresh_callback: Any | None = None,
     ) -> "ZohoAnalyticsAPI":
         """Create a client using an access token from an HTTP token broker."""
         token = HttpTokenProvider(
@@ -57,15 +57,15 @@ class ZohoAnalyticsAPI(BaseZohoClient):
         self,
         method: str,
         endpoint: str,
-        json: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
-        files: Optional[Dict[str, Any]] = None,
+        json: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
         stream: bool = False,
-        override_url: Optional[str] = None,
-        is_mutation: Optional[bool] = None,
-        timeout: Optional[int] = None,
+        override_url: str | None = None,
+        is_mutation: bool | None = None,
+        timeout: int | None = None,
     ) -> Any:
         request_headers = {"ZANALYTICS-ORGID": self.organization_id}
         if headers:

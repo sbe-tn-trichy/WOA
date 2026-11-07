@@ -5,7 +5,8 @@ from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from workflows.core.matching import to_finite_decimal
 from workflows.financial_statement_comparison.comparison import fetch_schedule_reports

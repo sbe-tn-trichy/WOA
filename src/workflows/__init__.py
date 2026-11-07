@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Dict, Tuple
+
 
 from .core.auth import (
     fetch_access_tokens,
@@ -22,7 +22,7 @@ from .core.exceptions import (
 from .core.models import DotDict
 
 
-_LAZY_EXPORTS: Dict[str, Tuple[str, str]] = {
+_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "sync_analytics_customers": (".customer_analytics_sync", "sync_analytics_customers"),
     "CustomerAnalyticsSyncResult": (".customer_analytics_sync", "CustomerAnalyticsSyncResult"),
     "build_normalized_customers": (".customer_normalization", "build_normalized_customers"),
@@ -168,7 +168,7 @@ def __getattr__(name: str):
     try:
         module = import_module(module_name, __name__)
     except ModuleNotFoundError as exc:
-        if exc.name in {"pdfplumber", "xlrd", "openpyxl", "dotenv"}:
+        if exc.name in {"pypdfium2", "python_calamine", "dotenv"}:
             raise ModuleNotFoundError(
                 f"Workflow {name!r} requires optional dependencies; install "
                 "WOA[workflows]."

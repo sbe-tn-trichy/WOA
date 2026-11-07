@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
 from ..core.exceptions import ReconciliationError
 from ..core.matching import get_bank_reference, parse_date, to_decimal

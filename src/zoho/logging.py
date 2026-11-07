@@ -1,6 +1,28 @@
-import os
 import logging
-from typing import Optional
+import os
+
+_SERVICE_LOGGERS = {
+    "books": (("zoho.books.api", "zoho_books_api.log"), ("zoho_books", "zoho_books_api.log")),
+    "inventory": (("zoho_inventory", "zoho_inventory_api.log"),),
+    "wd": (("zoho.wd.api", "zoho_wd_api.log"), ("zoho.wd.app", "app.log"), ("zoho_wd.app", "app.log")),
+    "mail": (("zoho_mail", "zoho_mail_api.log"),),
+    "sheet": (("zoho_sheet", "zoho_sheet_api.log"),),
+    "creator": (("zoho_creator", "zoho_creator_api.log"),),
+    "cliq": (("zoho_cliq", "zoho_cliq_api.log"),),
+}
+
+
+def configure_service_logger(service_name: str) -> logging.Logger:
+    """Configure a service's primary logger and its compatibility loggers."""
+    configs = _SERVICE_LOGGERS.get(service_name)
+    if configs is None:
+        return logging.getLogger(f"zoho.{service_name}")
+
+    logger = configure_logger(*configs[0])
+    for name, filename in configs[1:]:
+        configure_logger(name, filename)
+    return logger
+
 
 def configure_logger(logger_name: str, log_filename: str) -> logging.Logger:
     """

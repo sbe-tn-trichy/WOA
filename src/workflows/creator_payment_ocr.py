@@ -4,7 +4,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from pathlib import Path
 import re
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from zoho.creator import ZohoCreatorAPI

@@ -5,7 +5,10 @@ description: Review opposite postings in a Books account that span locations and
 
 # Inter-location Contra Review
 
-Run `uv run python apps/review_inter_location_contra.py` to produce
+Commands below use the macOS/Linux workspace interpreter. On Windows use
+`.\.venv\Scripts\python.exe` in place of `.venv/bin/python`.
+
+Run `.venv/bin/python apps/review_inter_location_contra.py` to produce
 `output/inter_location_contra_review.json`. The default account is the
 `Vendor To Customer` clearing bank account, ID `1094368000002033114`. The
 workflow checks FY 2025–26 and FY 2026–27 and includes the transaction date,
@@ -47,7 +50,7 @@ Zoho Books has distinct update contracts for journals, payments, and bank
 transactions, so a reviewed move must use the appropriate source document API
 and verify both sides afterward.
 
-`uv run python apps/manage_inter_location_contra_query_table.py` validates a
+`.venv/bin/python apps/manage_inter_location_contra_query_table.py` validates a
 live Analytics query over synced customer payments, vendor payments, journal
 items, journals, and locations. `--apply` saves it as the `Inter Location
 Contra FY25-27` Query Table. It is scoped to the clearing account and the two
@@ -70,7 +73,7 @@ Journal pairs have no bill allocation. Use
 the saved view after changing this query. Historical create/update commands
 delegate to this manager; the update adapter retains its configured default view ID. Updating requires `ZohoAnalytics.modeling.update`.
 
-Run `uv run python apps/propose_inter_location_updates.py` to read the saved
+Run `.venv/bin/python apps/propose_inter_location_updates.py` to read the saved
 Query Table and create `output/inter_location_location_proposals.md` and its
 machine-readable JSON companion. The workflow uses only `Contra pair` rows and
 groups allocation rows by pair,
@@ -79,7 +82,7 @@ references are exact and every allocated invoice and bill has the same location.
 Blank-reference pairs, journals, and conflicting document locations stay in
 manual review. It never updates Books.
 
-Run `uv run python apps/propose_inter_location_payment_updates.py` to create
+Run `.venv/bin/python apps/propose_inter_location_payment_updates.py` to create
 `output/inter_location_payment_proposals.md` and JSON for payment-to-invoice
 and payment-to-bill mismatches across bank accounts. It groups QT rows by
 payment and runs separate Analytics summaries of *all* allocations, including
@@ -95,7 +98,7 @@ vendor payment type. The prefix is not an allocated number: the Books location's
 assigned series and a unique suffix must be checked before updating both
 location and payment number. This app is read-only.
 
-Run `uv run python apps/recheck_inter_location_payment_proposals.py` after
+Run `.venv/bin/python apps/recheck_inter_location_payment_proposals.py` after
 generating the FY 2025–26 payment proposal to read every listed payment from
 current Books. Payments already at the proposed destination location are
 removed from the Markdown and JSON proposals; an audit of all checked IDs and
@@ -131,7 +134,7 @@ series, without consuming a new suffix. This numbered update proposal therefore
 does not cover same-series location-only mismatches. It produces Markdown and
 JSON review reports without updating vendor payments.
 
-`uv run python apps/apply_remaining_vendor_payment_proposals.py` dry-runs the
+`.venv/bin/python apps/apply_remaining_vendor_payment_proposals.py` dry-runs the
 current numbered FY 2025–26 vendor proposals. With `--apply`, it requires an
 exact match to the outstanding proposal IDs, preflights every payment and bill
 across all destination series before any write, then updates and verifies each
@@ -139,7 +142,7 @@ series. It records submitted IDs and read-back results in
 `output/inter_location_vendor_payment_remaining_apply_audit.json`. Re-run the
 Books proposal recheck afterward to remove verified moves from the review file.
 
-`uv run python apps/propose_inter_location_splits.py` reads the remaining FY
+`.venv/bin/python apps/propose_inter_location_splits.py` reads the remaining FY
 2025–26 manual-review payments and every allocated source invoice or bill from
 current Books. When one fully allocated payment spans locations, the report
 proposes retaining the current-location portion on the original payment and
@@ -148,7 +151,7 @@ amounts and document numbers in `output/inter_location_split_proposals_fy2526.md
 and JSON. Payment `1094368000052871212` is excluded because its SBE portion
 was already created separately. The workflow does not change Books.
 
-`uv run python apps/apply_inter_location_updates.py --apply` applies only the
+`.venv/bin/python apps/apply_inter_location_updates.py --apply` applies only the
 15 reviewed customer payment proposals after verifying all source payments,
 contra vendor payments, invoice locations, bill locations, allocations,
 references, dates, amounts, and clearing-account IDs in current Books data.

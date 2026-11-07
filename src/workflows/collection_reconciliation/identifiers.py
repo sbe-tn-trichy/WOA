@@ -1,9 +1,9 @@
 """Extract identifiers from nested Creator and Books response records."""
 
-from typing import Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
 
 
-def identifier(payload: object, keys: Sequence[str]) -> Optional[str]:
+def identifier(payload: object, keys: Sequence[str]) -> str | None:
     if isinstance(payload, Mapping):
         for key in keys:
             value = payload.get(key)

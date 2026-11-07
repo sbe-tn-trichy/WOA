@@ -37,7 +37,11 @@ def sdk_contracts(books: ZohoBooksAPI, analytics: ZohoAnalyticsAPI) -> None:
     checked_analytics: RenumberAnalyticsClient = analytics
     assert_type(checked_books.customer_payments.get("payment"), object)
     assert_type(offset_books.vendor_payments.create({"vendor_id": "vendor"}), object)
-    assert_type(checked_analytics.queries.execute(
+    analytics_contract(checked_analytics)
+
+
+def analytics_contract(client: RenumberAnalyticsClient) -> None:
+    assert_type(client.queries.execute(
         "workspace", "SELECT 1", max_attempts=1, poll_interval=2.0,
     ), object)
 

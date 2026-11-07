@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Mapping, TypedDict
+from collections.abc import Mapping
+from typing import Any, TypedDict
 
 
 class EquityLedgerEntry(TypedDict):

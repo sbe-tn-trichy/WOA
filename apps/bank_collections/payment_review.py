@@ -4,13 +4,14 @@
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 import logging
 import secrets
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 from urllib.parse import unquote, urlparse
 
 try:
@@ -30,14 +31,14 @@ _TEMPLATE_PATH = Path(__file__).resolve().parents[1] / "static" / "payment_revie
 HTML = _TEMPLATE_PATH.read_text(encoding="utf-8")
 
 
-def _clients(token_url: str, owner: Optional[str], org_id: str, domain: str):
+def _clients(token_url: str, owner: str | None, org_id: str, domain: str):
     creator = get_creator_client(owner_name=owner, domain=domain, token_url=token_url)
     books = get_books_client(org_id=org_id, domain=domain, token_url=token_url)
     return creator, books
 
 
 def make_handler(service: OnlinePaymentReviewService, review_token: str,
-                 metrics: Optional[RequestMetrics] = None):
+                 metrics: RequestMetrics | None = None):
     class Handler(BaseHTTPRequestHandler):
         def _valid_host(self) -> bool:
             port = self.server.server_address[1]
@@ -230,7 +231,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.host not in ("127.0.0.1", "localhost", "::1"):
         raise SystemExit("The review server may only bind to a loopback address.")

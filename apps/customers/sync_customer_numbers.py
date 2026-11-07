@@ -2,7 +2,7 @@
 """Fill Creator Customer# from Books for explicitly selected linked customers."""
 import argparse
 from dataclasses import asdict
-import json
+from utils import json
 
 try:
     from . import _bootstrap  # noqa: F401

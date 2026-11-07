@@ -1,7 +1,7 @@
 """Public vendor-ledger reconciliation API."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..core.models import DotDict
 from ._reconciler import (
@@ -36,10 +36,10 @@ def reconcile_vendor_account(
 
 def reconcile_vendor(
     vendor_ledger_path: str,
-    vendor_id: Optional[str] = None,
+    vendor_id: str | None = None,
     date_tolerance_days: int = 7,
     amount_tolerance: float = 0.0,
-    books_client: Optional[Any] = None,
+    books_client: Any | None = None,
 ) -> DotDict:
     """High-level wrapper to reconcile a vendor account with client initialization and auto-detection."""
     return DotDict(_reconcile_vendor(

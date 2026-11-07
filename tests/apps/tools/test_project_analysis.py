@@ -21,7 +21,7 @@ def repo(tmp_path):
         path = tmp_path / document
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("# Fixture\n", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text('[tool.mypy]\nfiles = ["src/workflows/core", "apps/one.py"]\n', encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text('[tool.ty.src]\ninclude = ["src/workflows/core", "apps/one.py"]\n', encoding="utf-8")
     for path, content in {
         "src/workflows/core/one.py": "VALUE = 1\n",
         "src/workflows/use.py": "from .core import one\n",
@@ -129,7 +129,7 @@ def test_transitive_dependents_affected_tests_and_okf_rules(repo):
 def test_verification_failures(monkeypatch, tmp_path):
     results = iter([
         subprocess.CompletedProcess([], 1, "out of sync", ""),
-        subprocess.CompletedProcess([], 1, "", "No module named mypy"),
+        subprocess.CompletedProcess([], 1, "", "No module named ty"),
     ])
     monkeypatch.setattr(audit.subprocess, "run", lambda *a, **k: next(results))
     assert [r["status"] for r in audit.verify(tmp_path)] == ["failed", "incomplete"]

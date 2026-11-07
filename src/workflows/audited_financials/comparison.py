@@ -4,11 +4,12 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal as D
 from pathlib import Path
-from typing import Any, Mapping, Protocol
-import json
-import openpyxl
-import yaml
-from zoho.books.resources.reports import Reports
+from collections.abc import Mapping
+from typing import Any, Protocol
+from utils import json
+from python_calamine import CalamineWorkbook
+from utils import yaml
+from zoho.books.custom.reports import Reports
 from .reports import _firm_rule
 
 @dataclass(frozen=True)
@@ -64,9 +65,13 @@ def fetch_comparison_reports(client: BooksReportClient, period: ComparisonPeriod
     return reports
 
 def read_audited_workbook(source: Path) -> dict[str, list[tuple[Any, ...]]]:
-    workbook = openpyxl.load_workbook(source, data_only=True, read_only=True)
+    workbook = CalamineWorkbook.from_path(source)
     try:
-        sheets = {sheet.title: list(sheet.iter_rows(values_only=True)) for sheet in workbook}
+        sheets = {
+            name: [tuple(None if value == "" else value for value in row)
+                   for row in workbook.get_sheet_by_name(name).to_python(skip_empty_area=False)]
+            for name in workbook.sheet_names
+        }
     finally:
         workbook.close()
     for sheet, minimum_rows in [('Trading & P&L', 39), ('Balance Sheet', 30)]:

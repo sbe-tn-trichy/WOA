@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import re
 from difflib import SequenceMatcher
-from typing import Any, Dict, List, Mapping, Sequence, TypedDict
+from collections.abc import Mapping, Sequence
+from typing import Any, TypedDict
 
 
 class DuplicateMatch(TypedDict):
     match_type: str  # "legacy_duplicate", "packaging_twin", "near_duplicate"
     similarity: float
-    item_a: Dict[str, Any]
-    item_b: Dict[str, Any]
+    item_a: dict[str, Any]
+    item_b: dict[str, Any]
     details: str
 
 
@@ -59,14 +60,14 @@ class NeosealAuditResult(TypedDict):
     total_audited: int
     active_count: int
     inactive_count: int
-    duplicates: List[DuplicateMatch]
-    naming_issues: List[NomenclatureIssue]
-    sku_issues: List[NomenclatureIssue]
-    group_issues: List[GroupCategorizationIssue]
-    price_list_issues: List[PriceListIssue]
-    margin_issues: List[ItemDataIssue]
-    pack_mrp_issues: List[ItemDataIssue]
-    alias_issues: List[ItemDataIssue]
+    duplicates: list[DuplicateMatch]
+    naming_issues: list[NomenclatureIssue]
+    sku_issues: list[NomenclatureIssue]
+    group_issues: list[GroupCategorizationIssue]
+    price_list_issues: list[PriceListIssue]
+    margin_issues: list[ItemDataIssue]
+    pack_mrp_issues: list[ItemDataIssue]
+    alias_issues: list[ItemDataIssue]
 
 
 class NeosealItemAuditor:
@@ -83,7 +84,7 @@ class NeosealItemAuditor:
         )
 
     @staticmethod
-    def _normalize_item(raw: Mapping[str, Any]) -> Dict[str, Any]:
+    def _normalize_item(raw: Mapping[str, Any]) -> dict[str, Any]:
         return {
             "item_id": str(raw.get("item_id") or "").strip(),
             "name": str(raw.get("name") or "").strip(),
@@ -111,14 +112,14 @@ class NeosealItemAuditor:
     @staticmethod
     def _normalize_price_list(
         price_list: Sequence[Mapping[str, Any]],
-    ) -> Dict[str, float | None]:
+    ) -> dict[str, float | None]:
         """Return price-list prices by normalized SKU.
 
         Price-list exports must provide ``sku`` plus one of ``price``, ``rate``,
         or ``selling_price``. Duplicate SKUs are rejected because their expected
         selling price is ambiguous.
         """
-        prices: Dict[str, float | None] = {}
+        prices: dict[str, float | None] = {}
         for row in price_list:
             sku = str(row.get("sku") or "").strip().casefold()
             if not sku:
@@ -132,9 +133,9 @@ class NeosealItemAuditor:
             prices[sku] = NeosealItemAuditor._as_float(price)
         return prices
 
-    def find_duplicates(self) -> List[DuplicateMatch]:
+    def find_duplicates(self) -> list[DuplicateMatch]:
         """Detect duplicates, near-duplicates, inactive legacy pairs, and container twins."""
-        results: List[DuplicateMatch] = []
+        results: list[DuplicateMatch] = []
         n = len(self.raw_items)
 
         for i in range(n):
@@ -224,9 +225,9 @@ class NeosealItemAuditor:
 
         return False
 
-    def check_naming_nomenclature(self) -> List[NomenclatureIssue]:
+    def check_naming_nomenclature(self) -> list[NomenclatureIssue]:
         """Audit item names for nomenclature compliance."""
-        issues: List[NomenclatureIssue] = []
+        issues: list[NomenclatureIssue] = []
 
         for it in self.raw_items:
             name = it["name"]
@@ -279,9 +280,9 @@ class NeosealItemAuditor:
 
         return issues
 
-    def check_sku_nomenclature(self) -> List[NomenclatureIssue]:
+    def check_sku_nomenclature(self) -> list[NomenclatureIssue]:
         """Audit user-generated SKUs for structural formula adherence."""
-        issues: List[NomenclatureIssue] = []
+        issues: list[NomenclatureIssue] = []
 
         for it in self.raw_items:
             name = it["name"]
@@ -396,9 +397,9 @@ class NeosealItemAuditor:
 
         return issues
 
-    def check_group_categorization(self) -> List[GroupCategorizationIssue]:
+    def check_group_categorization(self) -> list[GroupCategorizationIssue]:
         """Audit items for unassigned groups or catch-all bucket assignments."""
-        issues: List[GroupCategorizationIssue] = []
+        issues: list[GroupCategorizationIssue] = []
 
         for it in self.raw_items:
             grp = it["group_name"]
@@ -446,7 +447,7 @@ class NeosealItemAuditor:
 
         return issues
 
-    def check_price_list(self) -> List[PriceListIssue]:
+    def check_price_list(self) -> list[PriceListIssue]:
         """Compare each Neoseal item selling price with the supplied price list.
 
         An empty price list means the comparison was not requested, so no issues
@@ -456,7 +457,7 @@ class NeosealItemAuditor:
         if self.price_list is None:
             return []
 
-        issues: List[PriceListIssue] = []
+        issues: list[PriceListIssue] = []
         for it in self.raw_items:
             sku_key = it["sku"].casefold()
             if not sku_key:
@@ -493,9 +494,9 @@ class NeosealItemAuditor:
                 })
         return issues
 
-    def check_margin(self) -> List[ItemDataIssue]:
+    def check_margin(self) -> list[ItemDataIssue]:
         """Flag items whose selling price does not produce a positive margin."""
-        issues: List[ItemDataIssue] = []
+        issues: list[ItemDataIssue] = []
         for it in self.raw_items:
             purchase_rate = it["purchase_rate"]
             rate = it["rate"]
@@ -519,9 +520,9 @@ class NeosealItemAuditor:
                 ))
         return issues
 
-    def check_pack_size_and_mrp(self) -> List[ItemDataIssue]:
+    def check_pack_size_and_mrp(self) -> list[ItemDataIssue]:
         """Ensure item pack size and MRP are populated with positive values."""
-        issues: List[ItemDataIssue] = []
+        issues: list[ItemDataIssue] = []
         for it in self.raw_items:
             if it["pack_size"] is None or it["pack_size"] <= 0:
                 issues.append(self._data_issue(
@@ -543,7 +544,7 @@ class NeosealItemAuditor:
                 ))
         return issues
 
-    def check_aliases(self) -> List[ItemDataIssue]:
+    def check_aliases(self) -> list[ItemDataIssue]:
         """Ensure every item carries the vendor-facing alias used by Neoseal."""
         return [
             self._data_issue(

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import json
+from utils import json
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from workflows.core.payments import PaymentEvidence, payment_evidence_matches
 from workflows.core.checkpoint import write_atomic_json
@@ -17,7 +18,7 @@ def _normalized(value: Any) -> str:
 
 def find_books_payment(
     values: Mapping[str, Any], payments: Sequence[Mapping[str, Any]]
-) -> Tuple[Optional[Mapping[str, Any]], str]:
+) -> tuple[Mapping[str, Any] | None, str]:
     """Resolve a Books payment for an online Creator payment record."""
     existing_id = to_text(values.get("books_payment_id"))
     existing_number = _normalized(values.get("books_payment_number"))
@@ -58,7 +59,7 @@ def find_books_payment(
     return None, "payment_missing"
 
 
-def _creator_values(record: Mapping[str, Any]) -> Dict[str, Any]:
+def _creator_values(record: Mapping[str, Any]) -> dict[str, Any]:
     customer = record.get("Customer_Name")
     customer = customer if isinstance(customer, Mapping) else {}
     return {
@@ -122,10 +123,10 @@ def run_backfill(
     creator_app: str,
     execute: bool = False,
     allow_batch: bool = False,
-    creator_record_id: Optional[str] = None,
-    checkpoint_path: Optional[Path] = None,
-    resume_from: Optional[Path] = None,
-) -> Dict[str, Any]:
+    creator_record_id: str | None = None,
+    checkpoint_path: Path | None = None,
+    resume_from: Path | None = None,
+) -> dict[str, Any]:
     if execute and not creator_record_id and not allow_batch:
         raise ValueError("Batch execution requires --allow-batch.")
     records = creator.get_all_records(creator_app, "Online_Payments")
@@ -134,7 +135,7 @@ def run_backfill(
             record for record in records
             if to_text(record.get("ID")) == creator_record_id
         ]
-    resumed: Dict[str, Mapping[str, Any]] = {}
+    resumed: dict[str, Mapping[str, Any]] = {}
     if resume_from and resume_from.exists():
         payload = json.loads(resume_from.read_text(encoding="utf-8"))
         resumed = {
@@ -187,8 +188,8 @@ def run_backfill(
     return {"summary": summary, "rows": rows}
 
 
-def _summary(rows: Sequence[Mapping[str, Any]]) -> Dict[str, int]:
-    summary: Dict[str, int] = {"scanned": len(rows)}
+def _summary(rows: Sequence[Mapping[str, Any]]) -> dict[str, int]:
+    summary: dict[str, int] = {"scanned": len(rows)}
     for row in rows:
         status = to_text(row.get("status")) or "unknown"
         summary[status] = summary.get(status, 0) + 1

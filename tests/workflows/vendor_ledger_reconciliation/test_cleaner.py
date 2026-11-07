@@ -1,18 +1,19 @@
 import unittest
+from datetime import date, datetime
 from unittest.mock import patch, MagicMock
-import xlrd
+import pytest
 from workflows.vendor_ledger_reconciliation.cleaner import clean_ledger_file
 
 class TestLedgerCleaner(unittest.TestCase):
     @patch("os.path.exists")
-    @patch("xlrd.open_workbook")
+    @patch("workflows.vendor_ledger_reconciliation.cleaner.CalamineWorkbook.from_path")
     def test_clean_ledger_file_mock(self, mock_open_workbook, mock_exists):
         mock_exists.return_value = True
         # Setup mock sheet and workbook
         mock_wb = MagicMock()
         mock_sheet = MagicMock()
         mock_open_workbook.return_value = mock_wb
-        mock_wb.sheet_by_index.return_value = mock_sheet
+        mock_wb.get_sheet_by_index.return_value = mock_sheet
         mock_wb.datemode = 0
         
         # Define mock rows
@@ -37,21 +38,8 @@ class TestLedgerCleaner(unittest.TestCase):
         mock_sheet.nrows = len(mock_rows)
         mock_sheet.ncols = len(mock_rows[3])
         
-        def mock_cell_value(row, col):
-            return mock_rows[row][col]
-            
-        def mock_cell(row, col):
-            cell = MagicMock()
-            cell.value = mock_rows[row][col]
-            if isinstance(cell.value, float):
-                cell.ctype = xlrd.XL_CELL_NUMBER
-            else:
-                cell.ctype = xlrd.XL_CELL_TEXT
-            return cell
-            
-        mock_sheet.cell_value.side_effect = mock_cell_value
-        mock_sheet.cell.side_effect = mock_cell
-        
+        mock_sheet.to_python.return_value = mock_rows
+
         # Run cleaner with auto-detection of Polycab key (via filename starting with 277498)
         txs = clean_ledger_file("277498_dummy_path.xls")
         
@@ -74,13 +62,13 @@ class TestLedgerCleaner(unittest.TestCase):
 
 
     @patch("os.path.exists")
-    @patch("xlrd.open_workbook")
+    @patch("workflows.vendor_ledger_reconciliation.cleaner.CalamineWorkbook.from_path")
     def test_get_ledger_metadata_mock(self, mock_open_workbook, mock_exists):
         mock_exists.return_value = True
         mock_wb = MagicMock()
         mock_sheet = MagicMock()
         mock_open_workbook.return_value = mock_wb
-        mock_wb.sheet_by_index.return_value = mock_sheet
+        mock_wb.get_sheet_by_index.return_value = mock_sheet
         
         mock_rows = [
             ["Start Date", ":", "2026-01-01"],
@@ -90,7 +78,7 @@ class TestLedgerCleaner(unittest.TestCase):
         ]
         mock_sheet.nrows = len(mock_rows)
         mock_sheet.ncols = 3
-        mock_sheet.cell_value.side_effect = lambda r, c: mock_rows[r][c]
+        mock_sheet.to_python.return_value = mock_rows
         
         from workflows.vendor_ledger_reconciliation.cleaner import get_ledger_metadata
         metadata = get_ledger_metadata("dummy_path.xls")
@@ -99,3 +87,26 @@ class TestLedgerCleaner(unittest.TestCase):
         self.assertEqual(metadata["end_date"], "2026-03-31")
         self.assertEqual(metadata["party_name"], "POLYCAB INDIA LIMITED")
         self.assertEqual(metadata["opening_balance"], -12345.50)
+
+
+@pytest.mark.parametrize("value", [date(2026, 1, 2), datetime(2026, 1, 2, 12)])
+def test_calamine_native_dates(value):
+    from workflows.vendor_ledger_reconciliation.cleaner import clean_polycab_ledger
+    rows = [
+        ["Account No", "AR Invoice Date", "Transaction No", "Debit Amount"],
+        [123.0, value, 456.0, 12.5],
+    ]
+    with patch("workflows.vendor_ledger_reconciliation.cleaner._read_first_sheet", return_value=rows):
+        assert clean_polycab_ledger("ledger.xls") == [{
+            "account_no": "123", "date": "2026-01-02",
+            "transaction_no": "456", "debit_amount": 12.5,
+        }]
+
+
+def test_calamine_workbook_closes_on_read_error():
+    from workflows.vendor_ledger_reconciliation.cleaner import _read_first_sheet
+    with patch("workflows.vendor_ledger_reconciliation.cleaner.CalamineWorkbook.from_path") as factory:
+        factory.return_value.get_sheet_by_index.side_effect = ValueError("Bad sheet")
+        with pytest.raises(ValueError, match="Bad sheet"):
+            _read_first_sheet("ledger.xls")
+        factory.return_value.close.assert_called_once()

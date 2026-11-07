@@ -7,7 +7,7 @@ import importlib.abc
 import importlib.machinery
 import sys
 import types
-from typing import Sequence
+from collections.abc import Sequence
 
 from . import _bootstrap  # noqa: F401
 

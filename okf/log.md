@@ -2,6 +2,30 @@
 
 ## 2026-11-07
 
+- Added the canonical [JSON codec reference](json-codec.md) for RapidJSON precision, recovery serializers and legacy hash compatibility; linked architecture, HTTP transport, workflow persistence and metadata documentation. See [project entry](../CHANGELOG.md#adopt-python-rapidjson-for-project-json-handling).
+
+- Added the canonical [HTTP transport reference](http-transport.md) for pyqwest adaptation, TLS, pooling, uploads, streaming and verification limits; linked architecture/configuration, updated SDK/runbook ownership and generated API docs. See [project entry](../CHANGELOG.md#migrate-project-http-calls-from-requests-to-pyqwest).
+
+- Documented shared PDFium extraction and calamine workbook reading in [architecture](architecture.md), [audited financials](audited-financials-comparison.md), [RSO import](polycab-rso-import.md), [credit import](polycab-credit-import.md) and [vendor ledger matching](bank-vendor-ledger-matching.md), including layout-verification limits; see [project entry](../CHANGELOG.md#replace-pdf-and-spreadsheet-readers-with-pdfium-and-calamine).
+
+- Documented YAMLRocks configuration parsing, tag validation and date-writing limits in [configuration](configuration.md), with links/requirements updated in architecture, runbook and SDK concepts; see [project entry](../CHANGELOG.md#replace-pyyaml-with-yamlrocks).
+
+- Migrated the active checker to ty in the [type-safety plan](type-safety-plan.md), [runbook](development-runbook.md) and [analysis workflow](project-organization.md); see [project entry](../CHANGELOG.md#replace-mypy-checks-with-ty). Historical mypy verification remains historical evidence.
+
+- Standardized uv provisioning and dependency validation in the [development runbook](development-runbook.md), linked OCR setup and routine inter-location commands; see [project entry](../CHANGELOG.md#standardize-dependency-management-on-uv).
+
+- Updated [SDK download ownership](sdk-audit-findings.md) after removing the redundant wrapper; see [project entry](../CHANGELOG.md#remove-redundant-zoho-download-wrapper).
+
+- Documented base-client error parsing in [architecture](architecture.md); see [project entry](../CHANGELOG.md#simplify-base-client-error-handling).
+
+- Documented service logger configuration ownership in [architecture](architecture.md); see [project entry](../CHANGELOG.md#centralize-service-logger-setup).
+
+- Added the shared [`utils.http`](architecture.md#layer-boundaries) transport layer and import-direction rules across [architecture](architecture.md), [project overview](project-overview.md), and [SDK audit findings](sdk-audit-findings.md). See [project entry](../CHANGELOG.md#extract-shared-http-utility-layer-into-utilshttp-and-simplify-zohoauth).
+
+- Added checkout-relocation bytecode guidance to the [runbook](development-runbook.md). See [project entry](../CHANGELOG.md#rename-the-checkout-and-rebuild-its-environment).
+
+- Recorded the canonical WOA remote and checkout-move requirements in the [overview](project-overview.md). See [project entry](../CHANGELOG.md#align-the-local-remote-with-the-woa-rename).
+
 - Established centralized [test ownership](project-organization.md#test-ownership) and recorded path mapping and verification. See [project entry](../CHANGELOG.md#centralize-tests-by-source-ownership).
 
 
@@ -26,6 +50,9 @@
 - Documented mandatory pytest/xdist base dependencies and the compatibility `test` extra in the [runbook](development-runbook.md). See [project change](../CHANGELOG.md#require-the-test-runner-in-every-installation).
 
 - Adopted **WOA — Workflows, Ops and Automations** as the project and distribution identity in the [overview](project-overview.md), retaining vendor SDK and workflow imports. Updated dashboard and generated API branding, preserving saved favorites. See [project change](../CHANGELOG.md#name-the-project-woa).
+- Separated Books custom resources and recorded canonical route ownership, helper delegation and import migration in [Books](zoho-books.md#openapi-operation-coverage). See [project change](../CHANGELOG.md#deduplicate-books-endpoint-wrappers-and-separate-custom-resources).
+
+- Added [Books OpenAPI wrappers](zoho-books.md#openapi-operation-coverage), regeneration, upload encoding and compatibility contracts. See [project change](../CHANGELOG.md#complete-books-openapi-operation-wrappers).
 
 - Renamed the canonical settings/template to `config/config.yaml` and `config/config.example.yaml`, with explained sections and profile selection; documented priority and independent profiles in [configuration](configuration.md). See [project change](../CHANGELOG.md#clarify-and-rename-the-unified-yaml-configuration).
 

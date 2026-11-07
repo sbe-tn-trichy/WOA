@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-import json
+import rapidjson as json
 from zoho.sheet import ZohoSheetAPI
 
 class TestZohoSheetAPI(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         headers = self.client._get_headers()
         self.assertEqual(headers, {"Authorization": "Zoho-oauthtoken fake_access_token"})
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_list_workbooks_success(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -39,7 +39,7 @@ class TestZohoSheetAPI(unittest.TestCase):
             timeout=30,
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_list_sheets_success(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -57,7 +57,7 @@ class TestZohoSheetAPI(unittest.TestCase):
             timeout=30,
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_list_sheets_accepts_worksheet_name_response_field(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -66,7 +66,7 @@ class TestZohoSheetAPI(unittest.TestCase):
 
         self.assertEqual(self.client.list_sheets("wb1"), ["Sheet1"])
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_get_sheet_id(self, mock_request):
         response = MagicMock(status_code=200)
         response.json.return_value = {"worksheet_names": [
@@ -77,7 +77,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.client.get_sheet_id("wb1", "Missing")
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_format_ranges(self, mock_request):
         response = MagicMock(status_code=200)
         response.json.return_value = {"status": "success"}
@@ -87,7 +87,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         assert mock_request.call_args.kwargs["params"] == {"method": "ranges.format.set"}
         assert mock_request.call_args.kwargs["data"] == {"format_json": json.dumps(formats)}
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_delete_rows_by_index(self, mock_request):
         response = MagicMock(status_code=200)
         response.json.return_value = {"status": "success"}
@@ -95,10 +95,10 @@ class TestZohoSheetAPI(unittest.TestCase):
         self.client.delete_rows("wb1", "Sheet1", [2, 3])
         assert mock_request.call_args.kwargs["params"] == {"method": "worksheet.records.delete"}
         assert mock_request.call_args.kwargs["data"] == {
-            "worksheet_name": "Sheet1", "row_array": "[2, 3]",
+            "worksheet_name": "Sheet1", "row_array": "[2,3]",
         }
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_get_rows_success(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -119,7 +119,7 @@ class TestZohoSheetAPI(unittest.TestCase):
             timeout=30,
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_get_rows_no_records_graceful(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 400 # or whatever code returned for error 2884
@@ -129,7 +129,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         res = self.client.get_rows("wb1", "Sheet1")
         self.assertEqual(res, [])
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_set_content(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -152,7 +152,7 @@ class TestZohoSheetAPI(unittest.TestCase):
             timeout=30,
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_set_cell(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -175,7 +175,7 @@ class TestZohoSheetAPI(unittest.TestCase):
             timeout=30,
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_add_sheet(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -195,7 +195,7 @@ class TestZohoSheetAPI(unittest.TestCase):
             timeout=30,
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_add_rows(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -218,7 +218,7 @@ class TestZohoSheetAPI(unittest.TestCase):
             timeout=30,
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_update_rows(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -241,7 +241,7 @@ class TestZohoSheetAPI(unittest.TestCase):
             timeout=30,
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_truncate_sheet(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -263,8 +263,8 @@ class TestZohoSheetAPI(unittest.TestCase):
         )
 
 class TestSheetCatalystAuth(unittest.TestCase):
-    @patch("requests.request")
-    @patch("requests.post")
+    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_transport.post")
     def test_catalyst_auth_flow(self, mock_post, mock_request):
         # Setup mock responses based on request URL
         token_response = MagicMock(status_code=200)

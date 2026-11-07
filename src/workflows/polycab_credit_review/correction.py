@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import replace
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from zoho.helpers.references import update_reference_lines
 from zoho.helpers.records import get_verified_record

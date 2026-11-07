@@ -80,7 +80,7 @@ Date parsing and financial period calculation utilities for Zoho APIs.
 ### Function `parse_date`
 
 ```python
-def parse_date(value: object) -> Optional[date]
+def parse_date(value: object) -> date | None
 ```
 
 Safely parse a date from ISO string, datetime, date object, or other common formats.
@@ -88,7 +88,7 @@ Safely parse a date from ISO string, datetime, date object, or other common form
 ### Function `get_month_range`
 
 ```python
-def get_month_range(month: str) -> Tuple[date, date]
+def get_month_range(month: str) -> tuple[date, date]
 ```
 
 Return the start and end date for a given YYYY-MM string.
@@ -96,7 +96,7 @@ Return the start and end date for a given YYYY-MM string.
 ### Function `get_previous_month_range`
 
 ```python
-def get_previous_month_range(as_of: Optional[date] = None) -> Tuple[date, date]
+def get_previous_month_range(as_of: date | None = None) -> tuple[date, date]
 ```
 
 Return the start and end date of the previous calendar month.
@@ -104,7 +104,7 @@ Return the start and end date of the previous calendar month.
 ### Function `get_financial_year_range`
 
 ```python
-def get_financial_year_range(as_of: Optional[date] = None, start_month: int = 4) -> Tuple[date, date]
+def get_financial_year_range(as_of: date | None = None, start_month: int = 4) -> tuple[date, date]
 ```
 
 Return the start and end date of the financial/fiscal year.
@@ -141,7 +141,7 @@ Higher-level helper functions for Zoho Books bank account operations.
 ### Function `find_bank_account_by_name`
 
 ```python
-def find_bank_account_by_name(books_client: Any, account_name: str) -> Optional[Dict[str, Any]]
+def find_bank_account_by_name(books_client: Any, account_name: str) -> dict[str, Any] | None
 ```
 
 Look up a bank account by case-insensitive account_name.
@@ -149,7 +149,7 @@ Look up a bank account by case-insensitive account_name.
 ### Function `fetch_bank_accounts_map`
 
 ```python
-def fetch_bank_accounts_map(books_client: Any) -> Dict[str, Dict[str, Any]]
+def fetch_bank_accounts_map(books_client: Any) -> dict[str, dict[str, Any]]
 ```
 
 Fetch all bank accounts and index them by case-folded account_name.
@@ -157,7 +157,7 @@ Fetch all bank accounts and index them by case-folded account_name.
 ### Function `extract_bank_withdrawals`
 
 ```python
-def extract_bank_withdrawals(transactions: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]
+def extract_bank_withdrawals(transactions: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
 ```
 
 Filter a list of bank transactions down to outflows (withdrawals / debits).
@@ -165,7 +165,7 @@ Filter a list of bank transactions down to outflows (withdrawals / debits).
 ### Function `extract_bank_deposits`
 
 ```python
-def extract_bank_deposits(transactions: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]
+def extract_bank_deposits(transactions: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
 ```
 
 Filter a list of bank transactions down to inflows (deposits / credits / receipts).
@@ -191,7 +191,7 @@ Higher-level helper functions for Zoho Analytics and Inventory bin operations.
 ### Function `get_bins_for_items`
 
 ```python
-def get_bins_for_items(analytics_client: Any, workspace_id: str = DEFAULT_WORKSPACE_ID, item_ids: Optional[Union[Sequence[Union[str, int]], str, int]] = None, skus: Optional[Union[Sequence[str], str]] = None, item_names: Optional[Union[Sequence[str], str]] = None, available_only: bool = True, table_name: str = DEFAULT_TABLE_NAME, order_by: Optional[str] = 'ORDER BY "Item Name" ASC') -> List[Dict[str, Any]]
+def get_bins_for_items(analytics_client: Any, workspace_id: str = DEFAULT_WORKSPACE_ID, item_ids: Sequence[str | int] | str | int | None = None, skus: Sequence[str] | str | None = None, item_names: Sequence[str] | str | None = None, available_only: bool = True, table_name: str = DEFAULT_TABLE_NAME, order_by: str | None = 'ORDER BY "Item Name" ASC') -> list[dict[str, Any]]
 ```
 
 Query item stock across warehouse bins using Zoho Analytics.
@@ -221,7 +221,7 @@ Returns:
 ### Function `get_bins_by_item_map`
 
 ```python
-def get_bins_by_item_map(analytics_client: Any, workspace_id: str = DEFAULT_WORKSPACE_ID, key_field: str = 'SKU', item_ids: Optional[Union[Sequence[Union[str, int]], str, int]] = None, skus: Optional[Union[Sequence[str], str]] = None, available_only: bool = True, table_name: str = DEFAULT_TABLE_NAME) -> Dict[str, List[Dict[str, Any]]]
+def get_bins_by_item_map(analytics_client: Any, workspace_id: str = DEFAULT_WORKSPACE_ID, key_field: str = 'SKU', item_ids: Sequence[str | int] | str | int | None = None, skus: Sequence[str] | str | None = None, available_only: bool = True, table_name: str = DEFAULT_TABLE_NAME) -> dict[str, list[dict[str, Any]]]
 ```
 
 Fetch bin stock grouped by item key (e.g. SKU, Product ID, or Item Name).
@@ -239,7 +239,7 @@ Higher-level helper functions for Zoho Books contact operations.
 ### Function `find_contact_by_gstin`
 
 ```python
-def find_contact_by_gstin(books_client: Any, gstin: str, contact_type: Optional[str] = None) -> Optional[Dict[str, Any]]
+def find_contact_by_gstin(books_client: Any, gstin: str, contact_type: str | None = None) -> dict[str, Any] | None
 ```
 
 Look up a contact by their GSTIN (tax identifier).
@@ -249,7 +249,7 @@ Performs case-insensitive matching against `gst_no` and custom fields.
 ### Function `find_contact_by_name`
 
 ```python
-def find_contact_by_name(books_client: Any, contact_name: str, contact_type: Optional[str] = None, exact: bool = True) -> Optional[Dict[str, Any]]
+def find_contact_by_name(books_client: Any, contact_name: str, contact_type: str | None = None, exact: bool = True) -> dict[str, Any] | None
 ```
 
 Look up a contact by contact_name or company_name.
@@ -257,7 +257,7 @@ Look up a contact by contact_name or company_name.
 ### Function `fetch_active_customers_map`
 
 ```python
-def fetch_active_customers_map(books_client: Any, key_field: str = 'contact_id', status: str = 'active') -> Dict[str, Dict[str, Any]]
+def fetch_active_customers_map(books_client: Any, key_field: str = 'contact_id', status: str = 'active') -> dict[str, dict[str, Any]]
 ```
 
 Fetch all customers from Zoho Books and return an indexed dictionary.
@@ -275,7 +275,7 @@ Utilities for safely inspecting, extracting, and provisioning Zoho custom field 
 ### Function `get_custom_field_value`
 
 ```python
-def get_custom_field_value(record: Mapping[str, Any], field_name: str, default: Optional[Any] = None) -> Any
+def get_custom_field_value(record: Mapping[str, Any], field_name: str, default: Any | None = None) -> Any
 ```
 
 Extract a custom field value from a Zoho record across various response shapes.
@@ -288,7 +288,7 @@ Supports:
 ### Function `extract_custom_fields_dict`
 
 ```python
-def extract_custom_fields_dict(record: Mapping[str, Any]) -> Dict[str, Any]
+def extract_custom_fields_dict(record: Mapping[str, Any]) -> dict[str, Any]
 ```
 
 Extract all custom fields in a record into a flat dictionary keyed by api_name or label.
@@ -296,7 +296,7 @@ Extract all custom fields in a record into a flat dictionary keyed by api_name o
 ### Function `ensure_books_custom_fields`
 
 ```python
-def ensure_books_custom_fields(books_client: Any, entity: str, requirements: Sequence[Mapping[str, Any]], create_missing: bool = False) -> Dict[str, Any]
+def ensure_books_custom_fields(books_client: Any, entity: str, requirements: Sequence[Mapping[str, Any]], create_missing: bool = False) -> dict[str, Any]
 ```
 
 Verify and optionally provision custom fields on a Zoho Books entity.
@@ -362,7 +362,7 @@ Download a specific Books document; relative paths are confined to output/.
 ### Function `workdrive_upload_file`
 
 ```python
-def workdrive_upload_file(wd_client: Any, folder_id: str, file_path: str, file_name: Optional[str] = None) -> Dict[str, Any]
+def workdrive_upload_file(wd_client: Any, folder_id: str, file_path: str, file_name: str | None = None) -> dict[str, Any]
 ```
 
 Upload a local file to a Zoho WorkDrive folder.
@@ -370,7 +370,7 @@ Upload a local file to a Zoho WorkDrive folder.
 ### Function `attach_file_to_books_resource`
 
 ```python
-def attach_file_to_books_resource(books_client: Any, resource_name: str, resource_id: str, file_path: str, file_name: Optional[str] = None) -> Dict[str, Any]
+def attach_file_to_books_resource(books_client: Any, resource_name: str, resource_id: str, file_path: str, file_name: str | None = None) -> dict[str, Any]
 ```
 
 Attach a local file to a Zoho Books transaction (e.g., invoices, salesorders, bills).
@@ -378,7 +378,7 @@ Attach a local file to a Zoho Books transaction (e.g., invoices, salesorders, bi
 ### Function `workdrive_upload_and_attach`
 
 ```python
-def workdrive_upload_and_attach(wd_client: Any, books_client: Any, folder_id: str, file_path: str, resource_name: str, resource_id: str, file_name: Optional[str] = None) -> Dict[str, Any]
+def workdrive_upload_and_attach(wd_client: Any, books_client: Any, folder_id: str, file_path: str, resource_name: str, resource_id: str, file_name: str | None = None) -> dict[str, Any]
 ```
 
 Upload a file to WorkDrive and attach it to a Books resource in a single composite call.
@@ -416,7 +416,7 @@ Check whether a value is a valid 15-character Indian GSTIN.
 ### Function `group_contacts_by_gstin`
 
 ```python
-def group_contacts_by_gstin(contacts: Iterable[Mapping[str, Any]]) -> Dict[str, List[Mapping[str, Any]]]
+def group_contacts_by_gstin(contacts: Iterable[Mapping[str, Any]]) -> dict[str, list[Mapping[str, Any]]]
 ```
 
 Group contact records by their normalized valid GSTIN.
@@ -485,7 +485,7 @@ Higher-level helper functions for Zoho Inventory item operations.
 ### Function `fetch_items_lookup`
 
 ```python
-def fetch_items_lookup(inventory_client: ZohoInventoryAPI, key_field: str = 'name', status: str = 'active', purchase_account_id: Optional[str] = None) -> Dict[str, Dict[str, Any]]
+def fetch_items_lookup(inventory_client: ZohoInventoryAPI, key_field: str = 'name', status: str = 'active', purchase_account_id: str | None = None) -> dict[str, dict[str, Any]]
 ```
 
 Fetch all items from Zoho Inventory and index them by `key_field`.
@@ -496,7 +496,7 @@ scopes the query to a specific purchase account.
 ### Function `fetch_items_by_purchase_account`
 
 ```python
-def fetch_items_by_purchase_account(inventory_client: ZohoInventoryAPI, purchase_account_id: str, key_field: str = 'sku', status: str = 'all') -> Dict[str, Dict[str, Any]]
+def fetch_items_by_purchase_account(inventory_client: ZohoInventoryAPI, purchase_account_id: str, key_field: str = 'sku', status: str = 'all') -> dict[str, dict[str, Any]]
 ```
 
 Fetch items scoped to a specific purchase account and index them by `key_field`.
@@ -504,7 +504,7 @@ Fetch items scoped to a specific purchase account and index them by `key_field`.
 ### Function `find_item_by_sku_or_name`
 
 ```python
-def find_item_by_sku_or_name(inventory_client: ZohoInventoryAPI, query: str, purchase_account_id: Optional[str] = None) -> Optional[Dict[str, Any]]
+def find_item_by_sku_or_name(inventory_client: ZohoInventoryAPI, query: str, purchase_account_id: str | None = None) -> dict[str, Any] | None
 ```
 
 Search for an item by matching SKU or name, optionally scoped by purchase_account_id.
@@ -512,7 +512,7 @@ Search for an item by matching SKU or name, optionally scoped by purchase_accoun
 ### Function `find_item_by_exact_sku`
 
 ```python
-def find_item_by_exact_sku(inventory_client: ZohoInventoryAPI, sku: str, purchase_account_id: str) -> Optional[Dict[str, Any]]
+def find_item_by_exact_sku(inventory_client: ZohoInventoryAPI, sku: str, purchase_account_id: str) -> dict[str, Any] | None
 ```
 
 Find an exact Inventory SKU in one purchase account, preferring active items.
@@ -622,7 +622,7 @@ Normalize a cheque reference number by stripping non-alphanumerics and leading z
 ### Function `fetch_open_invoices`
 
 ```python
-def fetch_open_invoices(books_client: Any, customer_id: str) -> List[Dict[str, Any]]
+def fetch_open_invoices(books_client: Any, customer_id: str) -> list[dict[str, Any]]
 ```
 
 Fetch open, non-zero balance invoices for a customer from Zoho Books.
@@ -630,7 +630,7 @@ Fetch open, non-zero balance invoices for a customer from Zoho Books.
 ### Function `fetch_open_bills`
 
 ```python
-def fetch_open_bills(books_client: Any, vendor_id: str) -> List[Dict[str, Any]]
+def fetch_open_bills(books_client: Any, vendor_id: str) -> list[dict[str, Any]]
 ```
 
 Fetch open, non-zero balance bills for a vendor from Zoho Books.
@@ -638,7 +638,7 @@ Fetch open, non-zero balance bills for a vendor from Zoho Books.
 ### Function `find_bill_by_number`
 
 ```python
-def find_bill_by_number(books_client: Any, vendor_id: str, bill_number: str) -> Optional[Dict[str, Any]]
+def find_bill_by_number(books_client: Any, vendor_id: str, bill_number: str) -> dict[str, Any] | None
 ```
 
 Find a bill under a specific vendor by bill number.
@@ -646,7 +646,7 @@ Find a bill under a specific vendor by bill number.
 ### Function `allocate_documents_fifo`
 
 ```python
-def allocate_documents_fifo(amount: Any, documents: Sequence[Mapping[str, Any]], id_key: str = 'invoice_id', include_metadata: bool = False) -> Tuple[List[Dict[str, Any]], Decimal]
+def allocate_documents_fifo(amount: Any, documents: Sequence[Mapping[str, Any]], id_key: str = 'invoice_id', include_metadata: bool = False) -> tuple[list[dict[str, Any]], Decimal]
 ```
 
 Allocate a payment/credit amount across open documents sorted by due date and date.
@@ -656,7 +656,7 @@ Returns a tuple of (allocations, unallocated_remaining_amount).
 ### Function `unwrap_record`
 
 ```python
-def unwrap_record(response: Mapping[str, Any], candidate_keys: Sequence[str] = ()) -> Dict[str, Any]
+def unwrap_record(response: Mapping[str, Any], candidate_keys: Sequence[str] = ()) -> dict[str, Any]
 ```
 
 Extract the primary record dictionary from a Zoho API response payload.
@@ -667,7 +667,7 @@ Handles single-entity keys (e.g. 'salesorder', 'sales_order', 'payment', 'custom
 ### Function `find_transaction_by_number`
 
 ```python
-def find_transaction_by_number(resource: Any, number: str, number_keys: Sequence[str] = ('reference_number', 'salesorder_number', 'invoice_number', 'payment_number', 'creditnote_number', 'bill_number'), resource_key: Optional[str] = None) -> Optional[Dict[str, Any]]
+def find_transaction_by_number(resource: Any, number: str, number_keys: Sequence[str] = ('reference_number', 'salesorder_number', 'invoice_number', 'payment_number', 'creditnote_number', 'bill_number'), resource_key: str | None = None) -> dict[str, Any] | None
 ```
 
 Look up a transaction in a Books resource (sales_orders, invoices, customer_payments, etc.) by reference or number.

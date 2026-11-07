@@ -1,11 +1,12 @@
 """Analytics customer-payment inspection, with pure period and series analysis."""
 from collections import Counter, defaultdict
 from datetime import date
-from typing import Any, Dict, List, Mapping, Sequence, TypedDict
+from collections.abc import Mapping, Sequence
+from typing import Any, TypedDict
 from .core.matching import parse_date
 from .core.sequences import analyze_number_series, parse_doc_number
 
-def fetch_customer_payments(analytics: Any, workspace_id: str) -> List[Dict[str, Any]]:
+def fetch_customer_payments(analytics: Any, workspace_id: str) -> list[dict[str, Any]]:
     """Query customer payments from Zoho Analytics."""
     query = """
     SELECT 

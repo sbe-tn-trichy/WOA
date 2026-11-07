@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 @dataclass
@@ -16,14 +16,14 @@ class CreatorCustomerSyncConfig:
     max_deletion_limit: int = 50
     max_deletion_percentage: float = 15.0
     output_dir: Path = field(default_factory=lambda: Path("output"))
-    soft_delete_field: Optional[str] = None
+    soft_delete_field: str | None = None
     soft_delete_value: Any = True
 
-    form_link_name: Optional[str] = None
+    form_link_name: str | None = None
     # Creator field link name -> Books field name; identity is added automatically.
-    field_mapping: Dict[str, str] = field(default_factory=lambda: {"Customer_Name": "contact_name"})
+    field_mapping: dict[str, str] = field(default_factory=lambda: {"Customer_Name": "contact_name"})
 
-    books_branch_name: Optional[str] = None
+    books_branch_name: str | None = None
     books_branch_field: str = "cf_b_name"
     # Explicit selection never reconciles or deletes unrelated Creator customers.
     customer_ids: tuple[str, ...] = ()

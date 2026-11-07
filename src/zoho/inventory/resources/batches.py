@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 from ..base import BaseResource
 
 class Batches(BaseResource):
@@ -6,10 +6,10 @@ class Batches(BaseResource):
     def __init__(self, client: Any):
         super().__init__(client, 'batches')
 
-    def mark_as_active(self, batch_id: str) -> Dict[str, Any]:
+    def mark_as_active(self, batch_id: str) -> dict[str, Any]:
         """Mark a batch as active."""
         return self._action('POST', batch_id, 'active')
 
-    def mark_as_inactive(self, batch_id: str) -> Dict[str, Any]:
+    def mark_as_inactive(self, batch_id: str) -> dict[str, Any]:
         """Mark a batch as inactive."""
         return self._action('POST', batch_id, 'inactive')

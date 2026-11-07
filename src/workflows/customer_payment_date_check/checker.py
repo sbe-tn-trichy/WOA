@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 from zoho.helpers import parse_date
 from workflows.core.matching import to_finite_decimal
@@ -19,13 +20,13 @@ DEFAULT_DATE_MISMATCH_VIEW_ID = "264324000008269008"
 class InvoiceApplicationMismatch:
     invoice_id: str
     invoice_number: str
-    invoice_date: Optional[str]
+    invoice_date: str | None
     applied_date: str
     amount_applied: Decimal
     days_difference: int  # applied_date - payment_date
     mismatch_type: str  # "Applied After Payment", "Applied Before Payment"
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "invoice_id": self.invoice_id,
             "invoice_number": self.invoice_number,
@@ -48,9 +49,9 @@ class PaymentDateMismatchRecord:
     unused_amount: Decimal
     reference_number: str
     payment_mode: str
-    mismatched_applications: List[InvoiceApplicationMismatch]
+    mismatched_applications: list[InvoiceApplicationMismatch]
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "payment_id": self.payment_id,
             "payment_number": self.payment_number,
@@ -82,11 +83,11 @@ class AnalyticsCustomerPaymentDateChecker:
     def run(
         self,
         *,
-        from_date: Optional[str] = None,
-        to_date: Optional[str] = None,
-        customer_id: Optional[str] = None,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        customer_id: str | None = None,
         tolerance_days: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         start = parse_date(from_date) if from_date else None
         end = parse_date(to_date) if to_date else None
         if from_date and not start:
@@ -111,13 +112,13 @@ class AnalyticsCustomerPaymentDateChecker:
         self,
         rows: Iterable[Mapping[str, Any]],
         tolerance_days: int = 0,
-        from_date: Optional[date] = None,
-        to_date: Optional[date] = None,
-        customer_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        from_date: date | None = None,
+        to_date: date | None = None,
+        customer_id: str | None = None,
+    ) -> dict[str, Any]:
         from collections import defaultdict
 
-        by_payment: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+        by_payment: dict[str, dict[str, Any]] = defaultdict(lambda: {
             "header": {},
             "applications": [],
         })
@@ -203,7 +204,7 @@ class AnalyticsCustomerPaymentDateChecker:
                         )
                     )
 
-        mismatches: List[PaymentDateMismatchRecord] = []
+        mismatches: list[PaymentDateMismatchRecord] = []
         for pmt_num, pmt_data in by_payment.items():
             if pmt_data["applications"]:
                 hdr = pmt_data["header"]
@@ -242,11 +243,11 @@ def check_customer_payment_dates_analytics(
     *,
     workspace_id: str = DEFAULT_WORKSPACE_ID,
     view_id: str = DEFAULT_DATE_MISMATCH_VIEW_ID,
-    from_date: Optional[str] = None,
-    to_date: Optional[str] = None,
-    customer_id: Optional[str] = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+    customer_id: str | None = None,
     tolerance_days: int = 0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Audit customer payment vs applied dates via Analytics."""
     checker = AnalyticsCustomerPaymentDateChecker(
         analytics_client=analytics_client,

@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 from datetime import date, datetime
-from typing import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 
 from workflows.core.matching import parse_date
 from .contracts import RenumberAnalyticsClient, RenumberBooksClient

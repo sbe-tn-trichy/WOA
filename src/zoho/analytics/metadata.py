@@ -1,10 +1,11 @@
-import json
+from utils import json
 import logging
 import random
 import re
 import time
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set
+from collections.abc import Iterable
+from typing import Any
 
 from .exceptions import ZohoAnalyticsError
 from .snapshot import SCHEMA_VERSION, WorkspaceMetadataStore
@@ -20,7 +21,7 @@ _RATE_LIMIT_PATTERN = re.compile(
 )
 
 
-def _json_config(config: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+def _json_config(config: dict[str, Any] | None = None) -> dict[str, str]:
     return {"CONFIG": json.dumps(config or {})}
 
 
@@ -28,7 +29,7 @@ def _as_text(value: Any) -> str:
     return "" if value in (None, "null") else str(value)
 
 
-def _data(payload: Any, key: Optional[str] = None) -> Any:
+def _data(payload: Any, key: str | None = None) -> Any:
     if not isinstance(payload, dict):
         raise ZohoAnalyticsError("Analytics metadata API returned a non-object response.")
     if str(payload.get("status", "")).lower() == "failure":
@@ -64,7 +65,7 @@ def _read_json(path: Path, default: Any) -> Any:
         return default
 
 
-def _iter_dicts(value: Any) -> Iterable[Dict[str, Any]]:
+def _iter_dicts(value: Any) -> Iterable[dict[str, Any]]:
     if isinstance(value, dict):
         yield value
         for child in value.values():
@@ -74,8 +75,8 @@ def _iter_dicts(value: Any) -> Iterable[Dict[str, Any]]:
             yield from _iter_dicts(child)
 
 
-def _ids(value: Any, key: str) -> Set[str]:
-    found: Set[str] = set()
+def _ids(value: Any, key: str) -> set[str]:
+    found: set[str] = set()
     for item in _iter_dicts(value):
         candidate = item.get(key)
         if isinstance(candidate, list):
@@ -93,9 +94,9 @@ class _RequestController:
         requests_per_minute: float,
         max_retries: int,
         show_progress: bool,
-        sleep: Optional[Any] = None,
-        clock: Optional[Any] = None,
-        jitter: Optional[Any] = None,
+        sleep: Any | None = None,
+        clock: Any | None = None,
+        jitter: Any | None = None,
     ):
         if requests_per_minute <= 0:
             raise ValueError("requests_per_minute must be greater than zero.")
@@ -107,7 +108,7 @@ class _RequestController:
         self.sleep = sleep or time.sleep
         self.clock = clock or time.monotonic
         self.jitter = jitter or random.uniform
-        self.last_request_at: Optional[float] = None
+        self.last_request_at: float | None = None
         self.progress = ""
 
     def pace(self) -> None:
@@ -140,7 +141,7 @@ class Metadata:
 
     def __init__(self, client: Any):
         self.client = client
-        self._controller: Optional[_RequestController] = None
+        self._controller: _RequestController | None = None
 
     @staticmethod
     def _is_rate_limit(error: Exception) -> bool:
@@ -148,7 +149,7 @@ class Metadata:
             _RATE_LIMIT_PATTERN.search(str(error))
         )
 
-    def _request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    def _request(self, endpoint: str, params: dict[str, Any] | None = None) -> Any:
         controller = self._controller
         recovered_from_rate_limit = False
         retry_index = 0
@@ -191,18 +192,18 @@ class Metadata:
                 )
             return payload
 
-    def get_workspace(self, workspace_id: str) -> Dict[str, Any]:
+    def get_workspace(self, workspace_id: str) -> dict[str, Any]:
         workspace = _data(
             self._request(f"workspaces/{workspace_id}"),
             "workspaces",
         )
         return workspace if isinstance(workspace, dict) else {}
 
-    def list_folders(self, workspace_id: str) -> List[Dict[str, Any]]:
+    def list_folders(self, workspace_id: str) -> list[dict[str, Any]]:
         folders = _data(self._request(f"workspaces/{workspace_id}/folders"), "folders")
         return folders if isinstance(folders, list) else []
 
-    def list_datasources(self, workspace_id: str) -> List[Dict[str, Any]]:
+    def list_datasources(self, workspace_id: str) -> list[dict[str, Any]]:
         sources = _data(
             self._request(f"workspaces/{workspace_id}/datasources"),
             "dataSources",
@@ -213,15 +214,15 @@ class Metadata:
         self,
         workspace_id: str,
         page_size: int = 200,
-        view_types: Optional[List[int]] = None,
-    ) -> List[Dict[str, Any]]:
+        view_types: list[int] | None = None,
+    ) -> list[dict[str, Any]]:
         if page_size <= 0:
             raise ValueError("page_size must be greater than zero.")
-        views: List[Dict[str, Any]] = []
+        views: list[dict[str, Any]] = []
         start_index = 1
-        seen_ids: Set[str] = set()
+        seen_ids: set[str] = set()
         while True:
-            config: Dict[str, Any] = {
+            config: dict[str, Any] = {
                 "startIndex": start_index,
                 "noOfResult": page_size,
             }
@@ -256,7 +257,7 @@ class Metadata:
         self,
         view_id: str,
         include_involved: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         details = _data(
             self._request(
                 f"views/{view_id}",
@@ -266,7 +267,7 @@ class Metadata:
         )
         return details if isinstance(details, dict) else {}
 
-    def get_table_metadata(self, workspace_id: str, view_id: str) -> Dict[str, Any]:
+    def get_table_metadata(self, workspace_id: str, view_id: str) -> dict[str, Any]:
         return _data(
             self._request(f"workspaces/{workspace_id}/views/{view_id}/metadata")
         )
@@ -276,7 +277,7 @@ class Metadata:
         workspace_id: str,
         view_id: str,
         column_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return _data(
             self._request(
                 f"workspaces/{workspace_id}/views/{view_id}/columns/"
@@ -284,7 +285,7 @@ class Metadata:
             )
         )
 
-    def get_query_table(self, workspace_id: str, view_id: str) -> Dict[str, Any]:
+    def get_query_table(self, workspace_id: str, view_id: str) -> dict[str, Any]:
         """Read the complete saved SQL definition of a query table."""
         definition = _data(self._request(f"workspaces/{workspace_id}/querytables/{view_id}"))
         if not isinstance(definition, dict) or not isinstance(definition.get("sqlQuery"), str) or not definition["sqlQuery"].strip():
@@ -301,7 +302,7 @@ class Metadata:
         resume: bool = True,
         show_progress: bool = True,
         page_size: int = 200,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Download a resumable metadata snapshot into an indexed SQLite database."""
         if not workspace_id or not str(workspace_id).strip():
             raise ValueError("workspace_id is required.")
@@ -315,8 +316,8 @@ class Metadata:
         completed_views = set(store.completed_ids("view"))
         completed_tables = set(store.completed_ids("table"))
         completed_dependents = set(store.completed_ids("dependent"))
-        errors: List[Dict[str, Any]] = []
-        manifest: Dict[str, Any] = {
+        errors: list[dict[str, Any]] = []
+        manifest: dict[str, Any] = {
             "schemaVersion": SCHEMA_VERSION,
             "workspaceId": str(workspace_id),
             "startedAt": store.get_info("started_at")
@@ -380,9 +381,9 @@ class Metadata:
             store.replace_datasources(str(workspace_id), datasources)
             store.replace_views(str(workspace_id), views)
 
-            view_details: Dict[str, Dict[str, Any]] = {}
-            table_metadata: Dict[str, Dict[str, Any]] = {}
-            dependent_metadata: Dict[str, Dict[str, Any]] = {}
+            view_details: dict[str, dict[str, Any]] = {}
+            table_metadata: dict[str, dict[str, Any]] = {}
+            dependent_metadata: dict[str, dict[str, Any]] = {}
             table_views = [
                 view for view in views
                 if str(view.get("viewType", "")).strip().lower() in _TABLE_VIEW_TYPES
@@ -558,7 +559,7 @@ class Metadata:
         max_retries: int = 5,
         show_progress: bool = True,
         page_size: int = 200,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Incrementally refresh only new or modified workspace metadata."""
         return self.download_workspace(
             workspace_id=workspace_id,
@@ -572,7 +573,7 @@ class Metadata:
         )
 
     @staticmethod
-    def migrate_json_snapshot(source_dir: Any, output_path: Optional[Any] = None) -> Dict[str, int]:
+    def migrate_json_snapshot(source_dir: Any, output_path: Any | None = None) -> dict[str, int]:
         """Convert a legacy expanded JSON snapshot to the indexed SQLite format."""
         root = Path(source_dir).expanduser().resolve()
         workspace = _read_json(root / "workspace.json", {})
@@ -639,13 +640,13 @@ class Metadata:
 
     @staticmethod
     def _build_catalog(
-        workspace: Dict[str, Any],
-        folders: List[Dict[str, Any]],
-        datasources: List[Dict[str, Any]],
-        views: List[Dict[str, Any]],
-        view_details: Dict[str, Dict[str, Any]],
-        table_metadata: Dict[str, Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        workspace: dict[str, Any],
+        folders: list[dict[str, Any]],
+        datasources: list[dict[str, Any]],
+        views: list[dict[str, Any]],
+        view_details: dict[str, dict[str, Any]],
+        table_metadata: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
         catalog_views = []
         for view in views:
             item = dict(view)
@@ -666,19 +667,19 @@ class Metadata:
     @staticmethod
     def _build_relationships(
         workspace_id: str,
-        folders: List[Dict[str, Any]],
-        datasources: List[Dict[str, Any]],
-        views: List[Dict[str, Any]],
-        view_details: Dict[str, Dict[str, Any]],
-        table_metadata: Dict[str, Dict[str, Any]],
-        dependent_metadata: Dict[str, Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        nodes: List[Dict[str, Any]] = [
+        folders: list[dict[str, Any]],
+        datasources: list[dict[str, Any]],
+        views: list[dict[str, Any]],
+        view_details: dict[str, dict[str, Any]],
+        table_metadata: dict[str, dict[str, Any]],
+        dependent_metadata: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        nodes: list[dict[str, Any]] = [
             {"id": f"workspace:{workspace_id}", "type": "workspace", "zohoId": workspace_id}
         ]
-        edges: List[Dict[str, Any]] = []
-        view_by_name: Dict[str, List[str]] = {}
-        column_by_name: Dict[str, Dict[str, List[str]]] = {}
+        edges: list[dict[str, Any]] = []
+        view_by_name: dict[str, list[str]] = {}
+        column_by_name: dict[str, dict[str, list[str]]] = {}
 
         for folder in folders:
             folder_id = str(folder.get("folderId", ""))
@@ -732,7 +733,7 @@ class Metadata:
                 })
 
         for view_id, metadata in table_metadata.items():
-            names: Dict[str, List[str]] = {}
+            names: dict[str, list[str]] = {}
             for column in metadata.get("columns", []):
                 if not isinstance(column, dict) or not column.get("columnId"):
                     continue
@@ -841,8 +842,8 @@ class Metadata:
                     "target": f"view:{target_view_id}",
                 })
 
-        unique_edges: List[Dict[str, Any]] = []
-        seen_edges: Set[str] = set()
+        unique_edges: list[dict[str, Any]] = []
+        seen_edges: set[str] = set()
         for edge in edges:
             marker = json.dumps(edge, sort_keys=True)
             if marker not in seen_edges:

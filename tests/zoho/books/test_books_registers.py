@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from zoho.books.resources.ledger import Registers
+from zoho.books.custom.ledger import Registers
 
 
 def test_register_request_uses_custom_dates_and_keeps_raw_response():

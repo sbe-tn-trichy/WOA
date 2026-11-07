@@ -6,7 +6,8 @@ from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 
 FY_RANGES = (("2025-04-01", "2026-03-31"), ("2026-04-01", "2027-03-31"))

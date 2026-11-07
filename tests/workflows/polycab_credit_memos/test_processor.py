@@ -13,17 +13,11 @@ from workflows.core.config import Config
 
 class TestCreditMemoProcessor(unittest.TestCase):
     @patch("os.path.exists")
-    @patch("pdfplumber.open")
+    @patch("workflows.polycab_credit_memos.processor.read_pdf_pages")
     def test_parse_polycab_credit_memo(self, mock_plumber_open, mock_exists):
         mock_exists.return_value = True
         
-        # Mock pdfplumber structures
-        mock_pdf = MagicMock()
-        mock_page = MagicMock()
-        mock_plumber_open.return_value.__enter__.return_value = mock_pdf
-        mock_pdf.pages = [mock_page]
-        
-        mock_page.extract_text.return_value = """
+        mock_plumber_open.return_value = ["""
         POLYCAB INDIA LIMITED
         Credit Note
         Buyer's details / Place of Supply: Code Customer PO Number : Credit Note No :
@@ -35,7 +29,7 @@ class TestCreditMemoProcessor(unittest.TestCase):
         1 94054900 LDO0115087 Scintillate Slim Integral LED Downlight 5W 6500K NOS 64.91 1 0 64.91 9.00 5.84 9% 5.84 76.59
         TOTAL 108896.82
         (Rupees One Lakh Eight Thousand Eight Hundred Ninety Six and paise Eighty Two only) For POLYCAB INDIA LIMITED
-        """
+        """]
         
         details = parse_polycab_credit_memo("dummy_memo.pdf")
         
@@ -45,21 +39,17 @@ class TestCreditMemoProcessor(unittest.TestCase):
         self.assertTrue("Scintillate Slim Integral" in details["description"])
 
     @patch("os.path.exists", return_value=True)
-    @patch("pdfplumber.open")
+    @patch("workflows.polycab_credit_memos.processor.read_pdf_pages")
     def test_parse_rejects_pdf_without_extractable_text(self, mock_plumber_open, mock_exists):
-        page = MagicMock()
-        page.extract_text.return_value = None
-        mock_plumber_open.return_value.__enter__.return_value.pages = [page]
+        mock_plumber_open.return_value = [""]
 
         with self.assertRaisesRegex(ValueError, "No extractable text"):
             parse_polycab_credit_memo("image-only.pdf")
 
     @patch("os.path.exists", return_value=True)
-    @patch("pdfplumber.open")
+    @patch("workflows.polycab_credit_memos.processor.read_pdf_pages")
     def test_parse_rejects_unknown_invoice_month(self, mock_plumber_open, mock_exists):
-        page = MagicMock()
-        page.extract_text.return_value = "Invoice Date : 03-XYZ-2026"
-        mock_plumber_open.return_value.__enter__.return_value.pages = [page]
+        mock_plumber_open.return_value = ["Invoice Date : 03-XYZ-2026"]
 
         with self.assertRaisesRegex(ValueError, "Unsupported invoice month"):
             parse_polycab_credit_memo("bad-date.pdf")

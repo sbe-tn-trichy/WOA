@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import csv
 import io
-from typing import Any, Dict, List
+from typing import Any
 
 
-def render_markdown_report(payload: Dict[str, Any]) -> str:
+def render_markdown_report(payload: dict[str, Any]) -> str:
     """Render a human-readable Markdown audit report."""
     result = payload.get("result") or payload
     checked_at = payload.get("checked_at", "")
     filters = payload.get("filters", {})
 
-    lines: List[str] = [
+    lines: list[str] = [
         "# Customer Payment vs Applied Date Audit Report",
         "",
         f"- **Checked At (UTC)**: {checked_at}",
@@ -64,7 +64,7 @@ def render_markdown_report(payload: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_csv_report(payload: Dict[str, Any]) -> str:
+def render_csv_report(payload: dict[str, Any]) -> str:
     """Render a CSV audit report."""
     result = payload.get("result") or payload
     mismatches = result.get("mismatches", [])

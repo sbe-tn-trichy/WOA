@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 from zoho.base_client import BaseZohoClient
 from .resources.items import Items
 from .resources.move_orders import MoveOrders
@@ -22,8 +22,8 @@ class ZohoInventoryAPI(BaseZohoClient):
         access_token: str,
         organization_id: str,
         domain: str = "com",
-        on_request_completed: Optional[Any] = None,
-        token_refresh_callback: Optional[Any] = None
+        on_request_completed: Any | None = None,
+        token_refresh_callback: Any | None = None
     ):
         if not organization_id:
             raise ValueError("organization_id is required.")
@@ -56,15 +56,15 @@ class ZohoInventoryAPI(BaseZohoClient):
         self,
         method: str,
         endpoint: str,
-        json: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
-        files: Optional[Dict[str, Any]] = None,
+        json: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
         stream: bool = False,
-        override_url: Optional[str] = None,
-        is_mutation: Optional[bool] = None,
-        timeout: Optional[int] = None,
+        override_url: str | None = None,
+        is_mutation: bool | None = None,
+        timeout: int | None = None,
     ) -> Any:
         """
         Internal HTTP request handler with logging.

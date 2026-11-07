@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Mapping, TypedDict
+from collections.abc import Mapping
+from typing import Any, TypedDict
 
 from workflows.core.payments import (
     PaymentState, payment_state_matches, payment_series_params, payment_series_records, payment_number_suffix,

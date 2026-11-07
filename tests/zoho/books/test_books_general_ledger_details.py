@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from zoho.books.resources.reports import Reports
+from zoho.books.custom.reports import Reports
 
 
 ARGS = {"account_ids": ["a", "b"], "from_date": "2025-04-01", "to_date": "2026-03-31"}

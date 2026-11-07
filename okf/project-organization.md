@@ -135,7 +135,7 @@ are reports; optional check tools can also write their usual caches.
 Fast inspection checks static import boundaries, local file links and cross-file
 Markdown heading anchors in README, INDEX, WORKFLOWS, PROJECT_ANALYSIS, AGENTS,
 GEMINI, CHANGELOG and `okf/*.md`, plus OKF frontmatter rules (`type:` required
-on concept files; no frontmatter on `okf/log.md`). It reports explicit mypy target
+on concept files; no frontmatter on `okf/log.md`). It reports explicit ty target
 coverage separately from transitive checking. Syntax/read failures are incomplete
 inspections. In-page anchors, full CommonMark parsing, dynamic imports and
 financial safety are outside these checks. Directory file-count/depth policy is also
@@ -151,7 +151,7 @@ complete runtime impact graph. Changes to SDK/shared workflow infrastructure,
 tests, configuration or guidance trigger broader inspection. Ignored local
 configuration and recovery state are not inventoried.
 
-`--verify` additionally runs the existing API reference check and configured mypy
+`--verify` additionally runs the existing API reference check and configured ty
 using the executing interpreter. It never installs tools. Exit codes are 0 for
 completed clean checks, 1 for diagnostics/check failures, and 2 for incomplete
 execution (including missing tooling or invalid revisions). Failed invocations

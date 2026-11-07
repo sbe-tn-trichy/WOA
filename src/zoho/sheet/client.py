@@ -1,6 +1,6 @@
 import logging
-import json
-from typing import List, Dict, Any, Optional
+from utils import json
+from typing import Any
 from zoho.base_client import BaseZohoClient
 
 class ZohoSheetAPI(BaseZohoClient):
@@ -12,7 +12,7 @@ class ZohoSheetAPI(BaseZohoClient):
         self,
         access_token: str,
         domain: str = "in",
-        token_refresh_callback: Optional[Any] = None,
+        token_refresh_callback: Any | None = None,
     ):
         base_url = f"https://sheet.zoho.{domain or 'in'}/api/v2"
         super().__init__(
@@ -28,13 +28,13 @@ class ZohoSheetAPI(BaseZohoClient):
             "Authorization": f"Zoho-oauthtoken {str(self.access_token)}"
         }
 
-    def list_workbooks(self) -> List[Dict[str, Any]]:
+    def list_workbooks(self) -> list[dict[str, Any]]:
         """Lists all workbooks in the user's account."""
         params = {"method": "workbook.list"} # Added required method param
         res = self.request("GET", "workbooks", params=params)
         return res.get('workbooks', [])
 
-    def list_sheets(self, workbook_id: str) -> List[str]:
+    def list_sheets(self, workbook_id: str) -> list[str]:
         """Lists all worksheets in a workbook."""
         params = {"method": "worksheet.list"}
         res = self.request("POST", workbook_id, params=params, is_mutation=False)
@@ -56,14 +56,14 @@ class ZohoSheetAPI(BaseZohoClient):
                 return str(worksheet["worksheet_id"])
         raise ValueError(f"Worksheet {sheet_name!r} was not found.")
 
-    def format_ranges(self, workbook_id: str, formats: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def format_ranges(self, workbook_id: str, formats: list[dict[str, Any]]) -> dict[str, Any]:
         """Apply Zoho Sheet range formats in one workbook request."""
         return self.request(
             "POST", workbook_id, params={"method": "ranges.format.set"},
             data={"format_json": json.dumps(formats)}, is_mutation=True,
         )
 
-    def delete_rows(self, workbook_id: str, sheet_name: str, row_indices: List[int]) -> Dict[str, Any]:
+    def delete_rows(self, workbook_id: str, sheet_name: str, row_indices: list[int]) -> dict[str, Any]:
         """Delete specific tabular rows using their Zoho row indices."""
         if not row_indices:
             return {}
@@ -73,7 +73,7 @@ class ZohoSheetAPI(BaseZohoClient):
             is_mutation=True,
         )
 
-    def get_rows(self, workbook_id: str, sheet_name: str, limit: int = 1) -> List[Any]:
+    def get_rows(self, workbook_id: str, sheet_name: str, limit: int = 1) -> list[Any]:
         """Fetches rows from a specific sheet. Returns empty list if sheet has no records."""
         params = {
             "method": "worksheet.records.fetch",
@@ -100,7 +100,7 @@ class ZohoSheetAPI(BaseZohoClient):
             raise
 
 
-    def set_content(self, workbook_id: str, sheet_name: str, range_addr: str, data: List[List[Any]]) -> Dict[str, Any]:
+    def set_content(self, workbook_id: str, sheet_name: str, range_addr: str, data: list[list[Any]]) -> dict[str, Any]:
         """
         Sets content of a range of cells.
         Note: worksheet.content.set is currently returning 2867 (unsupported) in some environments.
@@ -114,7 +114,7 @@ class ZohoSheetAPI(BaseZohoClient):
         }
         return self.request("POST", workbook_id, params=params, data=payload, is_mutation=True)
 
-    def set_cell(self, workbook_id: str, sheet_name: str, row: int, col: int, content: Any) -> Dict[str, Any]:
+    def set_cell(self, workbook_id: str, sheet_name: str, row: int, col: int, content: Any) -> dict[str, Any]:
         """Sets content of a single cell using cell.content.set (guaranteed to work in v2)."""
         params = {"method": "cell.content.set"}
         payload = {
@@ -125,7 +125,7 @@ class ZohoSheetAPI(BaseZohoClient):
         }
         return self.request("POST", workbook_id, params=params, data=payload, is_mutation=True)
 
-    def add_sheet(self, workbook_id: str, sheet_name: str) -> Dict[str, Any]:
+    def add_sheet(self, workbook_id: str, sheet_name: str) -> dict[str, Any]:
         """Adds a new sheet to an existing workbook."""
         params = {"method": "worksheet.insert"}
         payload = {
@@ -133,7 +133,7 @@ class ZohoSheetAPI(BaseZohoClient):
         }
         return self.request("POST", workbook_id, params=params, data=payload, is_mutation=True)
 
-    def add_rows(self, workbook_id: str, sheet_name: str, rows_data: Any, header_row: int = 1) -> Dict[str, Any]:
+    def add_rows(self, workbook_id: str, sheet_name: str, rows_data: Any, header_row: int = 1) -> dict[str, Any]:
         """
         Appends rows to a specific sheet using tabular records API.
         rows_data can be a list of lists or a list of dicts.
@@ -146,7 +146,7 @@ class ZohoSheetAPI(BaseZohoClient):
         }
         return self.request("POST", workbook_id, params=params, data=payload, is_mutation=True)
 
-    def update_rows(self, workbook_id: str, sheet_name: str, criteria: str, rows_data: Dict[str, Any]) -> Dict[str, Any]:
+    def update_rows(self, workbook_id: str, sheet_name: str, criteria: str, rows_data: dict[str, Any]) -> dict[str, Any]:
         """Updates rows matching a criteria."""
         params = {"method": "worksheet.records.update"}
         payload = {
@@ -156,7 +156,7 @@ class ZohoSheetAPI(BaseZohoClient):
         }
         return self.request("POST", workbook_id, params=params, data=payload, is_mutation=True)
 
-    def truncate_sheet(self, workbook_id: str, sheet_name: str, criteria: str = "(row_index != 0)") -> Dict[str, Any]:
+    def truncate_sheet(self, workbook_id: str, sheet_name: str, criteria: str = "(row_index != 0)") -> dict[str, Any]:
         """Deletes rows in a sheet based on criteria."""
         params = {"method": "worksheet.records.delete"}
         payload = {
@@ -173,7 +173,7 @@ class ZohoSheetAPI(BaseZohoClient):
         start_col: int,
         end_row: int,
         end_col: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Clears content across a specified range using range.clear."""
         params = {"method": "range.clear"}
         payload = {

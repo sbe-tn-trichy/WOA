@@ -112,4 +112,4 @@ added or material account usage changes.
 The YAML retains accounting calculation and workbook-row sections used by other
 tooling. Account-name refresh preserves these sections and writes YAML atomically
 (formatting and comments may be normalized). Explicit JSON mapping paths remain
-supported. Install the workflows extra for PyYAML.
+supported. YAMLRocks is included in the base dependencies.

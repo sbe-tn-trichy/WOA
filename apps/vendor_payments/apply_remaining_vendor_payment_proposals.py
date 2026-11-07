@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 from collections import defaultdict
 from pathlib import Path
 

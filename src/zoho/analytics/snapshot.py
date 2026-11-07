@@ -1,10 +1,12 @@
 import hashlib
-import json
+from utils import json
+import json as legacy_json
 import sqlite3
 import zlib
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Literal, NotRequired, Optional, TypedDict
+from collections.abc import Iterable
+from typing import Any, Literal, NotRequired, TypedDict
 
 
 SCHEMA_VERSION = 5
@@ -19,7 +21,8 @@ class WorkflowViewUsage(TypedDict):
 
 
 def _compact_json(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    # Existing on-disk hashes depend on the standard library float/escape spelling.
+    return legacy_json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def _pack_json(value: Any) -> bytes:
@@ -47,7 +50,7 @@ def _json_hash(value: Any) -> str:
 class WorkspaceMetadataStore:
     """Indexed, single-file storage for a Zoho Analytics workspace snapshot."""
 
-    def __init__(self, path: Any, workspace_id: Optional[str] = None):
+    def __init__(self, path: Any, workspace_id: str | None = None):
         self.path = Path(path).expanduser().resolve()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         exists = self.path.exists()
@@ -106,7 +109,7 @@ class WorkspaceMetadataStore:
             view_rows = self.connection.execute(
                 "SELECT view_id, raw_json, details_json FROM views"
             ).fetchall()
-            modified_times: Dict[str, str] = {}
+            modified_times: dict[str, str] = {}
             for row in view_rows:
                 modified_time = _text(_unpack_json(row["raw_json"]).get("lastModifiedTime"))
                 modified_times[row["view_id"]] = modified_time
@@ -180,7 +183,7 @@ class WorkspaceMetadataStore:
                     AS used_by_workflows FROM views v;
         """)
 
-    def put_query_table(self, view_id: str, definition: Dict[str, Any],
+    def put_query_table(self, view_id: str, definition: dict[str, Any],
                         source_modified_time: str = "") -> bool:
         sql = definition.get("sqlQuery")
         if not isinstance(sql, str) or not sql.strip():
@@ -201,7 +204,7 @@ class WorkspaceMetadataStore:
             """, (view_id, sql, digest, source_modified_time, _utc_now(), _pack_json(definition)))
         return not previous or previous["definition_hash"] != digest
 
-    def get_query_table(self, view_id: str) -> Dict[str, Any]:
+    def get_query_table(self, view_id: str) -> dict[str, Any]:
         row = self.connection.execute(
             "SELECT * FROM query_tables WHERE view_id = ?", (view_id,)
         ).fetchone()
@@ -226,7 +229,7 @@ class WorkspaceMetadataStore:
                 "INSERT INTO workflow_view_usage VALUES (?, ?, ?, ?, ?)", rows
             )
 
-    def workflow_impact(self, view_id: str) -> List[Dict[str, Any]]:
+    def workflow_impact(self, view_id: str) -> list[dict[str, Any]]:
         """Find direct consumers and consumers of transitively dependent views."""
         affected = {view_id}
         pending = [view_id]
@@ -357,13 +360,13 @@ class WorkspaceMetadataStore:
         )
         self.connection.commit()
 
-    def get_info(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get_info(self, key: str, default: str | None = None) -> str | None:
         row = self.connection.execute(
             "SELECT value FROM snapshot_info WHERE key = ?", (key,)
         ).fetchone()
         return row["value"] if row else default
 
-    def put_workspace(self, workspace: Dict[str, Any], workspace_id: str) -> None:
+    def put_workspace(self, workspace: dict[str, Any], workspace_id: str) -> None:
         self.connection.execute(
             "INSERT OR REPLACE INTO workspaces(workspace_id, name, raw_json) VALUES (?, ?, ?)",
             (
@@ -374,7 +377,7 @@ class WorkspaceMetadataStore:
         )
         self.connection.commit()
 
-    def replace_folders(self, workspace_id: str, folders: Iterable[Dict[str, Any]]) -> None:
+    def replace_folders(self, workspace_id: str, folders: Iterable[dict[str, Any]]) -> None:
         with self.connection:
             self.connection.execute("DELETE FROM folders WHERE workspace_id = ?", (workspace_id,))
             self.connection.executemany(
@@ -392,7 +395,7 @@ class WorkspaceMetadataStore:
             )
 
     def replace_datasources(
-        self, workspace_id: str, datasources: Iterable[Dict[str, Any]]
+        self, workspace_id: str, datasources: Iterable[dict[str, Any]]
     ) -> None:
         rows = []
         for item in datasources:
@@ -415,7 +418,7 @@ class WorkspaceMetadataStore:
                 rows,
             )
 
-    def replace_views(self, workspace_id: str, views: Iterable[Dict[str, Any]]) -> None:
+    def replace_views(self, workspace_id: str, views: Iterable[dict[str, Any]]) -> None:
         views = list(views)
         current_ids = [str(item["viewId"]) for item in views if item.get("viewId")]
         existing_ids = {
@@ -484,7 +487,7 @@ class WorkspaceMetadataStore:
     def put_view_details(
         self,
         view_id: str,
-        details: Dict[str, Any],
+        details: dict[str, Any],
         source_modified_time: str = "",
     ) -> bool:
         content_hash = _json_hash(details)
@@ -509,7 +512,7 @@ class WorkspaceMetadataStore:
             self._mark_completed("view", view_id)
         return changed
 
-    def get_view_details(self, view_id: str) -> Dict[str, Any]:
+    def get_view_details(self, view_id: str) -> dict[str, Any]:
         row = self.connection.execute(
             "SELECT details_json FROM views WHERE view_id = ?", (view_id,)
         ).fetchone()
@@ -530,7 +533,7 @@ class WorkspaceMetadataStore:
     def put_table_metadata(
         self,
         view_id: str,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
         source_modified_time: str = "",
     ) -> bool:
         content_hash = _json_hash(metadata)
@@ -584,7 +587,7 @@ class WorkspaceMetadataStore:
             self._mark_completed("table", view_id)
         return changed
 
-    def get_table_metadata(self, view_id: str) -> Dict[str, Any]:
+    def get_table_metadata(self, view_id: str) -> dict[str, Any]:
         metadata_row = self.connection.execute(
             "SELECT raw_json FROM table_metadata WHERE view_id = ?", (view_id,)
         ).fetchone()
@@ -607,7 +610,7 @@ class WorkspaceMetadataStore:
             and self.is_completed("table", view_id)
         )
 
-    def view_sync_states(self) -> Dict[str, Dict[str, str]]:
+    def view_sync_states(self) -> dict[str, dict[str, str]]:
         return {
             row["view_id"]: dict(row)
             for row in self.connection.execute(
@@ -642,7 +645,7 @@ class WorkspaceMetadataStore:
                 self.connection.execute("DELETE FROM column_dependents")
 
     def put_column_dependents(
-        self, view_id: str, column_id: str, dependents: Dict[str, Any]
+        self, view_id: str, column_id: str, dependents: dict[str, Any]
     ) -> None:
         with self.connection:
             self.connection.execute(
@@ -651,7 +654,7 @@ class WorkspaceMetadataStore:
             )
             self._mark_completed("dependent", "%s:%s" % (view_id, column_id))
 
-    def get_column_dependents(self, view_id: str, column_id: str) -> Dict[str, Any]:
+    def get_column_dependents(self, view_id: str, column_id: str) -> dict[str, Any]:
         row = self.connection.execute(
             "SELECT raw_json FROM column_dependents WHERE view_id = ? AND column_id = ?",
             (view_id, column_id),
@@ -670,7 +673,7 @@ class WorkspaceMetadataStore:
             (object_type, object_id),
         ).fetchone() is not None
 
-    def completed_ids(self, object_type: str) -> List[str]:
+    def completed_ids(self, object_type: str) -> list[str]:
         return [
             row["object_id"]
             for row in self.connection.execute(
@@ -679,7 +682,7 @@ class WorkspaceMetadataStore:
             )
         ]
 
-    def replace_relationships(self, edges: Iterable[Dict[str, Any]]) -> None:
+    def replace_relationships(self, edges: Iterable[dict[str, Any]]) -> None:
         edges = list(edges)
         entity_keys = sorted(
             {
@@ -730,7 +733,7 @@ class WorkspaceMetadataStore:
                 rows,
             )
 
-    def replace_errors(self, errors: Iterable[Dict[str, Any]]) -> None:
+    def replace_errors(self, errors: Iterable[dict[str, Any]]) -> None:
         with self.connection:
             self.connection.execute("DELETE FROM errors")
             self.connection.executemany(
@@ -747,10 +750,10 @@ class WorkspaceMetadataStore:
             )
 
     def find_views(
-        self, name: Optional[str] = None, view_type: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self, name: str | None = None, view_type: str | None = None
+    ) -> list[dict[str, Any]]:
         clauses = []
-        parameters: List[Any] = []
+        parameters: list[Any] = []
         if name:
             clauses.append("name LIKE ? COLLATE NOCASE")
             parameters.append("%%%s%%" % name)
@@ -763,7 +766,7 @@ class WorkspaceMetadataStore:
         sql += " ORDER BY name, view_id"
         return [dict(row) for row in self.connection.execute(sql, parameters)]
 
-    def get_columns(self, view_id: str) -> List[Dict[str, Any]]:
+    def get_columns(self, view_id: str) -> list[dict[str, Any]]:
         return [
             dict(row)
             for row in self.connection.execute(
@@ -778,7 +781,7 @@ class WorkspaceMetadataStore:
 
     def get_relationships(
         self, entity_id: str, direction: str = "both"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         if direction not in {"both", "incoming", "outgoing"}:
             raise ValueError("direction must be 'both', 'incoming', or 'outgoing'.")
         if direction == "incoming":
@@ -808,7 +811,7 @@ class WorkspaceMetadataStore:
             )
         ]
 
-    def counts(self) -> Dict[str, int]:
+    def counts(self) -> dict[str, int]:
         result = {}
         for name in ("folders", "datasources", "views", "columns", "relationships", "errors", "query_tables", "workflow_view_usage"):
             result[name] = int(

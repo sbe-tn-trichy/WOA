@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import calendar
 from datetime import date, datetime, timedelta
-from typing import Optional, Tuple
+
+try:
+    from pydantic_core import SchemaValidator, ValidationError, core_schema
+    _DATE_VALIDATOR: SchemaValidator | None = SchemaValidator(core_schema.date_schema())
+except ImportError:
+    _DATE_VALIDATOR = None
 
 
-def parse_date(value: object) -> Optional[date]:
+def parse_date(value: object) -> date | None:
     """Safely parse a date from ISO string, datetime, date object, or other common formats."""
     if value is None:
         return None
@@ -20,11 +25,18 @@ def parse_date(value: object) -> Optional[date]:
     if not text:
         return None
 
-    # Try ISO YYYY-MM-DD
-    try:
-        return date.fromisoformat(text[:10])
-    except (TypeError, ValueError):
-        pass
+    # Try fast ISO YYYY-MM-DD via Rust speedate (pydantic-core)
+    if _DATE_VALIDATOR is not None:
+        try:
+            candidate = text[:10] if len(text) >= 10 and text[4] == "-" else text
+            return _DATE_VALIDATOR.validate_python(candidate)
+        except (ValidationError, ValueError):
+            pass
+    else:
+        try:
+            return date.fromisoformat(text[:10])
+        except (TypeError, ValueError):
+            pass
 
     # Try other common formats
     for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%d-%b-%Y", "%d-%b-%y"):
@@ -36,7 +48,7 @@ def parse_date(value: object) -> Optional[date]:
     return None
 
 
-def get_month_range(month: str) -> Tuple[date, date]:
+def get_month_range(month: str) -> tuple[date, date]:
     """Return the start and end date for a given YYYY-MM string."""
     try:
         parsed = datetime.strptime(month.strip(), "%Y-%m").date()
@@ -46,7 +58,7 @@ def get_month_range(month: str) -> Tuple[date, date]:
     return parsed.replace(day=1), parsed.replace(day=last_day)
 
 
-def get_previous_month_range(as_of: Optional[date] = None) -> Tuple[date, date]:
+def get_previous_month_range(as_of: date | None = None) -> tuple[date, date]:
     """Return the start and end date of the previous calendar month."""
     current = as_of or date.today()
     first_of_month = current.replace(day=1)
@@ -55,9 +67,9 @@ def get_previous_month_range(as_of: Optional[date] = None) -> Tuple[date, date]:
 
 
 def get_financial_year_range(
-    as_of: Optional[date] = None,
+    as_of: date | None = None,
     start_month: int = 4,
-) -> Tuple[date, date]:
+) -> tuple[date, date]:
     """Return the start and end date of the financial/fiscal year.
 
     Defaults to the Indian financial year (April 1 to March 31).

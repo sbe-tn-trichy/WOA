@@ -30,7 +30,7 @@ Main Zoho Workdrive API Client.
 ##### `ZohoWorkdriveAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, domain: str = 'in', team_id: Optional[str] = None, token_refresh_callback: Optional[Any] = None)
+def __init__(self, access_token: str, domain: str = 'in', team_id: str | None = None, token_refresh_callback: Any | None = None)
 ```
 
 Initialize the Zoho Workdrive API client.
@@ -46,7 +46,7 @@ Fetch the team ID (organization ID) for the current user.
 ##### `ZohoWorkdriveAPI.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, Any]] = None, stream: bool = False, override_url: Optional[str] = None, files: Optional[Dict[str, Any]] = None, is_mutation: Optional[bool] = None, timeout: Optional[int] = None) -> Any
+def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, files: dict[str, Any] | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
 ```
 
 Internal HTTP request handler.
@@ -72,7 +72,7 @@ def __init__(self, client: Any, endpoint: str)
 ##### `BaseResource._action`
 
 ```python
-def _action(self, method: str, resource_id: str, action: str, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def _action(self, method: str, resource_id: str, action: str, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 Perform a specific action on a resource.
@@ -113,7 +113,7 @@ def __init__(self, client: Any)
 ##### `Files.list_files`
 
 ```python
-def list_files(self, folder_id: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def list_files(self, folder_id: str, params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 List files and folders within a specific folder.
@@ -121,7 +121,7 @@ List files and folders within a specific folder.
 ##### `Files.list_all_files`
 
 ```python
-def list_all_files(self, folder_id: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]
+def list_all_files(self, folder_id: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]
 ```
 
 Fetch all files and folders across all pages using limit/offset pagination.
@@ -137,7 +137,7 @@ Download a file and save it to the specified path.
 ##### `Files._safe_download_name`
 
 ```python
-def _safe_download_name(self, name: Optional[str], fallback: str) -> str
+def _safe_download_name(self, name: str | None, fallback: str) -> str
 ```
 
 Return a filesystem-safe filename while keeping it readable.
@@ -145,7 +145,7 @@ Return a filesystem-safe filename while keeping it readable.
 ##### `Files._is_folder_item`
 
 ```python
-def _is_folder_item(self, item: Dict[str, Any]) -> bool
+def _is_folder_item(self, item: dict[str, Any]) -> bool
 ```
 
 Detect folder records across the shapes returned by WorkDrive APIs.
@@ -153,7 +153,7 @@ Detect folder records across the shapes returned by WorkDrive APIs.
 ##### `Files._next_available_download_path`
 
 ```python
-def _next_available_download_path(self, path: Path, reserved_paths: Set[Path]) -> Path
+def _next_available_download_path(self, path: Path, reserved_paths: set[Path]) -> Path
 ```
 
 Avoid duplicate source names in one run while keeping reruns idempotent.
@@ -161,7 +161,7 @@ Avoid duplicate source names in one run while keeping reruns idempotent.
 ##### `Files.download_folder`
 
 ```python
-def download_folder(self, folder_id: str, destination: Union[os.PathLike, str], *, dry_run: bool = False) -> List[Path]
+def download_folder(self, folder_id: str, destination: os.PathLike | str, *, dry_run: bool = False) -> list[Path]
 ```
 
 Recursively download all files from a Zoho WorkDrive folder.
@@ -169,7 +169,7 @@ Recursively download all files from a Zoho WorkDrive folder.
 ##### `Files.move`
 
 ```python
-def move(self, file_id: str, destination_folder_id: str) -> Dict[str, Any]
+def move(self, file_id: str, destination_folder_id: str) -> dict[str, Any]
 ```
 
 Move a file to a new folder.
@@ -177,7 +177,7 @@ Move a file to a new folder.
 ##### `Files.create_folder`
 
 ```python
-def create_folder(self, name: str, parent_id: str) -> Dict[str, Any]
+def create_folder(self, name: str, parent_id: str) -> dict[str, Any]
 ```
 
 Create a new folder in WorkDrive.
@@ -185,7 +185,7 @@ Create a new folder in WorkDrive.
 ##### `Files.delete`
 
 ```python
-def delete(self, resource_id: str) -> Dict[str, Any]
+def delete(self, resource_id: str) -> dict[str, Any]
 ```
 
 Move a file or folder to the trash.
@@ -193,7 +193,7 @@ Move a file or folder to the trash.
 ##### `Files.search`
 
 ```python
-def search(self, name: str, parent_id: Optional[str] = None, resource_type: Optional[str] = 'folder') -> List[Dict[str, Any]]
+def search(self, name: str, parent_id: str | None = None, resource_type: str | None = 'folder') -> list[dict[str, Any]]
 ```
 
 Search for files and folders using organization records search.
@@ -201,7 +201,7 @@ Search for files and folders using organization records search.
 ##### `Files.upload`
 
 ```python
-def upload(self, folder_id: str, file_path: str, file_name: Optional[str] = None) -> Dict[str, Any]
+def upload(self, folder_id: str, file_path: str, file_name: str | None = None) -> dict[str, Any]
 ```
 
 Upload a file to WorkDrive.

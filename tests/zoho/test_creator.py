@@ -20,7 +20,7 @@ class TestZohoCreatorAPI(unittest.TestCase):
         self.assertEqual(self.client.environment, "production")
         self.assertEqual(self.client.base_url, "https://www.zohoapis.com/creator/v2.1")
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_environment_header_can_be_disabled(self, mock_request):
         response = MagicMock(status_code=200)
         response.json.return_value = {"status": "ok"}
@@ -33,7 +33,7 @@ class TestZohoCreatorAPI(unittest.TestCase):
         client.request("GET", "test")
         self.assertNotIn("environment", mock_request.call_args.kwargs["headers"])
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_success(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -54,7 +54,7 @@ class TestZohoCreatorAPI(unittest.TestCase):
             timeout=30
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_401_refresh_success(self, mock_request):
         token_callback = MagicMock(return_value="refreshed_token")
         client = ZohoCreatorAPI(
@@ -78,7 +78,7 @@ class TestZohoCreatorAPI(unittest.TestCase):
         token_callback.assert_called_once()
         self.assertEqual(mock_request.call_count, 2)
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_failure(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 400
@@ -196,8 +196,8 @@ class TestCreatorCustomSDKFunctions(unittest.TestCase):
 
 
 class TestCreatorCatalystAuth(unittest.TestCase):
-    @patch("requests.request")
-    @patch("requests.post")
+    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_transport.post")
     def test_catalyst_auth_flow(self, mock_post, mock_request):
         # Mock Catalyst server response
         mock_response_catalyst = MagicMock()

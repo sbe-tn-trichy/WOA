@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, List, Union, BinaryIO
+from typing import Any, BinaryIO
 from .exceptions import ZohoWorkdriveError
 
 class BaseResource:
@@ -8,7 +8,7 @@ class BaseResource:
         self.client = client
         self.endpoint = endpoint
 
-    def _action(self, method: str, resource_id: str, action: str, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _action(self, method: str, resource_id: str, action: str, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Perform a specific action on a resource."""
         endpoint = f"{self.endpoint}/{resource_id}/{action}" if action else f"{self.endpoint}/{resource_id}"
         return self.client.request(method, endpoint, json=data, params=params)

@@ -5,16 +5,17 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date
 from decimal import Decimal
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 from zoho.helpers import parse_date, unwrap_record
 from workflows.core.matching import to_finite_decimal
 
 
-DuplicateKey = Tuple[str, date, Decimal]
+DuplicateKey = tuple[str, date, Decimal]
 
 
-def _date(value: Any) -> Optional[date]:
+def _date(value: Any) -> date | None:
     return parse_date(value)
 
 
@@ -22,7 +23,7 @@ def _payment_id(payment: Mapping[str, Any]) -> str:
     return str(payment.get("payment_id") or payment.get("customer_payment_id") or "").strip()
 
 
-def _summary(payment: Mapping[str, Any]) -> Dict[str, Any]:
+def _summary(payment: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "payment_id": _payment_id(payment),
         "payment_number": payment.get("payment_number"),
@@ -45,10 +46,10 @@ class DuplicatePaymentChecker:
     def run(
         self,
         *,
-        customer_id: Optional[str] = None,
-        from_date: Optional[str] = None,
-        to_date: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        customer_id: str | None = None,
+        from_date: str | None = None,
+        to_date: str | None = None,
+    ) -> dict[str, Any]:
         start = _date(from_date) if from_date else None
         end = _date(to_date) if to_date else None
         if from_date and not start:
@@ -58,7 +59,7 @@ class DuplicatePaymentChecker:
         if start and end and start > end:
             raise ValueError("from_date cannot be later than to_date.")
 
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if customer_id:
             params["customer_id"] = customer_id
         if from_date:
@@ -76,12 +77,12 @@ class DuplicatePaymentChecker:
         self,
         payments: Iterable[Mapping[str, Any]],
         *,
-        from_date: Optional[date] = None,
-        to_date: Optional[date] = None,
-    ) -> Dict[str, Any]:
+        from_date: date | None = None,
+        to_date: date | None = None,
+    ) -> dict[str, Any]:
         payment_list = list(payments)
-        grouped: Dict[DuplicateKey, List[Mapping[str, Any]]] = defaultdict(list)
-        skipped: List[Dict[str, str]] = []
+        grouped: dict[DuplicateKey, list[Mapping[str, Any]]] = defaultdict(list)
+        skipped: list[dict[str, str]] = []
         considered = 0
 
         for original in payment_list:
@@ -123,7 +124,7 @@ class DuplicatePaymentChecker:
             considered += 1
             grouped[(customer_id, paid_on, amount)].append(payment)
 
-        duplicate_groups: List[Dict[str, Any]] = []
+        duplicate_groups: list[dict[str, Any]] = []
         for (customer_id, paid_on, amount), matches in grouped.items():
             if len(matches) < 2:
                 continue
@@ -151,10 +152,10 @@ class DuplicatePaymentChecker:
 def check_duplicate_payments(
     books_client: Any,
     *,
-    customer_id: Optional[str] = None,
-    from_date: Optional[str] = None,
-    to_date: Optional[str] = None,
-) -> Dict[str, Any]:
+    customer_id: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> dict[str, Any]:
     """Convenience entry point for exact customer/date/amount duplicate checks."""
     return DuplicatePaymentChecker(books_client).run(
         customer_id=customer_id,

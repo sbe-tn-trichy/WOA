@@ -47,13 +47,13 @@ Main Zoho Inventory API Client linking all modules together.
 ##### `ZohoInventoryAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, organization_id: str, domain: str = 'com', on_request_completed: Optional[Any] = None, token_refresh_callback: Optional[Any] = None)
+def __init__(self, access_token: str, organization_id: str, domain: str = 'com', on_request_completed: Any | None = None, token_refresh_callback: Any | None = None)
 ```
 
 ##### `ZohoInventoryAPI.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None, stream: bool = False, override_url: Optional[str] = None, is_mutation: Optional[bool] = None, timeout: Optional[int] = None) -> Any
+def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, files: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
 ```
 
 Internal HTTP request handler with logging.
@@ -74,7 +74,7 @@ Base class for Zoho Inventory modules providing standard CRUD operations.
 
 | Attribute | Type | Default Value | Notes |
 |---|---|---|---|
-| `error_class` | `Type[ZohoInventoryError]` | `ZohoInventoryError` | - |
+| `error_class` | `type[ZohoInventoryError]` | `ZohoInventoryError` | - |
 | `logger_name` | `str` | `'zoho.inventory.api'` | - |
 
 ---
@@ -113,7 +113,7 @@ def __init__(self, client: Any)
 ##### `Items.mark_as_active`
 
 ```python
-def mark_as_active(self, item_id: str) -> Dict[str, Any]
+def mark_as_active(self, item_id: str) -> dict[str, Any]
 ```
 
 Activate an Inventory item.
@@ -121,7 +121,7 @@ Activate an Inventory item.
 ##### `Items.mark_as_inactive`
 
 ```python
-def mark_as_inactive(self, item_id: str) -> Dict[str, Any]
+def mark_as_inactive(self, item_id: str) -> dict[str, Any]
 ```
 
 Deactivate an Inventory item.
@@ -129,7 +129,7 @@ Deactivate an Inventory item.
 ##### `Items.get_details`
 
 ```python
-def get_details(self, item_ids: List[str], batch_size: int = 50) -> List[Dict[str, Any]]
+def get_details(self, item_ids: list[str], batch_size: int = 50) -> list[dict[str, Any]]
 ```
 
 Bulk-fetch complete items through GET /itemdetails; require every ID.
@@ -137,7 +137,7 @@ Bulk-fetch complete items through GET /itemdetails; require every ID.
 ##### `Items.list_bins`
 
 ```python
-def list_bins(self, item_id: str, location_id: str) -> List[Dict[str, Any]]
+def list_bins(self, item_id: str, location_id: str) -> list[dict[str, Any]]
 ```
 
 Read item-specific bin balances at one location.
@@ -145,7 +145,7 @@ Read item-specific bin balances at one location.
 ##### `Items.group_items`
 
 ```python
-def group_items(self, data: Dict[str, Any]) -> Dict[str, Any]
+def group_items(self, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 Group existing items under a new item group.
@@ -153,19 +153,19 @@ Group existing items under a new item group.
 ##### `Items.list_by_status`
 
 ```python
-def list_by_status(self, status: str = 'active') -> List[Dict[str, Any]]
+def list_by_status(self, status: str = 'active') -> list[dict[str, Any]]
 ```
 
 ##### `Items.list_by_purchase_account`
 
 ```python
-def list_by_purchase_account(self, account_id: str, status: str = 'all') -> List[Dict[str, Any]]
+def list_by_purchase_account(self, account_id: str, status: str = 'all') -> list[dict[str, Any]]
 ```
 
 ##### `Items.mark_inactive_bulk`
 
 ```python
-def mark_inactive_bulk(self, item_ids: List[str], batch_size: int = 200) -> List[Dict[str, Any]]
+def mark_inactive_bulk(self, item_ids: list[str], batch_size: int = 200) -> list[dict[str, Any]]
 ```
 
 ---
@@ -204,7 +204,7 @@ def __init__(self, client: Any)
 ##### `ItemGroups.mark_as_active`
 
 ```python
-def mark_as_active(self, itemgroup_id: str) -> Dict[str, Any]
+def mark_as_active(self, itemgroup_id: str) -> dict[str, Any]
 ```
 
 Mark an item group status as active.
@@ -212,7 +212,7 @@ Mark an item group status as active.
 ##### `ItemGroups.mark_as_inactive`
 
 ```python
-def mark_as_inactive(self, itemgroup_id: str) -> Dict[str, Any]
+def mark_as_inactive(self, itemgroup_id: str) -> dict[str, Any]
 ```
 
 Mark an item group status as inactive.
@@ -286,7 +286,7 @@ def __init__(self, client: Any)
 ##### `MoveOrders.mark_as_confirmed`
 
 ```python
-def mark_as_confirmed(self, move_order_id: str) -> Dict[str, Any]
+def mark_as_confirmed(self, move_order_id: str) -> dict[str, Any]
 ```
 
 Mark a move order status as confirmed.
@@ -294,7 +294,7 @@ Mark a move order status as confirmed.
 ##### `MoveOrders.mark_as_in_progress`
 
 ```python
-def mark_as_in_progress(self, move_order_id: str) -> Dict[str, Any]
+def mark_as_in_progress(self, move_order_id: str) -> dict[str, Any]
 ```
 
 Mark a move order status as in progress.
@@ -302,7 +302,7 @@ Mark a move order status as in progress.
 ##### `MoveOrders.mark_as_completed`
 
 ```python
-def mark_as_completed(self, move_order_id: str) -> Dict[str, Any]
+def mark_as_completed(self, move_order_id: str) -> dict[str, Any]
 ```
 
 Mark a move order status as completed.
@@ -343,7 +343,7 @@ def __init__(self, client: Any)
 ##### `TransferOrders.mark_as_in_transit`
 
 ```python
-def mark_as_in_transit(self, transfer_order_id: str) -> Dict[str, Any]
+def mark_as_in_transit(self, transfer_order_id: str) -> dict[str, Any]
 ```
 
 Mark a transfer order as in-transit.
@@ -351,7 +351,7 @@ Mark a transfer order as in-transit.
 ##### `TransferOrders.mark_as_received`
 
 ```python
-def mark_as_received(self, transfer_order_id: str) -> Dict[str, Any]
+def mark_as_received(self, transfer_order_id: str) -> dict[str, Any]
 ```
 
 Mark a transfer order as received.
@@ -359,7 +359,7 @@ Mark a transfer order as received.
 ##### `TransferOrders.submit_for_approval`
 
 ```python
-def submit_for_approval(self, transfer_order_id: str) -> Dict[str, Any]
+def submit_for_approval(self, transfer_order_id: str) -> dict[str, Any]
 ```
 
 Submit a transfer order for approval.
@@ -367,7 +367,7 @@ Submit a transfer order for approval.
 ##### `TransferOrders.approve`
 
 ```python
-def approve(self, transfer_order_id: str) -> Dict[str, Any]
+def approve(self, transfer_order_id: str) -> dict[str, Any]
 ```
 
 Approve a transfer order.
@@ -375,7 +375,7 @@ Approve a transfer order.
 ##### `TransferOrders.reject`
 
 ```python
-def reject(self, transfer_order_id: str) -> Dict[str, Any]
+def reject(self, transfer_order_id: str) -> dict[str, Any]
 ```
 
 Reject a transfer order.
@@ -449,7 +449,7 @@ def __init__(self, client: Any)
 ##### `Shipments.mark_as_delivered`
 
 ```python
-def mark_as_delivered(self, shipment_id: str) -> Dict[str, Any]
+def mark_as_delivered(self, shipment_id: str) -> dict[str, Any]
 ```
 
 Mark a shipment order status as delivered.
@@ -490,7 +490,7 @@ def __init__(self, client: Any)
 ##### `Picklists.mark_status`
 
 ```python
-def mark_status(self, picklist_id: str, status: str) -> Dict[str, Any]
+def mark_status(self, picklist_id: str, status: str) -> dict[str, Any]
 ```
 
 Update the status of a picklist.
@@ -564,7 +564,7 @@ def __init__(self, client: Any)
 ##### `Batches.mark_as_active`
 
 ```python
-def mark_as_active(self, batch_id: str) -> Dict[str, Any]
+def mark_as_active(self, batch_id: str) -> dict[str, Any]
 ```
 
 Mark a batch as active.
@@ -572,7 +572,7 @@ Mark a batch as active.
 ##### `Batches.mark_as_inactive`
 
 ```python
-def mark_as_inactive(self, batch_id: str) -> Dict[str, Any]
+def mark_as_inactive(self, batch_id: str) -> dict[str, Any]
 ```
 
 Mark a batch as inactive.

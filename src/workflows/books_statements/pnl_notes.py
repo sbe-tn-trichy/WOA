@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from zoho.helpers import fetch_profit_and_loss_schedule_format
 

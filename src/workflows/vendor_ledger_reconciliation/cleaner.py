@@ -1,15 +1,23 @@
-import xlrd
+from python_calamine import CalamineWorkbook
 import csv
 import os
 import logging
 from datetime import datetime, date
-from typing import Any, Dict, List, Optional
+from typing import Any
 from ..core.config import Config
 from ..core.exceptions import LedgerParsingError, LedgerNotImplementedError
 
 logger = logging.getLogger(__name__)
 
-def get_ledger_metadata(file_path: str) -> Dict[str, Any]:
+def _read_first_sheet(file_path: str) -> list[list[Any]]:
+    workbook = CalamineWorkbook.from_path(file_path)
+    try:
+        return workbook.get_sheet_by_index(0).to_python(skip_empty_area=False)
+    finally:
+        workbook.close()
+
+
+def get_ledger_metadata(file_path: str) -> dict[str, Any]:
     """
     Extracts metadata (Start Date, End Date) from a ledger file.
     Supports:
@@ -42,8 +50,9 @@ def get_ledger_metadata(file_path: str) -> Dict[str, Any]:
         }
 
     # ── Excel path (Polycab .xls) ────────────────────────────────────────────
-    workbook = xlrd.open_workbook(file_path)
-    sheet = workbook.sheet_by_index(0)
+    rows = _read_first_sheet(file_path)
+    width = max((len(row) for row in rows), default=0)
+    rows = [row + [""] * (width - len(row)) for row in rows]
     metadata = {
         "start_date": None,
         "end_date": None,
@@ -51,8 +60,8 @@ def get_ledger_metadata(file_path: str) -> Dict[str, Any]:
         "opening_balance": 0.0
     }
 
-    for r in range(min(15, sheet.nrows)):
-        row = [str(sheet.cell_value(r, c)).strip() for c in range(min(sheet.ncols, 5))]
+    for r in range(min(15, len(rows))):
+        row = [str(rows[r][c]).strip() for c in range(min(width, 5))]
         if not row:
             continue
         first_val = row[0].lower()
@@ -64,21 +73,22 @@ def get_ledger_metadata(file_path: str) -> Dict[str, Any]:
             metadata["party_name"] = row[2] if len(row) > 2 else None
         elif "opening balance" in first_val:
             try:
-                metadata["opening_balance"] = float(sheet.cell_value(r, 2))
+                metadata["opening_balance"] = float(rows[r][2])
             except Exception:
                 pass
     return metadata
 
-def clean_polycab_ledger(file_path: str) -> List[Dict[str, Any]]:
+def clean_polycab_ledger(file_path: str) -> list[dict[str, Any]]:
     """
     Parses and cleans Polycab's reconciliation ledger Excel file (.xls).
     """
-    workbook = xlrd.open_workbook(file_path)
-    sheet = workbook.sheet_by_index(0)
+    rows = _read_first_sheet(file_path)
+    width = max((len(row) for row in rows), default=0)
+    rows = [row + [""] * (width - len(row)) for row in rows]
     
     header_row_index = -1
-    for r in range(sheet.nrows):
-        val = sheet.cell_value(r, 0)
+    for r in range(len(rows)):
+        val = rows[r][0]
         if str(val).strip().lower() == "account no":
             header_row_index = r
             break
@@ -86,7 +96,7 @@ def clean_polycab_ledger(file_path: str) -> List[Dict[str, Any]]:
     if header_row_index == -1:
         raise LedgerParsingError("Could not find the Polycab header row starting with 'Account No'")
         
-    headers = [str(sheet.cell_value(header_row_index, c)).strip() for c in range(sheet.ncols)]
+    headers = [str(rows[header_row_index][c]).strip() for c in range(width)]
     
     key_mapping = {
         "account no": "account_no",
@@ -108,9 +118,9 @@ def clean_polycab_ledger(file_path: str) -> List[Dict[str, Any]]:
             col_to_key[idx] = key_mapping[h_lower]
             
     transactions = []
-    for r in range(header_row_index + 1, sheet.nrows):
-        first_val = str(sheet.cell_value(r, 0)).strip()
-        row_vals = [str(sheet.cell_value(r, c)).strip() for c in range(sheet.ncols)]
+    for r in range(header_row_index + 1, len(rows)):
+        first_val = str(rows[r][0]).strip()
+        row_vals = [str(rows[r][c]).strip() for c in range(width)]
         
         if not any(row_vals):
             continue
@@ -128,13 +138,13 @@ def clean_polycab_ledger(file_path: str) -> List[Dict[str, Any]]:
             
         tx = {}
         for c, key in col_to_key.items():
-            cell = sheet.cell(r, c)
-            val = cell.value
+            val = rows[r][c]
             
             if key == "date":
-                if cell.ctype == xlrd.XL_CELL_DATE:
-                    dt = xlrd.xldate_as_datetime(val, workbook.datemode)
-                    tx[key] = dt.date().isoformat()
+                if isinstance(val, datetime):
+                    tx[key] = val.date().isoformat()
+                elif isinstance(val, date):
+                    tx[key] = val.isoformat()
                 else:
                     tx[key] = str(val).strip()
             elif key in ("debit_amount", "credit_amount", "closing_balance"):
@@ -158,7 +168,7 @@ def clean_polycab_ledger(file_path: str) -> List[Dict[str, Any]]:
             
     return transactions
 
-def clean_zeiss_ledger(file_path: str) -> List[Dict[str, Any]]:
+def clean_zeiss_ledger(file_path: str) -> list[dict[str, Any]]:
     """
     Parses and cleans Carl Zeiss India's CSV statement.
 
@@ -284,7 +294,7 @@ def clean_zeiss_ledger(file_path: str) -> List[Dict[str, Any]]:
     logger.info(f"Zeiss cleaner: parsed {len(transactions)} rows from {os.path.basename(file_path)}")
     return transactions
 
-def clean_ledger_file(file_path: str, vendor_key: Optional[str] = None) -> List[Dict[str, Any]]:
+def clean_ledger_file(file_path: str, vendor_key: str | None = None) -> list[dict[str, Any]]:
     """
     Cleans a vendor or bank ledger file using the appropriate vendor-specific cleaner.
     

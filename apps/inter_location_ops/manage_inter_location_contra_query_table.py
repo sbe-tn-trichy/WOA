@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 try:
     from . import _bootstrap  # noqa: F401
@@ -16,7 +16,7 @@ from workflows.core.config import Config
 from workflows.inter_location_analytics_report import sync_inter_location_contra_query_table
 
 
-def build_parser(*, default_view_id: Optional[str] = None) -> argparse.ArgumentParser:
+def build_parser(*, default_view_id: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--account-id", default="1094368000002033114")
     parser.add_argument("--workspace-id", default="264324000000002043")
@@ -27,7 +27,7 @@ def build_parser(*, default_view_id: Optional[str] = None) -> argparse.ArgumentP
 
 
 def main(
-    argv: Optional[Sequence[str]] = None, *, default_view_id: Optional[str] = None
+    argv: Sequence[str] | None = None, *, default_view_id: str | None = None
 ) -> int:
     args = build_parser(default_view_id=default_view_id).parse_args(argv)
     analytics = get_analytics_client(org_id=Config.ANALYTICS_ORG_ID)

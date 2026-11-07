@@ -1,5 +1,6 @@
 """Refresh comparison formulas without replacing reviewed source inputs."""
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from .workflow import qualified
 

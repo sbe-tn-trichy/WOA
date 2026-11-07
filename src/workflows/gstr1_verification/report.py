@@ -1,6 +1,7 @@
 """Markdown presentation of GSTR-1 readiness evidence."""
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 
 def _cell(value: Any) -> str:

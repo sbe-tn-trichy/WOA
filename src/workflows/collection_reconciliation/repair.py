@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from workflows.collection_reconciliation.allocator import (
     allocate_invoices_oldest_due_first,
@@ -21,8 +22,8 @@ def _payment_payload(response: Mapping[str, Any]) -> Mapping[str, Any]:
 
 def _update_payload(
     payment: Mapping[str, Any], allocations: Sequence[Mapping[str, Any]]
-) -> Dict[str, Any]:
-    totals: Dict[str, Decimal] = {}
+) -> dict[str, Any]:
+    totals: dict[str, Decimal] = {}
     for row in list(payment.get("invoices") or []) + list(allocations):
         if not isinstance(row, Mapping):
             continue
@@ -50,7 +51,7 @@ def repair_payment_allocations(
     checkpoint_path: Path = Path(
         "output/collection_reconciliation/payment_allocation_repair.json"
     ),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Audit and optionally allocate open invoices to payments with unused credits."""
     rows = []
     allocated_total = Decimal("0")
@@ -61,7 +62,7 @@ def repair_payment_allocations(
         creator = entry.get("creator")
         creator = creator if isinstance(creator, Mapping) else {}
         customer_id = to_text(creator.get("books_customer_id"))
-        row: Dict[str, Any] = {"entry_id": to_text(entry.get("id")), "payment_id": payment_id}
+        row: dict[str, Any] = {"entry_id": to_text(entry.get("id")), "payment_id": payment_id}
         if not payment_id or not customer_id:
             row["status"] = "incomplete_checkpoint"
             rows.append(row)
@@ -107,7 +108,7 @@ def repair_payment_allocations(
             row["status"] = "repaired"
         rows.append(row)
         _write_checkpoint(checkpoint_path, {"rows": rows})
-    summary: Dict[str, Any] = {"scanned": len(rows), "allocated_amount": float(allocated_total)}
+    summary: dict[str, Any] = {"scanned": len(rows), "allocated_amount": float(allocated_total)}
     for row in rows:
         summary[row["status"]] = summary.get(row["status"], 0) + 1
     result = {"summary": summary, "rows": rows}

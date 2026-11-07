@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 from ..base import BaseResource
 
 class Picklists(BaseResource):
@@ -6,7 +6,7 @@ class Picklists(BaseResource):
     def __init__(self, client: Any):
         super().__init__(client, 'picklists')
 
-    def mark_status(self, picklist_id: str, status: str) -> Dict[str, Any]:
+    def mark_status(self, picklist_id: str, status: str) -> dict[str, Any]:
         """Update the status of a picklist."""
         payload = {"status": status}
         return self._action('POST', picklist_id, 'status', data=payload)

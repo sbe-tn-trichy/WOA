@@ -1,13 +1,14 @@
 """Google Sheets schedule cell formatting, batching and verified writes."""
 from __future__ import annotations
 
-import json
+from utils import json
 from pathlib import Path
 import re
 from typing import Any
 
-import requests
+from utils import http_transport
 
+from utils.http import request_json
 from .checkbox import checkbox_formula_updates
 
 
@@ -61,7 +62,7 @@ def update_requests(values: dict[str, list[list[Any]]], config: dict[str, Any]) 
 
 
 def apply_plan(spreadsheet_id: str, values: dict[str, list[list[Any]]], *,
-               access_token: str, config: dict[str, Any], session: Any = requests) -> None:
+               access_token: str, config: dict[str, Any], session: Any = http_transport) -> None:
     """Verify target layout, snapshot prior cells, batch write and read back formulas.
 
     Only configured note/asset rectangles and statement detail cells are managed.
@@ -71,9 +72,8 @@ def apply_plan(spreadsheet_id: str, values: dict[str, list[list[Any]]], *,
         raise ValueError("A Google spreadsheet ID and edit token are required")
     base = f"https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}"
     headers = {"Authorization": f"Bearer {access_token}"}
-    meta = session.get(base, headers=headers, params={"fields": "sheets.properties"}, timeout=30)
-    meta.raise_for_status()
-    sheets = {s["properties"]["title"]: s["properties"] for s in meta.json()["sheets"]}
+    meta_json = request_json("GET", base, session=session, headers=headers, params={"fields": "sheets.properties"}, timeout=30)
+    sheets = {s["properties"]["title"]: s["properties"] for s in meta_json["sheets"]}
     for key, title in config["sheets"].items():
         if title not in sheets or sheets[title]["sheetId"] != config["sheet_ids"][key]:
             raise ValueError(f"Sheet identity changed: {title}")
@@ -84,10 +84,9 @@ def apply_plan(spreadsheet_id: str, values: dict[str, list[list[Any]]], *,
         title = config["sheets"][key]
         row_limit = min(sheets[title]["gridProperties"]["rowCount"], config.get("managed_row_limit", 500))
         managed[key] = "'" + title.replace("'", "''") + f"'!A1:{last_column}{row_limit}"
-    prior = session.get(base + "/values:batchGet", headers=headers,
-                        params={"ranges": list(managed.values()), "valueRenderOption": "FORMULA"}, timeout=30)
-    prior.raise_for_status()
-    prior_ranges = prior.json().get("valueRanges", [])
+    prior_json = request_json("GET", base + "/values:batchGet", session=session, headers=headers,
+                              params={"ranges": list(managed.values()), "valueRenderOption": "FORMULA"}, timeout=30)
+    prior_ranges = prior_json.get("valueRanges", [])
     if len(prior_ranges) != 2:
         raise ValueError("Could not inspect managed note and asset blocks")
     for key, entry in zip(managed, prior_ranges):
@@ -106,13 +105,12 @@ def apply_plan(spreadsheet_id: str, values: dict[str, list[list[Any]]], *,
         title = config['sheets']['checkbox']
         limit = min(sheets[title]['gridProperties']['rowCount'], config.get('checkbox_row_limit', 1000))
         address = "'" + title.replace("'", "''") + f"'!A1:K{limit}"
-        response = session.get(base + '/values:batchGet', headers=headers,
+        checkbox_json = request_json("GET", base + '/values:batchGet', session=session, headers=headers,
             params={'ranges': [address], 'valueRenderOption': 'FORMULA'}, timeout=30)
-        response.raise_for_status()
-        entries = response.json().get('valueRanges', [])
+        entries = checkbox_json.get('valueRanges', [])
         if len(entries) != 1:
             raise ValueError('Could not inspect checkbox inputs')
-        checkbox_before = response.json()
+        checkbox_before = checkbox_json
         rows = entries[0].get('values', [])
         if len(rows) >= limit:
             raise ValueError('Checkbox reaches scan limit; increase checkbox_row_limit')
@@ -129,22 +127,20 @@ def apply_plan(spreadsheet_id: str, values: dict[str, list[list[Any]]], *,
             raise ValueError("Plan exceeds the existing sheet grid")
     # Check native validation and formulas before writing, including destinations
     # whose displayed plain values can conceal validation constraints.
-    native = session.get(base, headers=headers, params={"ranges": list(values), "includeGridData": "true",
+    native_json = request_json("GET", base, session=session, headers=headers, params={"ranges": list(values), "includeGridData": "true",
         "fields": "sheets(properties(title),data(startRow,startColumn,rowData(values(userEnteredValue,dataValidation,userEnteredFormat(textFormat),effectiveFormat(textFormat)))))"}, timeout=30)
-    native.raise_for_status()
-    if {s["properties"]["title"] for s in native.json().get("sheets", [])} != set(config["sheets"].values()):
+    if {s["properties"]["title"] for s in native_json.get("sheets", [])} != set(config["sheets"].values()):
         raise ValueError("Native cell metadata read is incomplete")
-    for sheet in native.json().get("sheets", []):
+    for sheet in native_json.get("sheets", []):
         for grid in sheet.get("data", []):
             for row in grid.get("rowData", []):
                 if any(cell.get("dataValidation") for cell in row.get("values", [])):
                     raise ValueError("Managed target contains data validation; review it before apply")
-    requests_body = changed_update_requests(requests_body, native.json(), config)
-    requests_body += note_bold_requests(values, native.json(), config)
-    read = session.get(base + "/values:batchGet", headers=headers,
-                       params={"ranges": list(values), "valueRenderOption": "FORMULA"}, timeout=30)
-    read.raise_for_status()
-    old = read.json().get("valueRanges", [])
+    requests_body = changed_update_requests(requests_body, native_json, config)
+    requests_body += note_bold_requests(values, native_json, config)
+    read_json = request_json("GET", base + "/values:batchGet", session=session, headers=headers,
+                             params={"ranges": list(values), "valueRenderOption": "FORMULA"}, timeout=30)
+    old = read_json.get("valueRanges", [])
     if len(old) != len(values):
         raise ValueError("Google Sheets did not return every target range")
     for address, entry in zip(values, old):
@@ -168,16 +164,14 @@ def apply_plan(spreadsheet_id: str, values: dict[str, list[list[Any]]], *,
                 raise ValueError(f"Unexpected existing formula in {address}")
     # The runner supplies an output path checked before any network call.
     snapshot = Path(config["backup_path"])
-    snapshot.write_text(json.dumps({**read.json(), "native_cells": native.json(),
+    snapshot.write_text(json.dumps({**read_json, "native_cells": native_json,
         "checkbox_before": checkbox_before}, indent=2), encoding="utf-8")
     if requests_body:
-        write = session.post(base + ":batchUpdate", headers=headers,
-                             json={"requests": requests_body}, timeout=30)
-        write.raise_for_status()
-    verify = session.get(base + "/values:batchGet", headers=headers,
-                         params={"ranges": list(values), "valueRenderOption": "FORMULA"}, timeout=30)
-    verify.raise_for_status()
-    returned = verify.json().get("valueRanges", [])
+        request_json("POST", base + ":batchUpdate", session=session, headers=headers,
+                     json={"requests": requests_body}, timeout=30)
+    verify_json = request_json("GET", base + "/values:batchGet", session=session, headers=headers,
+                               params={"ranges": list(values), "valueRenderOption": "FORMULA"}, timeout=30)
+    returned = verify_json.get("valueRanges", [])
     if len(returned) != len(values):
         raise ValueError("Google Sheets read-back is incomplete after update")
     for (address, expected), entry in zip(values.items(), returned):
@@ -187,19 +181,17 @@ def apply_plan(spreadsheet_id: str, values: dict[str, list[list[Any]]], *,
                 got = actual[r][c] if r < len(actual) and c < len(actual[r]) else ""
                 if got != cell:
                     raise ValueError(f"Google Sheets read-back differs in {address}, row {r + 1}, column {c + 1}")
-    effective = session.get(base + "/values:batchGet", headers=headers,
-                             params={"ranges": list(values), "valueRenderOption": "UNFORMATTED_VALUE"}, timeout=30)
-    effective.raise_for_status()
-    for entry in effective.json().get("valueRanges", []):
+    effective_json = request_json("GET", base + "/values:batchGet", session=session, headers=headers,
+                                  params={"ranges": list(values), "valueRenderOption": "UNFORMATTED_VALUE"}, timeout=30)
+    for entry in effective_json.get("valueRanges", []):
         for row in entry.get("values", []):
             if any(isinstance(value, str) and value.startswith(("#REF!", "#VALUE!", "#ERROR!", "#DIV/0!", "#NAME?", "#N/A")) for value in row):
                 raise ValueError("Google Sheets contains a formula error after update")
-    formatting = session.get(base, headers=headers, params={"ranges": [a for a in values if grid_address(a)[0] == config["sheets"]["notes"]],
+    formatting_json = request_json("GET", base, session=session, headers=headers, params={"ranges": [a for a in values if grid_address(a)[0] == config["sheets"]["notes"]],
         "includeGridData": "true", "fields": "sheets(properties(title),data(startRow,startColumn,rowData(values(userEnteredFormat(textFormat),effectiveFormat(textFormat)))))"}, timeout=30)
-    formatting.raise_for_status()
-    if not any(s["properties"]["title"] == config["sheets"]["notes"] for s in formatting.json().get("sheets", [])):
+    if not any(s["properties"]["title"] == config["sheets"]["notes"] for s in formatting_json.get("sheets", [])):
         raise ValueError("Google Sheets note formatting read-back is incomplete")
-    if note_bold_requests(values, formatting.json(), config):
+    if note_bold_requests(values, formatting_json, config):
         raise ValueError("Google Sheets note bold formatting read-back differs")
 
 

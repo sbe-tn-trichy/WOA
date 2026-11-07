@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from datetime import date
-import json
-from typing import Any, Iterator, Mapping, Sequence
+from utils import json
+from collections.abc import Iterator, Mapping, Sequence
+from typing import Any
 
 from zoho.base_resource import BaseResource
 

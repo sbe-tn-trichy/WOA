@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 try:
     from . import _bootstrap  # noqa: F401
@@ -38,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     state = json.loads(args.state.read_text(encoding="utf-8"))
     checkpoint = args.checkpoint or Path(

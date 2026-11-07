@@ -87,7 +87,7 @@ def test_metric_counters_remain_copyable_and_exclude_creator_and_sheet_identifie
 def test_gst_rejects_missing_mismatched_and_incomplete_details(payload):
     client = MagicMock()
     client.invoices.get.return_value = payload
-    from zoho.books.resources.gst import GST
+    from zoho.books.custom.gst import GST
     with pytest.raises(ZohoBooksError, match="incomplete"):
         GST(client)._fetch_details_concurrently(
             client.invoices, [{"invoice_id": "one"}], "invoice_id", "invoice")
@@ -96,7 +96,7 @@ def test_gst_rejects_missing_mismatched_and_incomplete_details(payload):
 @pytest.mark.parametrize("docs", [[{}], [{"invoice_id": "one"}] * 2])
 def test_gst_rejects_invalid_list_before_detail_calls(docs):
     client = MagicMock()
-    from zoho.books.resources.gst import GST
+    from zoho.books.custom.gst import GST
     with pytest.raises(ZohoBooksError, match="missing or duplicate"):
         GST(client)._fetch_details_concurrently(client.invoices, docs, "invoice_id", "invoice")
     client.invoices.get.assert_not_called()

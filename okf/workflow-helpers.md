@@ -61,6 +61,7 @@ orchestrator contains only the review sequence.
   preserves the prior target when formatting fails, closes before replacement,
   retries Windows file-lock errors and cleans staging files. `write_atomic_json`
   uses it and exposes indentation, ASCII escaping and serialization options.
+  Its [JSON codec](json-codec.md) preserves explicit `default=str` recovery values.
   AIS, account mapping, collection review, payment-date checkpoints and GSTR-2
   snapshots use this shared persistence; GSTR-3B CSV retains its UTF-8 BOM.
 
@@ -154,7 +155,7 @@ execution exits unsuccessfully.
 ## Customer validation breaking migration
 
 The SDK `ZohoBooksAPI.customer_validator` binding and
-`zoho.books.resources.customer_validator` import were removed. Use:
+`zoho.books.custom.customer_validator` import were removed. Use:
 
 ```python
 from workflows.customer_validation import CustomerValidator

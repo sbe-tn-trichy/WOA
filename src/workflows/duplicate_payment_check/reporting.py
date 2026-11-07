@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from html import escape
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 
 def _text(value: Any) -> str:

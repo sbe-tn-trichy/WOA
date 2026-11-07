@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Set, Tuple
+from typing import Any
 
 
 def build_inter_location_query(account_id: str) -> str:
@@ -156,11 +156,11 @@ def sync_inter_location_contra_query_table(
     *,
     workspace_id: str,
     account_id: str = "1094368000002033114",
-    view_id: Optional[str] = None,
+    view_id: str | None = None,
     name: str = "Inter Location Contra FY25-27",
     apply: bool = False,
     description: str = "Live clearing-account contra pairs across locations, FY 2025-26 and FY 2026-27; blank references require pairing review.",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Single unified workflow function for previewing, creating, or updating the Analytics Query Table."""
     from workflows.analytics_catalog import AnalyticsCatalog, WorkflowViewReference
 
@@ -184,7 +184,7 @@ def sync_inter_location_contra_query_table(
     preview = [row for branch in branches for row in analytics.queries.execute(workspace_id, branch)]
     expected_pairs = validate_document_rows(preview)
 
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "last_successful_sync_at": last_sync,
         "sql": sql,
         "preview_row_count": len(preview),

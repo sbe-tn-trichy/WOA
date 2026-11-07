@@ -17,12 +17,22 @@ status: active
 `WOA` enforces strict modularity through a layered architecture with one-way import rules:
 
 ```
-zoho (API Clients & Auth) <-- workflows (Business Engines) <-- apps (Web UIs & CLI Tools)
+utils (Shared Transport & Primitives) <-- zoho (API Clients & Auth) <-- workflows (Business Engines) <-- apps (Web UIs & CLI Tools)
 ```
 
 ## Layer Boundaries
 
+0. **Shared Utilities Layer (`utils.http`)**:
+   - `utils.json` owns the RapidJSON codec and its [financial/recovery compatibility rules](json-codec.md).
+   - `utils.http_transport` owns the pyqwest adapter. See [HTTP transport](http-transport.md) for request encoding, pool ownership, timeouts, TLS and streaming contracts.
+   - Service-agnostic HTTP transport primitives: session/mock-compatible request execution (`send_http_request`, `request_json`), JSON/binary response decoding, HTML error sanitization, bounded `Retry-After` parsing, HTTPS override host validation, seekable upload stream replay (`capture_upload_positions`, `rewind_uploads`), and streaming file downloads (`write_response_to_file`).
+   - `utils.pdf.read_pdf_pages` extracts text through pypdfium2, normalizes CRLF and closes document/page/text handles. Supplier-specific interpretation stays in each workflow.
+   - `utils.yaml` uses YAMLRocks, preserves legacy scalar interpretation and validates source tags before conversion so custom/Python tags and multi-document configuration fail closed.
+   - Must not import from `zoho`, `workflows`, `google_sheets`, `apps`, or `scripts`.
+
 1. **Core / Client Layer (`zoho.books`, `zoho.wd`, `zoho.creator`, `zoho.helpers`, etc.)**:
+   - Base-client error parsing preserves zero API error codes and falls back to alternate codes only for missing/null primary codes; malformed JSON uses sanitized response text.
+   - `zoho.logging.configure_service_logger` owns service logger names, files and compatibility loggers; the base client delegates setup to it.
    - Generic REST endpoint wrappers, authentication helpers, and reusable composite overlay helpers (`zoho.helpers`).
    - `zoho.helpers` provides domain-agnostic composite functions (e.g. contact/item lookups, custom field extraction, WorkDrive upload-and-attach) reducing boilerplate in workflows.
    - Low-level clients and helpers do not import workflows or apps.

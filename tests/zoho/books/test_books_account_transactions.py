@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from zoho.books.resources.reports import Reports
+from zoho.books.custom.reports import Reports
 
 ARGS = dict(account_ids=['a'], from_date='2022-08-01', to_date='2026-10-31')
 RULE = {'columns': [{'index': 1, 'field': 'account_id', 'value': ['a'],

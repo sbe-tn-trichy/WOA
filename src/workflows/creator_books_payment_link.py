@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import json
+from utils import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from zoho.helpers.transactions import unwrap_record
 
@@ -21,7 +22,7 @@ def _normalized(value: Any) -> str:
 
 def build_native_payment_indexes(
     payments: Sequence[Mapping[str, Any]],
-) -> Tuple[Dict[str, Mapping[str, Any]], Dict[str, List[Mapping[str, Any]]]]:
+) -> tuple[dict[str, Mapping[str, Any]], dict[str, list[Mapping[str, Any]]]]:
     return build_payment_indexes(payments)
 
 
@@ -30,7 +31,7 @@ def resolve_books_payment(
     payments: Sequence[Mapping[str, Any]],
     by_id: Mapping[str, Mapping[str, Any]],
     by_number: Mapping[str, Sequence[Mapping[str, Any]]],
-) -> Tuple[Optional[Mapping[str, Any]], str]:
+) -> tuple[Mapping[str, Any] | None, str]:
     transaction_id = to_text(creator.get("books_transaction_id"))
     payment_number = _normalized(creator.get("books_payment_number"))
     id_match = by_id.get(transaction_id) if transaction_id else None
@@ -65,8 +66,8 @@ def resolve_books_payment(
     return None, "payment_missing"
 
 
-def _custom_field_values(payment: Mapping[str, Any]) -> Dict[str, str]:
-    values: Dict[str, str] = {
+def _custom_field_values(payment: Mapping[str, Any]) -> dict[str, str]:
+    values: dict[str, str] = {
         key: to_text(payment.get(key))
         for key in ("cf_creator_record_id", "cf_creator_payment_id")
         if to_text(payment.get(key))
@@ -85,7 +86,7 @@ def _custom_field_values(payment: Mapping[str, Any]) -> Dict[str, str]:
 
 def classify_links(
     payment: Mapping[str, Any], creator_record_id: str, creator_payment_id: str
-) -> Tuple[str, List[str]]:
+) -> tuple[str, list[str]]:
     if not creator_record_id or not creator_payment_id:
         return "creator_data_incomplete", []
     values = _custom_field_values(payment)
@@ -104,12 +105,12 @@ class BackfillConfig:
     location_id: str = ""
     execute: bool = False
     allow_batch: bool = False
-    creator_record_id: Optional[str] = None
+    creator_record_id: str | None = None
     creator_app: str = "order-management-new"
     creator_report: str = "matched"
     creator_crosscheck_report: str = "All_Payments"
     books_request_interval_seconds: float = 0.8
-    resume_from: Optional[Path] = None
+    resume_from: Path | None = None
     checkpoint_path: Path = Path(
         "output/collection_reconciliation/creator_books_payment_links.json"
     )
@@ -125,19 +126,19 @@ class BackfillConfig:
 
 @dataclass
 class BackfillResult:
-    rows: List[Dict[str, Any]] = field(default_factory=list)
-    oldest_creator_date: Optional[str] = None
-    sequence_gaps: List[Dict[str, Any]] = field(default_factory=list)
+    rows: list[dict[str, Any]] = field(default_factory=list)
+    oldest_creator_date: str | None = None
+    sequence_gaps: list[dict[str, Any]] = field(default_factory=list)
 
-    def summary(self) -> Dict[str, int]:
-        summary: Dict[str, int] = {"scanned": len(self.rows)}
+    def summary(self) -> dict[str, int]:
+        summary: dict[str, int] = {"scanned": len(self.rows)}
         for row in self.rows:
             status = to_text(row.get("status")) or "unknown"
             summary[status] = summary.get(status, 0) + 1
         return summary
 
 
-def _creator_values(record: Mapping[str, Any]) -> Dict[str, Any]:
+def _creator_values(record: Mapping[str, Any]) -> dict[str, Any]:
     customer = record.get("Customer_Name")
     if isinstance(customer, Mapping):
         customer = customer.get("zc_display_value") or customer.get("Name")
@@ -152,8 +153,8 @@ def _creator_values(record: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def _crosschecked_values(
-    record: Mapping[str, Any], canonical: Optional[Mapping[str, Any]]
-) -> Dict[str, Any]:
+    record: Mapping[str, Any], canonical: Mapping[str, Any] | None
+) -> dict[str, Any]:
     values = _creator_values(record)
     if canonical is not None:
         canonical_values = _creator_values(canonical)
@@ -166,7 +167,7 @@ def _crosschecked_values(
 def find_creator_sequence_gaps(
     matched: Sequence[Mapping[str, Any]],
     crosscheck: Sequence[Mapping[str, Any]],
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Report absent matched-report Payment_ID ranges and their Creator cross-check."""
     matched_ids = sorted({
         int(value) for row in matched
@@ -176,7 +177,7 @@ def find_creator_sequence_gaps(
         int(value) for row in crosscheck
         if (value := to_text(row.get("Payment_ID"))).isdigit()
     })
-    gaps: List[Dict[str, Any]] = []
+    gaps: list[dict[str, Any]] = []
     for left, right in zip(matched_ids, matched_ids[1:]):
         if right - left <= 1:
             continue
@@ -253,7 +254,7 @@ class CreatorBooksPaymentLinkBackfill:
                 row for row in records
                 if to_text(row.get("ID")) == self.config.creator_record_id
             ]
-        resumed: Dict[str, Dict[str, Any]] = {}
+        resumed: dict[str, dict[str, Any]] = {}
         if self.config.resume_from and self.config.resume_from.exists():
             payload = json.loads(self.config.resume_from.read_text(encoding="utf-8"))
             resumed = {
@@ -268,7 +269,7 @@ class CreatorBooksPaymentLinkBackfill:
             and payment_date >= oldest_date
         ]
         by_id, by_number = build_native_payment_indexes(payments)
-        claims: Dict[str, set[str]] = {}
+        claims: dict[str, set[str]] = {}
         for record in [*crosscheck, *records]:
             candidate, _ = resolve_books_payment(
                 _crosschecked_values(
@@ -279,8 +280,8 @@ class CreatorBooksPaymentLinkBackfill:
             if candidate is not None and record_id:
                 payment_id = to_text(candidate.get("payment_id") or candidate.get("id"))
                 claims.setdefault(payment_id, set()).add(record_id)
-        rows: List[Dict[str, Any]] = []
-        details: Dict[str, Mapping[str, Any]] = {}
+        rows: list[dict[str, Any]] = []
+        details: dict[str, Mapping[str, Any]] = {}
         missing_link_ids: set[str] = set()
         for payment in payments:
             payment_id = to_text(payment.get("payment_id") or payment.get("id"))
@@ -314,7 +315,7 @@ class CreatorBooksPaymentLinkBackfill:
                 _crosschecked_values(record, canonical_by_id.get(record_id)),
                 payments, by_id, by_number
             )
-            row: Dict[str, Any] = {
+            row: dict[str, Any] = {
                 "creator_record_id": record_id,
                 "match_source": source,
             }

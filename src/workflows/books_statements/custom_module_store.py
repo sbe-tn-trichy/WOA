@@ -1,7 +1,7 @@
 """Download the Books Sales Person and Beat custom modules into editable SQLite tables."""
 from __future__ import annotations
 
-import json
+from utils import json
 import sqlite3
 import time
 from datetime import datetime, timezone

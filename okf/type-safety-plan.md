@@ -17,6 +17,17 @@ The migration is incremental. Its implemented scope and outstanding work are
 recorded below; this plan never authorizes live writes. Implement each phase as
 a reviewable change with its own changelog evidence.
 
+## Checker migration — 2026-11-07
+
+The active checker is pinned `ty==0.0.99`, run with the workspace interpreter
+using `-m ty check`. `tool.ty.src.include` retains the previous explicit target
+list and `tool.ty.environment` sets Python 3.14 and the source import path.
+Positive and negative compiler contracts exercise ty, including rejection of
+swapped IDs, float stock quantities and invalid result statuses. ty defaults
+replace mypy strict settings; explicit-Any rejection is not equivalent.
+Historical mypy results below describe the earlier checker, not current coverage.
+See the [runbook](development-runbook.md#type-checking) for current commands.
+
 ## Implementation status — 2026-11-03
 
 - The pinned mypy 2.4.1 development extra and requests stubs are installed in
@@ -124,7 +135,7 @@ and the [project changelog](../CHANGELOG.md) own operational and test evidence.
 
 **Owners:** `pyproject.toml`, `.github/workflows/tests.yml`, development runbook.
 
-- Adopt one checker: mypy, invoked through the workspace Python. Verify support
+- Adopt one checker: ty, invoked through the workspace Python. Verify support
   for CPython 3.14.4, existing syntax, and all three CI platforms before choosing
   a fixed tooling version. Record that version in a separate development extra;
   keep it out of runtime dependencies. Dependency installation is a separately
@@ -149,8 +160,8 @@ and the [project changelog](../CHANGELOG.md) own operational and test evidence.
 **Exit:** The initial strict target has zero diagnostics; CI fails on an
 intentional wrong argument/return during verification; removing the deliberate
 mistake restores success. No blanket suppressions or environment replacement.
-Document `.venv/Scripts/python.exe -m mypy` on Windows and
-`.venv/bin/python -m mypy` on macOS/Linux once configured.
+Document `.venv/Scripts/python.exe -m ty check` on Windows and
+`.venv/bin/python -m ty check` on macOS/Linux once configured.
 
 ## Phase 2 — Complete payment renumbering end to end
 
@@ -252,6 +263,5 @@ verification required by a workflow.
 
 ## Tool references
 
-- [Mypy incremental adoption](https://mypy.readthedocs.io/en/stable/existing_code.html)
-- [Mypy configuration and import behavior](https://mypy.readthedocs.io/en/stable/config_file.html)
-- [Mypy optional checks](https://mypy.readthedocs.io/en/stable/error_code_list2.html)
+- [ty configuration](https://docs.astral.sh/ty/configuration/)
+- [ty rules](https://docs.astral.sh/ty/rules/)

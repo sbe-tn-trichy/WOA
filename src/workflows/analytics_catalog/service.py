@@ -1,9 +1,10 @@
 """Cached SQLite analysis with explicit manual metadata synchronization."""
 
-import json
+from utils import json
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator, Sequence, TypedDict
+from collections.abc import Iterator, Sequence
+from typing import Any, TypedDict
 
 from zoho.analytics import WorkspaceMetadataStore, WorkflowViewUsage
 from .registry import DEFAULT_REFERENCES, WorkflowViewReference

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-import re
+try:
+    import regex as re
+except ImportError:
+    import re
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 GSTIN_PATTERN = re.compile(
     r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$"
@@ -24,9 +28,9 @@ def is_valid_gstin(value: Any) -> bool:
 
 def group_contacts_by_gstin(
     contacts: Iterable[Mapping[str, Any]],
-) -> Dict[str, List[Mapping[str, Any]]]:
+) -> dict[str, list[Mapping[str, Any]]]:
     """Group contact records by their normalized valid GSTIN."""
-    grouped: Dict[str, List[Mapping[str, Any]]] = defaultdict(list)
+    grouped: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for contact in contacts:
         raw_gst = contact.get("gst_no") or contact.get("gstin")
         if not raw_gst:

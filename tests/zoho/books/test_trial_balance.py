@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from zoho.books.resources.reports import Reports
+from zoho.books.custom.reports import Reports
 from workflows import fetch_trial_balance_for_firm, fetch_trial_balance_for_gstin
 from workflows.audited_financials import reports as helpers
 

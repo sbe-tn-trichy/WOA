@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import json
+from utils import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Mapping, Protocol, Sequence, TypeVar
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, Protocol
 
 from .checkpoint import write_atomic_json
-
-Baseline = TypeVar("Baseline")
-
 
 class SnapshotResource(Protocol):
     def list(self, params: Mapping[str, Any]) -> Mapping[str, Any]: ...
@@ -31,7 +29,7 @@ class SnapshotPolicy:
     missing_page_is_empty: bool = False
 
 
-def refresh_snapshot(
+def refresh_snapshot[Baseline](
     *, api: SnapshotResource, snapshot_path: Path, organization_id: str,
     workspace_id: str, policy: SnapshotPolicy,
     analytics_loader: Callable[[], tuple[Baseline, datetime]],

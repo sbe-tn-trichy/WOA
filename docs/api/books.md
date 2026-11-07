@@ -9,49 +9,47 @@ Complete reference for the Zoho Books client, CRUD resources, status and approva
   - [Class `ZohoBooksAPI`](#zoho-books-client-zohobooksapi)
 - [`zoho.books.base`](#zoho-books-base)
   - [Class `BaseResource`](#zoho-books-base-baseresource)
-- [`zoho.books.mixins`](#zoho-books-mixins)
-  - [Class `ActiveInactiveMixin`](#zoho-books-mixins-activeinactivemixin)
-  - [Class `StatusMixin`](#zoho-books-mixins-statusmixin)
-  - [Class `ApprovalMixin`](#zoho-books-mixins-approvalmixin)
-  - [Class `EmailMixin`](#zoho-books-mixins-emailmixin)
-  - [Class `CreditsMixin`](#zoho-books-mixins-creditsmixin)
-- [`zoho.books.resources.contacts`](#zoho-books-resources-contacts)
-  - [Class `Contacts`](#zoho-books-resources-contacts-contacts)
-  - [Class `Organizations`](#zoho-books-resources-contacts-organizations)
-  - [Class `ChartOfAccounts`](#zoho-books-resources-contacts-chartofaccounts)
-  - [Class `Vendors`](#zoho-books-resources-contacts-vendors)
-- [`zoho.books.resources.sales`](#zoho-books-resources-sales)
-  - [Class `Invoices`](#zoho-books-resources-sales-invoices)
-  - [Class `Estimates`](#zoho-books-resources-sales-estimates)
-  - [Class `SalesOrders`](#zoho-books-resources-sales-salesorders)
-  - [Class `CreditNotes`](#zoho-books-resources-sales-creditnotes)
-  - [Class `VendorCredits`](#zoho-books-resources-sales-vendorcredits)
-  - [Class `SalesReturns`](#zoho-books-resources-sales-salesreturns)
-  - [Class `CustomerPayments`](#zoho-books-resources-sales-customerpayments)
-- [`zoho.books.resources.purchases`](#zoho-books-resources-purchases)
-  - [Class `Bills`](#zoho-books-resources-purchases-bills)
-  - [Class `PurchaseOrders`](#zoho-books-resources-purchases-purchaseorders)
-  - [Class `VendorPayments`](#zoho-books-resources-purchases-vendorpayments)
-  - [Class `Expenses`](#zoho-books-resources-purchases-expenses)
-- [`zoho.books.resources.banking`](#zoho-books-resources-banking)
-  - [Class `BankAccounts`](#zoho-books-resources-banking-bankaccounts)
-  - [Class `BankTransactions`](#zoho-books-resources-banking-banktransactions)
-  - [Class `Journals`](#zoho-books-resources-banking-journals)
-- [`zoho.books.resources.gst`](#zoho-books-resources-gst)
-  - [Class `GST`](#zoho-books-resources-gst-gst)
-- [`zoho.books.resources.settings`](#zoho-books-resources-settings)
-  - [Class `Locations`](#zoho-books-resources-settings-locations)
-  - [Class `CustomFields`](#zoho-books-resources-settings-customfields)
-- [`zoho.books.resources.projects`](#zoho-books-resources-projects)
-  - [Class `Projects`](#zoho-books-resources-projects-projects)
-  - [Class `Tasks`](#zoho-books-resources-projects-tasks)
-  - [Class `TimeEntries`](#zoho-books-resources-projects-timeentries)
-- [`zoho.books.resources.reports`](#zoho-books-resources-reports)
-  - [Class `Reports`](#zoho-books-resources-reports-reports)
-- [`zoho.books.resources.ledger`](#zoho-books-resources-ledger)
-  - [Class `Registers`](#zoho-books-resources-ledger-registers)
-- [`zoho.books.resources.fixed_assets`](#zoho-books-resources-fixed_assets)
-  - [Class `FixedAssets`](#zoho-books-resources-fixed_assets-fixedassets)
+- [`zoho.books.custom.mixins`](#zoho-books-custom-mixins)
+  - [Class `ActiveInactiveMixin`](#zoho-books-custom-mixins-activeinactivemixin)
+  - [Class `StatusMixin`](#zoho-books-custom-mixins-statusmixin)
+  - [Class `ApprovalMixin`](#zoho-books-custom-mixins-approvalmixin)
+  - [Class `EmailMixin`](#zoho-books-custom-mixins-emailmixin)
+  - [Class `CreditsMixin`](#zoho-books-custom-mixins-creditsmixin)
+- [`zoho.books.custom.contacts`](#zoho-books-custom-contacts)
+  - [Class `Contacts`](#zoho-books-custom-contacts-contacts)
+  - [Class `Organizations`](#zoho-books-custom-contacts-organizations)
+  - [Class `ChartOfAccounts`](#zoho-books-custom-contacts-chartofaccounts)
+  - [Class `Vendors`](#zoho-books-custom-contacts-vendors)
+  - [Class `Locations`](#zoho-books-custom-contacts-locations)
+  - [Class `CustomFields`](#zoho-books-custom-contacts-customfields)
+- [`zoho.books.custom.sales`](#zoho-books-custom-sales)
+  - [Class `Invoices`](#zoho-books-custom-sales-invoices)
+  - [Class `Estimates`](#zoho-books-custom-sales-estimates)
+  - [Class `SalesOrders`](#zoho-books-custom-sales-salesorders)
+  - [Class `CreditNotes`](#zoho-books-custom-sales-creditnotes)
+  - [Class `VendorCredits`](#zoho-books-custom-sales-vendorcredits)
+  - [Class `SalesReturns`](#zoho-books-custom-sales-salesreturns)
+  - [Class `CustomerPayments`](#zoho-books-custom-sales-customerpayments)
+- [`zoho.books.custom.purchases`](#zoho-books-custom-purchases)
+  - [Class `Bills`](#zoho-books-custom-purchases-bills)
+  - [Class `PurchaseOrders`](#zoho-books-custom-purchases-purchaseorders)
+  - [Class `VendorPayments`](#zoho-books-custom-purchases-vendorpayments)
+  - [Class `Expenses`](#zoho-books-custom-purchases-expenses)
+- [`zoho.books.custom.banking`](#zoho-books-custom-banking)
+  - [Class `BankAccounts`](#zoho-books-custom-banking-bankaccounts)
+  - [Class `BankTransactions`](#zoho-books-custom-banking-banktransactions)
+  - [Class `Journals`](#zoho-books-custom-banking-journals)
+- [`zoho.books.custom.gst`](#zoho-books-custom-gst)
+  - [Class `GST`](#zoho-books-custom-gst-gst)
+- [`zoho.books.custom.projects`](#zoho-books-custom-projects)
+  - [Class `Projects`](#zoho-books-custom-projects-projects)
+  - [Class `Tasks`](#zoho-books-custom-projects-tasks)
+  - [Class `TimeEntries`](#zoho-books-custom-projects-timeentries)
+- [`zoho.books.custom.reports`](#zoho-books-custom-reports)
+  - [Class `Reports`](#zoho-books-custom-reports-reports)
+- [`zoho.books.custom.ledger`](#zoho-books-custom-ledger)
+  - [Class `Registers`](#zoho-books-custom-ledger-registers)
+  - [Class `FixedAssets`](#zoho-books-custom-ledger-fixedassets)
 
 ---
 
@@ -61,7 +59,7 @@ Complete reference for the Zoho Books client, CRUD resources, status and approva
 
 ### Class `ZohoBooksAPI`
 
-**Bases:** `BaseZohoClient`
+**Bases:** `BaseZohoClient`, `BooksResources`
 
 Main Zoho Books API Client linking all modules together.
 
@@ -70,7 +68,7 @@ Main Zoho Books API Client linking all modules together.
 ##### `ZohoBooksAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, organization_id: str, domain: str = 'com', on_request_completed: Optional[Any] = None, token_refresh_callback: Optional[Any] = None)
+def __init__(self, access_token: str, organization_id: str, domain: str = 'com', on_request_completed: Any | None = None, token_refresh_callback: Any | None = None)
 ```
 
 Initialize the Zoho Books API client.
@@ -78,7 +76,7 @@ Initialize the Zoho Books API client.
 ##### `ZohoBooksAPI.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None, stream: bool = False, override_url: Optional[str] = None, is_mutation: Optional[bool] = None, timeout: Optional[int] = None) -> Any
+def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, files: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
 ```
 
 Internal HTTP request handler with logging.
@@ -99,14 +97,14 @@ Base class for Zoho Books modules providing standard CRUD operations.
 
 | Attribute | Type | Default Value | Notes |
 |---|---|---|---|
-| `error_class` | `Type[ZohoBooksError]` | `ZohoBooksError` | - |
+| `error_class` | `type[ZohoBooksError]` | `ZohoBooksError` | - |
 | `logger_name` | `str` | `'zoho.books.api'` | - |
 
 ---
 
-## Module `zoho.books.mixins`
+## Module `zoho.books.custom.mixins`
 
-**Source:** [`src/zoho/books/mixins.py`](src/zoho/books/mixins.py)
+**Source:** [`src/zoho/books/custom/mixins.py`](src/zoho/books/custom/mixins.py)
 
 ### Class `ActiveInactiveMixin`
 
@@ -115,13 +113,13 @@ Base class for Zoho Books modules providing standard CRUD operations.
 ##### `ActiveInactiveMixin.mark_as_active`
 
 ```python
-def mark_as_active(self: Any, resource_id: str) -> Dict[str, Any]
+def mark_as_active(self: Any, resource_id: str) -> dict[str, Any]
 ```
 
 ##### `ActiveInactiveMixin.mark_as_inactive`
 
 ```python
-def mark_as_inactive(self: Any, resource_id: str) -> Dict[str, Any]
+def mark_as_inactive(self: Any, resource_id: str) -> dict[str, Any]
 ```
 
 ### Class `StatusMixin`
@@ -131,25 +129,25 @@ def mark_as_inactive(self: Any, resource_id: str) -> Dict[str, Any]
 ##### `StatusMixin.mark_as_void`
 
 ```python
-def mark_as_void(self: Any, resource_id: str) -> Dict[str, Any]
+def mark_as_void(self: Any, resource_id: str) -> dict[str, Any]
 ```
 
 ##### `StatusMixin.mark_as_open`
 
 ```python
-def mark_as_open(self: Any, resource_id: str) -> Dict[str, Any]
+def mark_as_open(self: Any, resource_id: str) -> dict[str, Any]
 ```
 
 ##### `StatusMixin.mark_as_sent`
 
 ```python
-def mark_as_sent(self: Any, resource_id: str) -> Dict[str, Any]
+def mark_as_sent(self: Any, resource_id: str) -> dict[str, Any]
 ```
 
 ##### `StatusMixin.mark_as_draft`
 
 ```python
-def mark_as_draft(self: Any, resource_id: str) -> Dict[str, Any]
+def mark_as_draft(self: Any, resource_id: str) -> dict[str, Any]
 ```
 
 ### Class `ApprovalMixin`
@@ -159,13 +157,13 @@ def mark_as_draft(self: Any, resource_id: str) -> Dict[str, Any]
 ##### `ApprovalMixin.submit_for_approval`
 
 ```python
-def submit_for_approval(self: Any, resource_id: str) -> Dict[str, Any]
+def submit_for_approval(self: Any, resource_id: str) -> dict[str, Any]
 ```
 
 ##### `ApprovalMixin.approve`
 
 ```python
-def approve(self: Any, resource_id: str) -> Dict[str, Any]
+def approve(self: Any, resource_id: str) -> dict[str, Any]
 ```
 
 ### Class `EmailMixin`
@@ -175,7 +173,7 @@ def approve(self: Any, resource_id: str) -> Dict[str, Any]
 ##### `EmailMixin.email`
 
 ```python
-def email(self: Any, resource_id: str, data: Dict[str, Any], params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def email(self: Any, resource_id: str, data: dict[str, Any], params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 ### Class `CreditsMixin`
@@ -185,14 +183,14 @@ def email(self: Any, resource_id: str, data: Dict[str, Any], params: Optional[Di
 ##### `CreditsMixin.apply_credits`
 
 ```python
-def apply_credits(self: Any, resource_id: str, data: Dict[str, Any]) -> Dict[str, Any]
+def apply_credits(self: Any, resource_id: str, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 ---
 
-## Module `zoho.books.resources.contacts`
+## Module `zoho.books.custom.contacts`
 
-**Source:** [`src/zoho/books/resources/contacts.py`](src/zoho/books/resources/contacts.py)
+**Source:** [`src/zoho/books/custom/contacts.py`](src/zoho/books/custom/contacts.py)
 
 ### Class `Contacts`
 
@@ -227,7 +225,7 @@ def __init__(self, client: Any)
 ##### `Contacts.list_customers`
 
 ```python
-def list_customers(self, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]
+def list_customers(self, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]
 ```
 
 Fetch all active customer contacts, with optional filter overrides.
@@ -235,7 +233,7 @@ Fetch all active customer contacts, with optional filter overrides.
 ##### `Contacts.bulk_update`
 
 ```python
-def bulk_update(self, contacts: List[Dict[str, Any]], params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def bulk_update(self, contacts: list[dict[str, Any]], params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 Update multiple contacts in one form-encoded API request.
@@ -243,19 +241,19 @@ Update multiple contacts in one form-encoded API request.
 ##### `Contacts.enable_portal`
 
 ```python
-def enable_portal(self, contact_id: str, data: Dict[str, Any]) -> Dict[str, Any]
+def enable_portal(self, contact_id: str, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 ##### `Contacts.email_statement`
 
 ```python
-def email_statement(self, contact_id: str, data: Dict[str, Any], params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def email_statement(self, contact_id: str, data: dict[str, Any], params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 ##### `Contacts.get_statement`
 
 ```python
-def get_statement(self, contact_id: str, params: Optional[Dict[str, Any]] = None) -> bytes
+def get_statement(self, contact_id: str, params: dict[str, Any] | None = None, *, stream: bool = False) -> Any
 ```
 
 Retrieve a statement for a contact.
@@ -264,7 +262,7 @@ Returns binary content (e.g. XLS or PDF) depending on the parameters (e.g. accep
 ##### `Contacts.download_statement`
 
 ```python
-def download_statement(self, contact_id: str, save_path: str, params: Optional[Dict[str, Any]] = None) -> str
+def download_statement(self, contact_id: str, save_path: str, params: dict[str, Any] | None = None) -> str
 ```
 
 Download a contact statement and save it to the specified path.
@@ -327,7 +325,7 @@ def __init__(self, client: Any)
 ##### `ChartOfAccounts.list_transactions`
 
 ```python
-def list_transactions(self, account_id: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def list_transactions(self, account_id: str, params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 Return one page of transactions involving a financial account.
@@ -335,7 +333,7 @@ Return one page of transactions involving a financial account.
 ##### `ChartOfAccounts.list_all_transactions`
 
 ```python
-def list_all_transactions(self, account_id: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]
+def list_all_transactions(self, account_id: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]
 ```
 
 Return every page of transactions involving a financial account.
@@ -373,7 +371,7 @@ def __init__(self, client: Any)
 ##### `Vendors.get_statement`
 
 ```python
-def get_statement(self, vendor_id: str, params: Optional[Dict[str, Any]] = None) -> bytes
+def get_statement(self, vendor_id: str, params: dict[str, Any] | None = None, *, stream: bool = False) -> Any
 ```
 
 Retrieve a statement for a vendor. 
@@ -382,16 +380,67 @@ Returns binary content (e.g. XLS or PDF) depending on the parameters (e.g. accep
 ##### `Vendors.download_statement`
 
 ```python
-def download_statement(self, vendor_id: str, save_path: str, params: Optional[Dict[str, Any]] = None) -> str
+def download_statement(self, vendor_id: str, save_path: str, params: dict[str, Any] | None = None) -> str
 ```
 
 Download a vendor statement and save it to the specified path.
 
+### Class `Locations`
+
+**Bases:** `BaseResource`
+
+Organization locations and their India tax-registration settings.
+
+#### Inherited Mixin Capabilities
+
+**From `BaseResource`:**
+
+- `list(params=None)`: Fetch one page of records from the resource endpoint.
+- `list_iter(params=None, resource_key=None, per_page=200)`: Generator yielding records across pages without buffering all in memory.
+- `list_all(params=None, resource_key=None, per_page=200)`: Auto-paginates and returns all records as a single list.
+- `get(resource_id, params=None)`: Fetch a single record by resource identifier.
+- `create(data, params=None, files=None)`: Create a record after validating required fields and defaults.
+- `update(resource_id, data, params=None, files=None)`: Update an existing record.
+- `delete(resource_id, params=None)`: Delete an existing record.
+- `_action(method, resource_id, action, ...)`: Execute a sub-action endpoint (e.g. status changes, sub-resources).
+
+#### Methods
+
+##### `Locations.__init__`
+
+```python
+def __init__(self, client: Any)
+```
+
+### Class `CustomFields`
+
+Zoho Books custom-field settings endpoints.
+
+#### Methods
+
+##### `CustomFields.__init__`
+
+```python
+def __init__(self, client: Any)
+```
+
+##### `CustomFields.list_for_entity`
+
+```python
+def list_for_entity(self, entity: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]
+```
+
+##### `CustomFields.create`
+
+```python
+def create(self, data: dict[str, Any]) -> dict[str, Any]
+```
+
 ---
 
-## Module `zoho.books.resources.sales`
+## Module `zoho.books.custom.sales`
 
-**Source:** [`src/zoho/books/resources/sales.py`](src/zoho/books/resources/sales.py)
+**Source:** [`src/zoho/books/custom/sales.py`](src/zoho/books/custom/sales.py)
 
 ### Class `Invoices`
 
@@ -438,12 +487,6 @@ Download a vendor statement and save it to the specified path.
 def __init__(self, client: Any)
 ```
 
-##### `Invoices.apply_credits`
-
-```python
-def apply_credits(self, invoice_id: str, data: Dict[str, Any]) -> Dict[str, Any]
-```
-
 ### Class `Estimates`
 
 **Bases:** `BaseResource`, `StatusMixin`, `EmailMixin`
@@ -483,13 +526,13 @@ def __init__(self, client: Any)
 ##### `Estimates.mark_as_accepted`
 
 ```python
-def mark_as_accepted(self, estimate_id: str) -> Dict[str, Any]
+def mark_as_accepted(self, estimate_id: str) -> dict[str, Any]
 ```
 
 ##### `Estimates.mark_as_declined`
 
 ```python
-def mark_as_declined(self, estimate_id: str) -> Dict[str, Any]
+def mark_as_declined(self, estimate_id: str) -> dict[str, Any]
 ```
 
 ### Class `SalesOrders`
@@ -527,7 +570,7 @@ def __init__(self, client: Any)
 ##### `SalesOrders.add_attachment`
 
 ```python
-def add_attachment(self, sales_order_id: str, file_path: str) -> Dict[str, Any]
+def add_attachment(self, sales_order_id: str, file_path: str) -> dict[str, Any]
 ```
 
 Attach a local file to a sales order.
@@ -599,7 +642,7 @@ def __init__(self, client: Any)
 ##### `VendorCredits.add_attachment`
 
 ```python
-def add_attachment(self, vendor_credit_id: str, file_path: str) -> Dict[str, Any]
+def add_attachment(self, vendor_credit_id: str, file_path: str) -> dict[str, Any]
 ```
 
 ### Class `SalesReturns`
@@ -662,22 +705,22 @@ def __init__(self, client: Any)
 ##### `CustomerPayments.refund`
 
 ```python
-def refund(self, payment_id: str, data: Dict[str, Any]) -> Dict[str, Any]
+def refund(self, payment_id: str, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 ##### `CustomerPayments.update_with_number_series`
 
 ```python
-def update_with_number_series(self, payment_id: str, data: Dict[str, Any]) -> Dict[str, Any]
+def update_with_number_series(self, payment_id: str, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 Update a payment via multipart form while preserving the chosen number series.
 
 ---
 
-## Module `zoho.books.resources.purchases`
+## Module `zoho.books.custom.purchases`
 
-**Source:** [`src/zoho/books/resources/purchases.py`](src/zoho/books/resources/purchases.py)
+**Source:** [`src/zoho/books/custom/purchases.py`](src/zoho/books/custom/purchases.py)
 
 ### Class `Bills`
 
@@ -742,7 +785,7 @@ Normalize bill numbers for duplicate grouping.
 
 ```python
 @classmethod
-def find_duplicate_groups(cls, bills: Iterable[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]
+def find_duplicate_groups(cls, bills: Iterable[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]
 ```
 
 Group bill records with repeated non-blank bill numbers.
@@ -750,26 +793,15 @@ Group bill records with repeated non-blank bill numbers.
 ##### `Bills.list_duplicate_bill_groups`
 
 ```python
-def list_duplicate_bill_groups(self) -> Dict[str, List[Dict[str, Any]]]
+def list_duplicate_bill_groups(self) -> dict[str, list[dict[str, Any]]]
 ```
 
 Fetch all bills and return groups with duplicate bill numbers.
 
-##### `Bills.update`
-
-```python
-def update(self, bill_id: str, data: Dict[str, Any], params: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
-```
-
-Update an existing bill.
-
-Note: Zoho Books typically requires the full payload for updates.
-Missing fields may be reset to defaults or cleared.
-
 ##### `Bills.add_attachment`
 
 ```python
-def add_attachment(self, bill_id: str, file_content: Any, filename: str) -> Dict[str, Any]
+def add_attachment(self, bill_id: str, file_content: Any, filename: str) -> dict[str, Any]
 ```
 
 Attach a file to an existing bill.
@@ -809,13 +841,13 @@ def __init__(self, client: Any)
 ##### `PurchaseOrders.mark_as_billed`
 
 ```python
-def mark_as_billed(self, po_id: str) -> Dict[str, Any]
+def mark_as_billed(self, po_id: str) -> dict[str, Any]
 ```
 
 ##### `PurchaseOrders.mark_as_cancelled`
 
 ```python
-def mark_as_cancelled(self, po_id: str) -> Dict[str, Any]
+def mark_as_cancelled(self, po_id: str) -> dict[str, Any]
 ```
 
 ### Class `VendorPayments`
@@ -846,7 +878,7 @@ def __init__(self, client: Any)
 ##### `VendorPayments.update_with_number_series`
 
 ```python
-def update_with_number_series(self, payment_id: str, data: Dict[str, Any]) -> Dict[str, Any]
+def update_with_number_series(self, payment_id: str, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 Update location and chosen payment number without auto numbering.
@@ -880,9 +912,9 @@ def __init__(self, client: Any)
 
 ---
 
-## Module `zoho.books.resources.banking`
+## Module `zoho.books.custom.banking`
 
-**Source:** [`src/zoho/books/resources/banking.py`](src/zoho/books/resources/banking.py)
+**Source:** [`src/zoho/books/custom/banking.py`](src/zoho/books/custom/banking.py)
 
 ### Class `BankAccounts`
 
@@ -942,25 +974,25 @@ def __init__(self, client: Any)
 ##### `BankTransactions.get_matches`
 
 ```python
-def get_matches(self, transaction_id: str) -> Dict[str, Any]
+def get_matches(self, transaction_id: str) -> dict[str, Any]
 ```
 
 ##### `BankTransactions.match`
 
 ```python
-def match(self, transaction_id: str, data: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Dict[str, Any]
+def match(self, transaction_id: str, data: dict[str, Any] | list[dict[str, Any]]) -> dict[str, Any]
 ```
 
 ##### `BankTransactions.categorize_as_expense`
 
 ```python
-def categorize_as_expense(self, transaction_id: str, data: Dict[str, Any]) -> Dict[str, Any]
+def categorize_as_expense(self, transaction_id: str, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 ##### `BankTransactions.categorize`
 
 ```python
-def categorize(self, transaction_id: str, data: Dict[str, Any]) -> Dict[str, Any]
+def categorize(self, transaction_id: str, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 Categorize a bank line, including a transfer_fund transaction.
@@ -968,7 +1000,7 @@ Categorize a bank line, including a transfer_fund transaction.
 ##### `BankTransactions.categorize_as_vendor_payment`
 
 ```python
-def categorize_as_vendor_payment(self, transaction_id: str, data: Dict[str, Any]) -> Dict[str, Any]
+def categorize_as_vendor_payment(self, transaction_id: str, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 Categorize a vendor payment; no bill allocations records an advance.
@@ -976,13 +1008,13 @@ Categorize a vendor payment; no bill allocations records an advance.
 ##### `BankTransactions.categorize_as_customer_payment`
 
 ```python
-def categorize_as_customer_payment(self, transaction_id: str, data: Dict[str, Any]) -> Dict[str, Any]
+def categorize_as_customer_payment(self, transaction_id: str, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 ##### `BankTransactions.unmatch`
 
 ```python
-def unmatch(self, transaction_id: str, account_id: str) -> Dict[str, Any]
+def unmatch(self, transaction_id: str, account_id: str) -> dict[str, Any]
 ```
 
 ### Class `Journals`
@@ -1013,14 +1045,14 @@ def __init__(self, client: Any)
 ##### `Journals.publish`
 
 ```python
-def publish(self, journal_id: str) -> Dict[str, Any]
+def publish(self, journal_id: str) -> dict[str, Any]
 ```
 
 ---
 
-## Module `zoho.books.resources.gst`
+## Module `zoho.books.custom.gst`
 
-**Source:** [`src/zoho/books/resources/gst.py`](src/zoho/books/resources/gst.py)
+**Source:** [`src/zoho/books/custom/gst.py`](src/zoho/books/custom/gst.py)
 
 ### Class `GST`
 
@@ -1052,7 +1084,7 @@ def __init__(self, client: Any)
 ##### `GST.get_month_date_range`
 
 ```python
-def get_month_date_range(self, month_str: str) -> Tuple[str, str]
+def get_month_date_range(self, month_str: str) -> tuple[str, str]
 ```
 
 Parses a month string ('YYYY-MM') and returns ('YYYY-MM-01', 'YYYY-MM-DD').
@@ -1060,7 +1092,7 @@ Parses a month string ('YYYY-MM') and returns ('YYYY-MM-01', 'YYYY-MM-DD').
 ##### `GST.validate_gst_data`
 
 ```python
-def validate_gst_data(self, month_str: str) -> Dict[str, Any]
+def validate_gst_data(self, month_str: str) -> dict[str, Any]
 ```
 
 Executes outward GST validations:
@@ -1072,7 +1104,7 @@ Executes outward GST validations:
 ##### `GST._validate_document_sequence_and_status`
 
 ```python
-def _validate_document_sequence_and_status(self, docs: List[Dict[str, Any]], num_key: str, id_key: str, date_key: str) -> Dict[str, Any]
+def _validate_document_sequence_and_status(self, docs: list[dict[str, Any]], num_key: str, id_key: str, date_key: str) -> dict[str, Any]
 ```
 
 Performs status classification and sequence/chronological order check on list of documents.
@@ -1080,7 +1112,7 @@ Performs status classification and sequence/chronological order check on list of
 ##### `GST._fetch_details_concurrently`
 
 ```python
-def _fetch_details_concurrently(self, client_module: Any, docs: List[Dict[str, Any]], id_key: str, doc_key: str) -> List[Dict[str, Any]]
+def _fetch_details_concurrently(self, client_module: Any, docs: list[dict[str, Any]], id_key: str, doc_key: str) -> list[dict[str, Any]]
 ```
 
 Fetch complete details with bounded concurrency; transport owns retries.
@@ -1088,7 +1120,7 @@ Fetch complete details with bounded concurrency; transport owns retries.
 ##### `GST._generate_tax_summary`
 
 ```python
-def _generate_tax_summary(self, detailed_invoices: List[Dict[str, Any]], detailed_credit_notes: List[Dict[str, Any]]) -> Dict[str, Any]
+def _generate_tax_summary(self, detailed_invoices: list[dict[str, Any]], detailed_credit_notes: list[dict[str, Any]]) -> dict[str, Any]
 ```
 
 Aggregates taxable value, tax, and totals grouped by HSN and GST rate.
@@ -1097,7 +1129,7 @@ Generates separate sums for Invoices, Credit Notes, and Net Consolidated.
 ##### `GST.get_gstr_outward_supplies`
 
 ```python
-def get_gstr_outward_supplies(self, params: Optional[Dict[str, Any]] = None) -> bytes
+def get_gstr_outward_supplies(self, params: dict[str, Any] | None = None, *, stream: bool = False) -> Any
 ```
 
 Retrieve GSTR-1 Outward Supplies report content (e.g. XLSX, XLS or PDF).
@@ -1105,7 +1137,7 @@ Retrieve GSTR-1 Outward Supplies report content (e.g. XLSX, XLS or PDF).
 ##### `GST.download_gstr_outward_supplies`
 
 ```python
-def download_gstr_outward_supplies(self, save_path: str, params: Optional[Dict[str, Any]] = None) -> str
+def download_gstr_outward_supplies(self, save_path: str, params: dict[str, Any] | None = None) -> str
 ```
 
 Download GSTR-1 Outward Supplies report and save it to the specified path.
@@ -1113,7 +1145,7 @@ Download GSTR-1 Outward Supplies report and save it to the specified path.
 ##### `GST.get_gstr_inward_supplies`
 
 ```python
-def get_gstr_inward_supplies(self, params: Optional[Dict[str, Any]] = None) -> bytes
+def get_gstr_inward_supplies(self, params: dict[str, Any] | None = None, *, stream: bool = False) -> Any
 ```
 
 Retrieve GSTR-2 Inward Supplies report content (e.g. XLSX, XLS or PDF).
@@ -1121,73 +1153,16 @@ Retrieve GSTR-2 Inward Supplies report content (e.g. XLSX, XLS or PDF).
 ##### `GST.download_gstr_inward_supplies`
 
 ```python
-def download_gstr_inward_supplies(self, save_path: str, params: Optional[Dict[str, Any]] = None) -> str
+def download_gstr_inward_supplies(self, save_path: str, params: dict[str, Any] | None = None) -> str
 ```
 
 Download GSTR-2 Inward Supplies report and save it to the specified path.
 
 ---
 
-## Module `zoho.books.resources.settings`
+## Module `zoho.books.custom.projects`
 
-**Source:** [`src/zoho/books/resources/settings.py`](src/zoho/books/resources/settings.py)
-
-### Class `Locations`
-
-**Bases:** `BaseResource`
-
-Organization locations and their India tax-registration settings.
-
-#### Inherited Mixin Capabilities
-
-**From `BaseResource`:**
-
-- `list(params=None)`: Fetch one page of records from the resource endpoint.
-- `list_iter(params=None, resource_key=None, per_page=200)`: Generator yielding records across pages without buffering all in memory.
-- `list_all(params=None, resource_key=None, per_page=200)`: Auto-paginates and returns all records as a single list.
-- `get(resource_id, params=None)`: Fetch a single record by resource identifier.
-- `create(data, params=None, files=None)`: Create a record after validating required fields and defaults.
-- `update(resource_id, data, params=None, files=None)`: Update an existing record.
-- `delete(resource_id, params=None)`: Delete an existing record.
-- `_action(method, resource_id, action, ...)`: Execute a sub-action endpoint (e.g. status changes, sub-resources).
-
-#### Methods
-
-##### `Locations.__init__`
-
-```python
-def __init__(self, client: Any)
-```
-
-### Class `CustomFields`
-
-Zoho Books custom-field settings endpoints.
-
-#### Methods
-
-##### `CustomFields.__init__`
-
-```python
-def __init__(self, client: Any)
-```
-
-##### `CustomFields.list_for_entity`
-
-```python
-def list_for_entity(self, entity: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]
-```
-
-##### `CustomFields.create`
-
-```python
-def create(self, data: Dict[str, Any]) -> Dict[str, Any]
-```
-
----
-
-## Module `zoho.books.resources.projects`
-
-**Source:** [`src/zoho/books/resources/projects.py`](src/zoho/books/resources/projects.py)
+**Source:** [`src/zoho/books/custom/projects.py`](src/zoho/books/custom/projects.py)
 
 ### Class `Projects`
 
@@ -1222,7 +1197,7 @@ def __init__(self, client: Any)
 ##### `Projects.clone`
 
 ```python
-def clone(self, project_id: str, data: Dict[str, Any]) -> Dict[str, Any]
+def clone(self, project_id: str, data: dict[str, Any]) -> dict[str, Any]
 ```
 
 ### Class `Tasks`
@@ -1249,6 +1224,14 @@ def clone(self, project_id: str, data: Dict[str, Any]) -> Dict[str, Any]
 ```python
 def __init__(self, client: Any)
 ```
+
+##### `Tasks.create`
+
+```python
+def create(self, data: dict[str, Any] | list[dict[str, Any]], params: dict[str, Any] | None = None, files: dict[str, Any] | None = None) -> Any
+```
+
+Books task creation accepts an array as well as a single task.
 
 ### Class `TimeEntries`
 
@@ -1278,20 +1261,20 @@ def __init__(self, client: Any)
 ##### `TimeEntries.start_timer`
 
 ```python
-def start_timer(self, time_entry_id: str) -> Dict[str, Any]
+def start_timer(self, time_entry_id: str) -> dict[str, Any]
 ```
 
 ##### `TimeEntries.stop_timer`
 
 ```python
-def stop_timer(self) -> Dict[str, Any]
+def stop_timer(self) -> dict[str, Any]
 ```
 
 ---
 
-## Module `zoho.books.resources.reports`
+## Module `zoho.books.custom.reports`
 
-**Source:** [`src/zoho/books/resources/reports.py`](src/zoho/books/resources/reports.py)
+**Source:** [`src/zoho/books/custom/reports.py`](src/zoho/books/custom/reports.py)
 
 Zoho Books financial report requests.
 
@@ -1403,9 +1386,9 @@ and from the browser's ``profitandloss-scheduleformat`` view route.
 
 ---
 
-## Module `zoho.books.resources.ledger`
+## Module `zoho.books.custom.ledger`
 
-**Source:** [`src/zoho/books/resources/ledger.py`](src/zoho/books/resources/ledger.py)
+**Source:** [`src/zoho/books/custom/ledger.py`](src/zoho/books/custom/ledger.py)
 
 Read Zoho Books account registers as detailed general-ledger entries.
 
@@ -1452,14 +1435,6 @@ def iter_transactions_for_accounts(self, account_ids: Sequence[str], *, from_dat
 ```
 
 Yield detailed rows from one filtered register query across pages.
-
----
-
-## Module `zoho.books.resources.fixed_assets`
-
-**Source:** [`src/zoho/books/resources/fixed_assets.py`](src/zoho/books/resources/fixed_assets.py)
-
-Read fixed assets and their valuation histories through the Books API.
 
 ### Class `FixedAssets`
 

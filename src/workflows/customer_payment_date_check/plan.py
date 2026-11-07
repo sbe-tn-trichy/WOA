@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from zoho.helpers import parse_date
 
 
-def parse_any_date(val: Any) -> Optional[date]:
+def parse_any_date(val: Any) -> date | None:
     if not val:
         return None
     s = str(val).strip()
@@ -21,10 +22,10 @@ def parse_any_date(val: Any) -> Optional[date]:
     return parse_date(val)
 
 
-def build_update_plan(audit_result_or_rows: Any) -> Dict[str, Any]:
+def build_update_plan(audit_result_or_rows: Any) -> dict[str, Any]:
     """Build update plan to align application date to max(payment_date, invoice_date)."""
-    plan_rows: List[Dict[str, Any]] = []
-    by_payment: Dict[str, List[Dict[str, Any]]] = {}
+    plan_rows: list[dict[str, Any]] = []
+    by_payment: dict[str, list[dict[str, Any]]] = {}
 
     # Case 1: Structured audit result payload
     if isinstance(audit_result_or_rows, dict):
@@ -142,7 +143,7 @@ def build_update_plan(audit_result_or_rows: Any) -> Dict[str, Any]:
     }
 
 
-def render_plan_markdown(plan: Dict[str, Any]) -> str:
+def render_plan_markdown(plan: dict[str, Any]) -> str:
     lines = [
         "# Invoice Payment Date Update Plan",
         "",

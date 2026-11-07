@@ -3,7 +3,7 @@
 
 import argparse
 import csv
-import json
+from utils import json
 from pathlib import Path
 
 try:

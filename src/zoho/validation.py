@@ -2,10 +2,23 @@
 
 from collections.abc import Mapping
 
+try:
+    from pydantic_core import SchemaValidator, ValidationError, core_schema
+    _RECORD_VALIDATOR: SchemaValidator | None = SchemaValidator(
+        core_schema.dict_schema(core_schema.str_schema(), core_schema.any_schema())
+    )
+except ImportError:
+    _RECORD_VALIDATOR = None
+
 
 def require_record(value: object, context: str) -> dict[str, object]:
     if not isinstance(value, Mapping):
         raise ValueError(f"{context} must be an object")
+    if _RECORD_VALIDATOR is not None and isinstance(value, dict):
+        try:
+            return _RECORD_VALIDATOR.validate_python(value)
+        except ValidationError:
+            raise ValueError(f"{context} must have string keys") from None
     result: dict[str, object] = {}
     for key, item in value.items():
         if not isinstance(key, str):

@@ -4,12 +4,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Any, Mapping, Sequence
-import json
+from collections.abc import Mapping, Sequence
+from typing import Any
+from utils import json
 import re
 
-import requests
+from utils import http_transport
 
+from utils.http import request_json
 from workflows.core.matching import to_finite_decimal
 
 KEYS = {"profitandloss": "schedule_profit_and_loss", "balancesheet": "schedule_balance_sheet"}
@@ -48,16 +50,19 @@ def fetch_schedule_reports(books: Any, *, from_date: str, to_date: str,
 
 
 def read_sheet_cells(spreadsheet_id: str, cells: Sequence[str], *, access_token: str,
-                     session: Any = requests) -> dict[str, Any]:
+                     session: Any = http_transport) -> dict[str, Any]:
     """Read exact qualified A1 cells using the caller's Google OAuth token."""
     if not re.fullmatch(r"[A-Za-z0-9_-]+", spreadsheet_id) or not access_token:
         raise ValueError("A spreadsheet ID and Google OAuth token are required")
-    response = session.get(
+    payload = request_json(
+        "GET",
         f"https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values:batchGet",
+        session=session,
         headers={"Authorization": f"Bearer {access_token}"},
-        params={"ranges": list(cells), "valueRenderOption": "UNFORMATTED_VALUE"}, timeout=30)
-    response.raise_for_status()
-    ranges = response.json().get("valueRanges", [])
+        params={"ranges": list(cells), "valueRenderOption": "UNFORMATTED_VALUE"},
+        timeout=30,
+    )
+    ranges = payload.get("valueRanges", [])
     if len(ranges) != len(cells):
         raise ValueError("Google Sheets did not return every requested cell")
     result = {}

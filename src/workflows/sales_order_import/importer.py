@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 import math
 from decimal import Decimal
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from zoho.exceptions import ZohoError
 from zoho.helpers.items import find_item_by_exact_sku

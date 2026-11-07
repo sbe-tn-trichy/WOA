@@ -22,6 +22,23 @@ scope/exclusions, platform, commands/results, and unresolved limitations here.
 Use `--since` with an explicitly selected commit until an original review commit
 is established. An inspection report does not advance the substantive review baseline.
 
+## 2026-11-07 pyqwest migration verification
+
+Reviewed `d84be7ecc7ae4e1be742a874440df992c460ca41` plus pre-existing local
+changes and the pyqwest migration. Scope: direct HTTP routing, body encoding,
+response ownership, retries, timeouts, TLS and dependency/mocking integration.
+Platform: macOS arm64, workspace CPython 3.14.10. Native local-server tests
+verify multipart replay after 401/429 (SDK-001), fixed-length uploads, incremental
+downloads, interrupted-transfer errors, cookie isolation and redirect credential
+stripping. Full suite: 3,609 passed and four subtests; ty and analyzer verification
+passed. A public documentation GET verified native HTTPS; no live financial
+mutations or Zoho/Google endpoint checks were performed. Windows and hosted CI
+remain unverified. SDK-003 URL-query logging remains an existing open finding,
+not a new migration regression or a resolved issue. See the
+[implementation evidence](CHANGELOG.md#migrate-project-http-calls-from-requests-to-pyqwest)
+and [transport contracts](okf/http-transport.md). This does not advance the
+substantive review baseline or close findings awaiting broader verification.
+
 ## 2026-11-07 structure, readability, performance and security review
 
 Reviewed revision `3ee068baa917bfd3b05af3d49242bcaed54aa1f3` plus existing

@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from datetime import date
 from calendar import monthrange
 from decimal import Decimal
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 from workflows.core.matching import to_finite_decimal
 
 

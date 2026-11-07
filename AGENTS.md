@@ -42,8 +42,9 @@ correctness and data safety:
 
 ## Architecture
 
-- Library code lives in `src/zoho/` (low-level clients) and `src/workflows/`
-  (domain workflows); permanent entry points live in `apps/`.
+- Library code lives in `src/utils/` (cross-service utilities such as `utils.http`),
+  `src/zoho/` (low-level clients), and `src/workflows/` (domain workflows);
+  permanent entry points live in `apps/`.
 - Read `project_structure.max_nested_folder_depth` from `config/config.yaml` for
   the maximum directory depth beneath `apps/`, `src/workflows/`, and `output/`
   (root depth 0; a direct child is depth 1). Use 1 if the local file or key is
@@ -56,8 +57,10 @@ correctness and data safety:
   (e.g., `apps/<domain>/`) alongside unified entry-point dispatchers at the `apps/`
   root. Transparent meta-path redirection in `apps/__init__.py` preserves
   backward-compatible imports for legacy script paths.
-- Imports flow `zoho <- workflows <- apps`. Neither `zoho` nor `workflows` may
-  import from `apps` or `scripts`; workflows contain no servers or CLI parsers.
+- Imports flow `utils <- zoho <- workflows <- apps`. `utils` must not import from
+  `zoho`, `workflows`, `google_sheets`, `apps`, or `scripts`; neither `zoho` nor
+  `workflows` may import from `apps` or `scripts`; workflows contain no servers
+  or CLI parsers.
 - `scripts/` is Git-ignored scratch space with a retention target under 24 hours.
 - Keep web HTML/CSS/JS in `apps/static/`, loaded from Python rather than embedded.
 - Export supported public APIs and exceptions from the relevant `__init__.py`.
@@ -92,6 +95,7 @@ correctness and data safety:
 ## Execution Environment & Fast-Path
 
 - **Immediate Execution**: Attempt a requested execution first without unrelated exploration. This does not authorize live mutations or bypass explicit confirmation. If the interpreter/configuration is unavailable, report the failure and follow the setup runbook; never switch silently to another environment or tenant.
+- Use uv for authorized environment provisioning, package installation and dependency checks; pip is not required. Follow the runbook and preserve the constraints baseline.
 - Always run Python commands and tests using the workspace virtual environment:
   - Windows PowerShell: `.\.venv\Scripts\python.exe <script>` and `.\.venv\Scripts\python.exe -m pytest`.
   - Linux/macOS: `.venv/bin/python <script>` and `.venv/bin/python -m pytest`.

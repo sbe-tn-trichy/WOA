@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Any
 
 logger = logging.getLogger("zoho.helpers.bins")
 
@@ -16,7 +17,7 @@ def _escape_sql_literal(value: Any) -> str:
     return str(value).replace("'", "''")
 
 
-def _to_clean_list(val: Any) -> List[str]:
+def _to_clean_list(val: Any) -> list[str]:
     """Convert a single value or sequence into a list of non-empty strings."""
     if val is None:
         return []
@@ -34,13 +35,13 @@ def _to_clean_list(val: Any) -> List[str]:
 def get_bins_for_items(
     analytics_client: Any,
     workspace_id: str = DEFAULT_WORKSPACE_ID,
-    item_ids: Optional[Union[Sequence[Union[str, int]], str, int]] = None,
-    skus: Optional[Union[Sequence[str], str]] = None,
-    item_names: Optional[Union[Sequence[str], str]] = None,
+    item_ids: Sequence[str | int] | str | int | None = None,
+    skus: Sequence[str] | str | None = None,
+    item_names: Sequence[str] | str | None = None,
     available_only: bool = True,
     table_name: str = DEFAULT_TABLE_NAME,
-    order_by: Optional[str] = 'ORDER BY "Item Name" ASC',
-) -> List[Dict[str, Any]]:
+    order_by: str | None = 'ORDER BY "Item Name" ASC',
+) -> list[dict[str, Any]]:
     """Query item stock across warehouse bins using Zoho Analytics.
 
     Parameters:
@@ -65,7 +66,7 @@ def get_bins_for_items(
             - Out
             - Available
     """
-    conditions: List[str] = []
+    conditions: list[str] = []
 
     if available_only:
         conditions.append('"Available" > 0')
@@ -106,11 +107,11 @@ def get_bins_by_item_map(
     analytics_client: Any,
     workspace_id: str = DEFAULT_WORKSPACE_ID,
     key_field: str = "SKU",
-    item_ids: Optional[Union[Sequence[Union[str, int]], str, int]] = None,
-    skus: Optional[Union[Sequence[str], str]] = None,
+    item_ids: Sequence[str | int] | str | int | None = None,
+    skus: Sequence[str] | str | None = None,
     available_only: bool = True,
     table_name: str = DEFAULT_TABLE_NAME,
-) -> Dict[str, List[Dict[str, Any]]]:
+) -> dict[str, list[dict[str, Any]]]:
     """Fetch bin stock grouped by item key (e.g. SKU, Product ID, or Item Name).
 
     Returns a mapping of {key_value: [bin_record_1, bin_record_2, ...]}.
@@ -123,7 +124,7 @@ def get_bins_by_item_map(
         available_only=available_only,
         table_name=table_name,
     )
-    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    grouped: dict[str, list[dict[str, Any]]] = {}
     for record in records:
         key_val = record.get(key_field)
         if key_val is not None:

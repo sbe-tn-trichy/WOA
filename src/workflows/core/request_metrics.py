@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 import logging
 from threading import Lock
 from time import monotonic
-from typing import Any, Iterator, Mapping
+from collections.abc import Iterator, Mapping
+from typing import Any
 
 
 @dataclass

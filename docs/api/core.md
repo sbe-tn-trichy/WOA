@@ -5,6 +5,46 @@ Shared HTTP transport, authentication managers, base resource abstractions, exce
 
 ## Table of Contents
 
+- [`utils.http`](#utils-http)
+  - [Class `SeekableStream`](#utils-http-seekablestream)
+  - [Class `_HttpMethodCallable`](#utils-http-_httpmethodcallable)
+  - [Class `_HttpRequestCallable`](#utils-http-_httprequestcallable)
+  - [Class `_ChunkIterable`](#utils-http-_chunkiterable)
+  - [Function `is_json_content_type`](#utils-http-is_json_content_type)
+  - [Function `is_html_body`](#utils-http-is_html_body)
+  - [Function `sanitize_error_text`](#utils-http-sanitize_error_text)
+  - [Function `extract_retry_after`](#utils-http-extract_retry_after)
+  - [Function `parse_retry_after`](#utils-http-parse_retry_after)
+  - [Function `validate_https_override_url`](#utils-http-validate_https_override_url)
+  - [Function `capture_upload_positions`](#utils-http-capture_upload_positions)
+  - [Function `rewind_uploads`](#utils-http-rewind_uploads)
+  - [Function `filter_request_kwargs`](#utils-http-filter_request_kwargs)
+  - [Function `send_http_request`](#utils-http-send_http_request)
+  - [Function `unwrap_json_body`](#utils-http-unwrap_json_body)
+  - [Function `get_json_value`](#utils-http-get_json_value)
+  - [Function `request_json`](#utils-http-request_json)
+  - [Function `decode_response`](#utils-http-decode_response)
+  - [Function `write_response_to_file`](#utils-http-write_response_to_file)
+- [`utils.json`](#utils-json)
+  - [Function `dumps`](#utils-json-dumps)
+  - [Function `loads`](#utils-json-loads)
+  - [Function `dump`](#utils-json-dump)
+  - [Function `load`](#utils-json-load)
+- [`utils.http_transport`](#utils-http_transport)
+  - [Class `TransportError`](#utils-http_transport-transporterror)
+  - [Class `HTTPError`](#utils-http_transport-httperror)
+  - [Class `RequestOptions`](#utils-http_transport-requestoptions)
+  - [Class `_Headers`](#utils-http_transport-_headers)
+  - [Class `Response`](#utils-http_transport-response)
+  - [Class `_Readable`](#utils-http_transport-_readable)
+  - [Class `Session`](#utils-http_transport-session)
+  - [Function `request`](#utils-http_transport-request)
+  - [Function `get`](#utils-http_transport-get)
+  - [Function `post`](#utils-http_transport-post)
+- [`utils.yaml`](#utils-yaml)
+  - [Function `safe_load`](#utils-yaml-safe_load)
+- [`utils.pdf`](#utils-pdf)
+  - [Function `read_pdf_pages`](#utils-pdf-read_pdf_pages)
 - [`zoho.auth`](#zoho-auth)
   - [Class `HttpTokenProvider`](#zoho-auth-httptokenprovider)
   - [Class `ZohoOAuth2Manager`](#zoho-auth-zohooauth2manager)
@@ -37,9 +77,424 @@ Shared HTTP transport, authentication managers, base resource abstractions, exce
   - [Function `require_text`](#zoho-validation-require_text)
 - [`zoho.identifiers`](#zoho-identifiers)
 - [`zoho.logging`](#zoho-logging)
+  - [Function `configure_service_logger`](#zoho-logging-configure_service_logger)
   - [Function `configure_logger`](#zoho-logging-configure_logger)
-- [`zoho.downloads`](#zoho-downloads)
-  - [Function `write_response_to_file`](#zoho-downloads-write_response_to_file)
+
+---
+
+## Module `utils.http`
+
+**Source:** [`src/utils/http.py`](src/utils/http.py)
+
+Reusable HTTP transport, session, retry, and streaming download utilities.
+
+**Declared Exports (`__all__`):**
+`DEFAULT_RETRY_AFTER`, `DEFAULT_TIMEOUT`, `MAX_RETRY_AFTER`, `SeekableStream`, `capture_upload_positions`, `decode_response`, `extract_retry_after`, `filter_request_kwargs`, `get_json_value`, `is_html_body`, `is_json_content_type`, `parse_retry_after`, `request_json`, `rewind_uploads`, `sanitize_error_text`, `send_http_request`, `unwrap_json_body`, `validate_https_override_url`, `write_response_to_file`
+
+### Constants & Settings
+
+| Constant | Type | Value | Description |
+|---|---|---|---|
+| `DEFAULT_TIMEOUT` | `float` | `30.0` | - |
+| `DEFAULT_RETRY_AFTER` | `int` | `12` | - |
+| `MAX_RETRY_AFTER` | `int` | `60` | - |
+
+### Class `SeekableStream`
+
+**Bases:** `Protocol`
+
+Protocol for upload streams supporting tell/seek replay across retries.
+
+#### Methods
+
+##### `SeekableStream.read`
+
+```python
+def read(self, size: int = ...) -> bytes
+```
+
+##### `SeekableStream.tell`
+
+```python
+def tell(self) -> int
+```
+
+##### `SeekableStream.seek`
+
+```python
+def seek(self, offset: int) -> int
+```
+
+### Class `_HttpMethodCallable`
+
+**Bases:** `Protocol`
+
+### Class `_HttpRequestCallable`
+
+**Bases:** `Protocol`
+
+### Class `_ChunkIterable`
+
+**Bases:** `Protocol`
+
+### Function `is_json_content_type`
+
+```python
+def is_json_content_type(content_type: str) -> bool
+```
+
+Return True if ``content_type`` indicates a JSON media type.
+
+### Function `is_html_body`
+
+```python
+def is_html_body(text: str) -> bool
+```
+
+Return True if ``text`` looks like an HTML document/error page.
+
+### Function `sanitize_error_text`
+
+```python
+def sanitize_error_text(text: str | None, status_code: int, reason: str | None = None) -> str
+```
+
+Format a safe fallback error message without leaking raw HTML pages.
+
+### Function `extract_retry_after`
+
+```python
+def extract_retry_after(headers: object) -> str | None
+```
+
+Return the raw ``Retry-After`` header value when ``headers`` is a mapping.
+
+### Function `parse_retry_after`
+
+```python
+def parse_retry_after(headers: object, default: int = DEFAULT_RETRY_AFTER, maximum: int = MAX_RETRY_AFTER) -> int
+```
+
+Parse ``Retry-After`` into a bounded delay in ``[0, maximum]`` seconds.
+
+### Function `validate_https_override_url`
+
+```python
+def validate_https_override_url(override_url: str, allowed_hosts: collections.abc.Set[str | None] | Sequence[str | None], *, error_message: str = 'Override URL must use an approved HTTPS Zoho host.') -> None
+```
+
+Ensure ``override_url`` uses HTTPS on port 443 without credentials on an allowed host.
+
+### Function `capture_upload_positions`
+
+```python
+def capture_upload_positions(files: Mapping[str, object] | None) -> list[tuple[SeekableStream, int]]
+```
+
+Record current seek positions of upload streams; reject non-seekable streams.
+
+### Function `rewind_uploads`
+
+```python
+def rewind_uploads(positions: Sequence[tuple[SeekableStream, int]]) -> None
+```
+
+Restore recorded seek positions before retrying an upload request.
+
+### Function `filter_request_kwargs`
+
+```python
+def filter_request_kwargs(kwargs: Mapping[str, object], *, keep_none_keys: collections.abc.Set[str] = frozenset()) -> dict[str, object]
+```
+
+Copy request kwargs, dropping ``url``/``method`` and unrequested ``None`` entries.
+
+### Function `send_http_request`
+
+```python
+def send_http_request(method: str, url: str, *, session: http_transport.Session | None = None, **kwargs: object) -> http_transport.Response
+```
+
+Execute through an explicit session or the shared pyqwest transport.
+
+### Function `unwrap_json_body`
+
+```python
+def unwrap_json_body(payload: object) -> object
+```
+
+Unwrap a payload dictionary or stringified JSON body from a gateway envelope.
+
+### Function `get_json_value`
+
+```python
+def get_json_value(payload: object, *keys: str | int, default: object = None, required: bool = False, unwrap_body: bool = True) -> object
+```
+
+Extract a specific nested value by key or path from a JSON object.
+
+If ``unwrap_body`` is True and ``payload`` contains a wrapped ``body`` (common
+in serverless/gateway responses), it unwraps the inner JSON payload first.
+
+### Function `request_json`
+
+```python
+def request_json(method: str, url: str, *, session: object = http_transport, headers: Mapping[str, str] | None = None, params: Mapping[str, object] | None = None, json: object = None, data: object = None, timeout: float = DEFAULT_TIMEOUT, key: str | int | None = None, unwrap_body: bool = False) -> object
+```
+
+Send an HTTP request using ``session``, raise for HTTP status, and decode JSON.
+
+### Function `decode_response`
+
+```python
+def decode_response(response: http_transport.Response) -> object
+```
+
+Decode a non-streamed HTTP response into JSON, raw bytes, or ``{}`` for empty bodies.
+
+### Function `write_response_to_file`
+
+```python
+def write_response_to_file(response: object, destination: str, chunk_size: int = 8192) -> str
+```
+
+Write bytes or a streaming HTTP response to ``destination`` and close it.
+
+---
+
+## Module `utils.json`
+
+**Source:** [`src/utils/json.py`](src/utils/json.py)
+
+Project JSON codec backed by python-rapidjson.
+
+**Declared Exports (`__all__`):**
+`JSONDecodeError`, `dump`, `dumps`, `load`, `loads`
+
+### Function `dumps`
+
+```python
+def dumps(value: object, *, indent: int | None = None, ensure_ascii: bool = True, sort_keys: bool = False, default: Callable[[object], object] | None = None, allow_nan: bool = True) -> str
+```
+
+Encode compact JSON; preserve explicit serializers and exact Decimal numbers.
+
+### Function `loads`
+
+```python
+def loads(value: str | bytes | bytearray) -> object
+```
+
+Decode with existing int/float types and legacy byte-encoding support.
+
+### Function `dump`
+
+```python
+def dump(value: object, stream: IO[str], *, indent: int | None = None, ensure_ascii: bool = True, sort_keys: bool = False, default: Callable[[object], object] | None = None, allow_nan: bool = True) -> None
+```
+
+Write JSON text to an existing stream; file ownership stays with the caller.
+
+### Function `load`
+
+```python
+def load(stream: IO[str] | IO[bytes]) -> object
+```
+
+Read one JSON document from a text or binary stream.
+
+---
+
+## Module `utils.http_transport`
+
+**Source:** [`src/utils/http_transport.py`](src/utils/http_transport.py)
+
+Synchronous pyqwest transport for the project's HTTP request conventions.
+
+**Declared Exports (`__all__`):**
+`HTTPError`, `RequestOptions`, `Response`, `Session`, `TransportError`, `get`, `post`, `request`
+
+### Class `TransportError`
+
+**Bases:** `Exception`
+
+An HTTP connection, timeout, protocol or body-transfer failure.
+
+### Class `HTTPError`
+
+**Bases:** `TransportError`
+
+An unsuccessful HTTP response.
+
+### Class `RequestOptions`
+
+**Bases:** `TypedDict`
+
+#### Class Attributes
+
+| Attribute | Type | Default Value | Notes |
+|---|---|---|---|
+| `headers` | `Mapping[str, str] | None` | - | - |
+| `params` | `object` | - | - |
+| `json` | `object` | - | - |
+| `data` | `object` | - | - |
+| `files` | `Mapping[str, object] | None` | - | - |
+| `stream` | `bool` | - | - |
+| `timeout` | `float | tuple[float | None, float | None] | None` | - | - |
+
+### Class `_Headers`
+
+**Bases:** `Mapping[str, str]`
+
+#### Methods
+
+##### `_Headers.__init__`
+
+```python
+def __init__(self, headers: pyqwest.Headers)
+```
+
+### Class `Response`
+
+Own a native response while exposing buffered and incremental reads.
+
+#### Methods
+
+##### `Response.__init__`
+
+```python
+def __init__(self, response: pyqwest.SyncResponse)
+```
+
+##### `Response.content`
+
+```python
+@property
+def content(self) -> bytes
+```
+
+##### `Response.text`
+
+```python
+@property
+def text(self) -> str
+```
+
+##### `Response.json`
+
+```python
+def json(self) -> object
+```
+
+##### `Response.iter_content`
+
+```python
+def iter_content(self, chunk_size: int = 8192) -> Iterator[bytes]
+```
+
+##### `Response.raise_for_status`
+
+```python
+def raise_for_status(self) -> None
+```
+
+##### `Response.close`
+
+```python
+def close(self) -> None
+```
+
+### Class `_Readable`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `_Readable.read`
+
+```python
+def read(self, size: int = ...) -> bytes
+```
+
+### Class `Session`
+
+Reuse native pools, with Requests-style connect/read inactivity timeouts.
+
+#### Methods
+
+##### `Session.__init__`
+
+```python
+def __init__(self, *, persist_cookies: bool = True) -> None
+```
+
+##### `Session.request`
+
+```python
+def request(self, method: str, url: str, *, headers: Mapping[str, str] | None = None, params: object = None, json: object = None, data: object = None, files: Mapping[str, object] | None = None, stream: bool = False, timeout: float | tuple[float | None, float | None] | None = 30) -> Response
+```
+
+##### `Session.close`
+
+```python
+def close(self) -> None
+```
+
+### Function `request`
+
+```python
+def request(method: str, url: str, **kwargs: Unpack[RequestOptions]) -> Response
+```
+
+### Function `get`
+
+```python
+def get(url: str, **kwargs: Unpack[RequestOptions]) -> Response
+```
+
+### Function `post`
+
+```python
+def post(url: str, **kwargs: Unpack[RequestOptions]) -> Response
+```
+
+---
+
+## Module `utils.yaml`
+
+**Source:** [`src/utils/yaml.py`](src/utils/yaml.py)
+
+YAMLRocks loading with the project's existing safe YAML policy.
+
+**Declared Exports (`__all__`):**
+`YAMLError`, `safe_load`, `safe_dump`
+
+### Function `safe_load`
+
+```python
+def safe_load(stream: str | bytes | IO[str]) -> object
+```
+
+Read one document, preserving legacy scalars and rejecting custom tags.
+
+---
+
+## Module `utils.pdf`
+
+**Source:** [`src/utils/pdf.py`](src/utils/pdf.py)
+
+Text extraction shared by supplier PDF parsers.
+
+**Declared Exports (`__all__`):**
+`read_pdf_pages`
+
+### Function `read_pdf_pages`
+
+```python
+def read_pdf_pages(path: str | Path) -> list[str]
+```
+
+Extract page text with normalized newlines and close native handles.
 
 ---
 
@@ -56,13 +511,13 @@ Retrieve service tokens from an HTTP token broker without persisting them.
 ##### `HttpTokenProvider.__init__`
 
 ```python
-def __init__(self, url: str, timeout: float = 10.0, fallback_services: Optional[Mapping[str, str]] = None)
+def __init__(self, url: str, timeout: float = 10.0, fallback_services: Mapping[str, str] | None = None)
 ```
 
 ##### `HttpTokenProvider.get_tokens`
 
 ```python
-def get_tokens(self) -> Dict[str, Optional[str]]
+def get_tokens(self) -> dict[str, str | None]
 ```
 
 ##### `HttpTokenProvider.get_token`
@@ -73,15 +528,14 @@ def get_token(self, service: str) -> str
 
 ### Class `ZohoOAuth2Manager`
 
-Handles Zoho OAuth 2.0 access token caching, expiration checks, 
-and token refreshing.
+Caches a Zoho OAuth 2.0 access token and refreshes it when expired.
 
 #### Methods
 
 ##### `ZohoOAuth2Manager.__init__`
 
 ```python
-def __init__(self, client_id: str, client_secret: str, refresh_token: Optional[str] = None, domain: str = 'com', access_token: Optional[str] = None, expires_at: Optional[float] = None, keyring_service: Optional[str] = None, keyring_username: Optional[str] = None)
+def __init__(self, client_id: str, client_secret: str, refresh_token: str | None = None, domain: str = 'com', access_token: str | None = None, expires_at: float | None = None, keyring_service: str | None = None, keyring_username: str | None = None)
 ```
 
 ##### `ZohoOAuth2Manager.refresh_token`
@@ -91,8 +545,7 @@ def __init__(self, client_id: str, client_secret: str, refresh_token: Optional[s
 def refresh_token(self) -> str
 ```
 
-Retrieves the refresh token. Either returns the direct token string 
-or fetches it from the system keyring if keyring parameters are set.
+Direct token, else the system keyring entry.
 
 ##### `ZohoOAuth2Manager.get_token_url`
 
@@ -106,7 +559,7 @@ def get_token_url(self) -> str
 def refresh_access_token(self) -> str
 ```
 
-Calls Zoho's OAuth endpoint to exchange the refresh token for a new access token.
+Exchange the refresh token for a new access token.
 
 ##### `ZohoOAuth2Manager.get_access_token`
 
@@ -114,7 +567,7 @@ Calls Zoho's OAuth endpoint to exchange the refresh token for a new access token
 def get_access_token(self) -> str
 ```
 
-Returns a valid access token. Refreshes automatically if expired or missing.
+Return a valid access token, refreshing if missing or expired.
 
 ### Class `CatalystAuth`
 
@@ -131,8 +584,7 @@ Allows explicit request mutation token switching via get_token_for_request(is_mu
 def get_token_for_request(self, is_mutation: bool) -> str
 ```
 
-Explicitly resolves token based on request mutation flag,
-bypassing expensive stack introspection.
+Broker token for mutations; direct token for reads.
 
 ### Function `fetch_token_from_catalyst`
 
@@ -162,7 +614,7 @@ domain resolution, and unified automatic 401 token refresh retries.
 ##### `BaseZohoClient.__init__`
 
 ```python
-def __init__(self, access_token: Any, domain: str, base_url: str, service_name: str, token_refresh_callback: Optional[Any] = None, on_request_completed: Optional[Any] = None, default_timeout: int = 30)
+def __init__(self, access_token: Any, domain: str, base_url: str, service_name: str, token_refresh_callback: Any | None = None, on_request_completed: Any | None = None, default_timeout: int = 30)
 ```
 
 ##### `BaseZohoClient.close`
@@ -176,13 +628,13 @@ Close the underlying HTTP session.
 ##### `BaseZohoClient._raise_for_status`
 
 ```python
-def _raise_for_status(self, response: requests.Response, endpoint: Optional[str] = None)
+def _raise_for_status(self, response: http_transport.Response, endpoint: str | None = None) -> None
 ```
 
 ##### `BaseZohoClient.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None, stream: bool = False, override_url: Optional[str] = None, is_mutation: Optional[bool] = None, timeout: Optional[int] = None) -> Any
+def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, files: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
 ```
 
 ---
@@ -199,11 +651,11 @@ Shared base class for Zoho API modules providing standard CRUD and pagination.
 
 | Attribute | Type | Default Value | Notes |
 |---|---|---|---|
-| `required_fields` | `List[str]` | `[]` | - |
-| `defaults` | `Dict[str, object]` | `{}` | - |
-| `line_item_required_fields` | `List[str]` | `[]` | - |
-| `line_item_defaults` | `Dict[str, object]` | `{}` | - |
-| `error_class` | `Type[ZohoError]` | `ZohoError` | - |
+| `required_fields` | `builtins.list[str]` | `[]` | - |
+| `defaults` | `dict[str, object]` | `{}` | - |
+| `line_item_required_fields` | `builtins.list[str]` | `[]` | - |
+| `line_item_defaults` | `dict[str, object]` | `{}` | - |
+| `error_class` | `type[ZohoError]` | `ZohoError` | - |
 | `logger_name` | `str` | `'zoho.api'` | - |
 
 #### Methods
@@ -217,7 +669,7 @@ def __init__(self, client: BaseZohoClient, endpoint: str) -> None
 ##### `BaseResource._prepare_payload`
 
 ```python
-def _prepare_payload(self, data: Dict[str, object], check_required: bool = True) -> Dict[str, object]
+def _prepare_payload(self, data: dict[str, object], check_required: bool = True) -> dict[str, object]
 ```
 
 Merge defaults (if creating) and check if all required fields are present.
@@ -225,13 +677,13 @@ Merge defaults (if creating) and check if all required fields are present.
 ##### `BaseResource.list`
 
 ```python
-def list(self, params: Optional[Dict[str, object]] = None) -> object
+def list(self, params: dict[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource.list_iter`
 
 ```python
-def list_iter(self, params: Optional[Dict[str, object]] = None, resource_key: Optional[str] = None, per_page: int = 200) -> Iterator[Dict[str, object]]
+def list_iter(self, params: dict[str, object] | None = None, resource_key: str | None = None, per_page: int = 200) -> Iterator[dict[str, object]]
 ```
 
 Generator yielding records item-by-item across pages without buffering all in memory.
@@ -239,7 +691,7 @@ Generator yielding records item-by-item across pages without buffering all in me
 ##### `BaseResource.list_all`
 
 ```python
-def list_all(self, params: Optional[Dict[str, object]] = None, resource_key: Optional[str] = None) -> List[Dict[str, object]]
+def list_all(self, params: dict[str, object] | None = None, resource_key: str | None = None) -> builtins.list[dict[str, object]]
 ```
 
 Helper to fetch all records across all pages.
@@ -247,31 +699,31 @@ Helper to fetch all records across all pages.
 ##### `BaseResource.get`
 
 ```python
-def get(self, resource_id: str, params: Optional[Dict[str, object]] = None) -> object
+def get(self, resource_id: str, params: dict[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource.create`
 
 ```python
-def create(self, data: Dict[str, object], params: Optional[Dict[str, object]] = None, files: Optional[Dict[str, object]] = None) -> object
+def create(self, data: dict[str, object], params: dict[str, object] | None = None, files: dict[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource.update`
 
 ```python
-def update(self, resource_id: str, data: Dict[str, object], params: Optional[Dict[str, object]] = None, files: Optional[Dict[str, object]] = None) -> object
+def update(self, resource_id: str, data: dict[str, object], params: dict[str, object] | None = None, files: dict[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource.delete`
 
 ```python
-def delete(self, resource_id: str, params: Optional[Dict[str, object]] = None) -> object
+def delete(self, resource_id: str, params: dict[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource._action`
 
 ```python
-def _action(self, method: str, resource_id: Optional[str], action: str, data: Optional[Dict[str, object]] = None, params: Optional[Dict[str, object]] = None) -> object
+def _action(self, method: str, resource_id: str | None, action: str, data: dict[str, object] | None = None, params: dict[str, object] | None = None) -> object
 ```
 
 Helper for action endpoints like /invoices/{id}/status/sent.
@@ -293,7 +745,7 @@ Base exception class for all Zoho SDK errors.
 ##### `ZohoError.__init__`
 
 ```python
-def __init__(self, message: str, status_code: Optional[int] = None, error_code: Optional[Union[str, int]] = None, response_data: Optional[Any] = None, endpoint: Optional[str] = None, retry_after: Optional[Union[str, int]] = None)
+def __init__(self, message: str, status_code: int | None = None, error_code: str | int | None = None, response_data: Any | None = None, endpoint: str | None = None, retry_after: str | int | None = None)
 ```
 
 ### Class `ZohoERPError`
@@ -366,7 +818,7 @@ Custom exception for Zoho Sheet API errors.
 
 | Constant | Type | Value | Description |
 |---|---|---|---|
-| `SENSITIVE_PARAM_KEYS` | `Set[str]` | `{'authtoken', 'auth_token', 'authoriz...` | Known sensitive parameter keys (case-insensitive) |
+| `SENSITIVE_PARAM_KEYS` | `set[str]` | `{'authtoken', 'auth_token', 'authoriz...` | Known sensitive parameter keys (case-insensitive) |
 
 ### Function `mask_sensitive_value`
 
@@ -380,7 +832,7 @@ Values with 4 or fewer characters are masked as '****'.
 ### Function `sanitize_log_params`
 
 ```python
-def sanitize_log_params(params: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]
+def sanitize_log_params(params: dict[str, Any] | None) -> dict[str, Any] | None
 ```
 
 Recursively sanitize query parameters or payload dictionaries for logging.
@@ -389,7 +841,7 @@ Sensitive keys are masked showing only their last 4 characters.
 ### Function `sanitize_filename`
 
 ```python
-def sanitize_filename(name: Optional[str], fallback: str = 'unnamed') -> str
+def sanitize_filename(name: str | None, fallback: str = 'unnamed') -> str
 ```
 
 Sanitize an untrusted filename to prevent path traversal and invalid filesystem characters.
@@ -448,6 +900,14 @@ Nominal identifiers for validated records; these do not validate tenant scope.
 
 **Source:** [`src/zoho/logging.py`](src/zoho/logging.py)
 
+### Function `configure_service_logger`
+
+```python
+def configure_service_logger(service_name: str) -> logging.Logger
+```
+
+Configure a service's primary logger and its compatibility loggers.
+
 ### Function `configure_logger`
 
 ```python
@@ -456,21 +916,5 @@ def configure_logger(logger_name: str, log_filename: str) -> logging.Logger
 
 Configures a logger with a FileHandler in the tests/logs or logs directory,
 ensuring it is done dynamically without import-time side-effects.
-
----
-
-## Module `zoho.downloads`
-
-**Source:** [`src/zoho/downloads.py`](src/zoho/downloads.py)
-
-Internal helpers for safely writing API download responses to disk.
-
-### Function `write_response_to_file`
-
-```python
-def write_response_to_file(response: Any, destination: str, chunk_size: int = 8192) -> str
-```
-
-Write bytes or a streaming HTTP response to ``destination`` and close it.
 
 ---

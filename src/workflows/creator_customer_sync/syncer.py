@@ -3,7 +3,7 @@ import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any
 
 from zoho.helpers.custom_fields import get_custom_field_value
 
@@ -29,10 +29,10 @@ class CreatorCustomerSyncer:
         self.config = config
 
     @staticmethod
-    def field_value(record: Dict[str, Any], field: str) -> Any:
+    def field_value(record: dict[str, Any], field: str) -> Any:
         return next((v for k, v in record.items() if k.lower() == field.lower()), None)
 
-    def fetch_books_customers(self) -> Dict[str, Dict[str, Any]]:
+    def fetch_books_customers(self) -> dict[str, dict[str, Any]]:
         if self.config.books_status_filter not in {"all", "active", "inactive"}:
             raise ReconciliationError("books_status_filter must be all, active, or inactive.")
         if self.config.customer_ids:
@@ -80,10 +80,10 @@ class CreatorCustomerSyncer:
             selected[key] = record
         return selected
 
-    def fetch_books_customer_keys(self) -> Set[str]:
+    def fetch_books_customer_keys(self) -> set[str]:
         return set(self.fetch_books_customers())
 
-    def fetch_creator_customers(self) -> List[Dict[str, Any]]:
+    def fetch_creator_customers(self) -> list[dict[str, Any]]:
         """Fetch all customer records from Zoho Creator."""
         if self.config.customer_ids:
             field = self.config.creator_id_field
@@ -111,11 +111,11 @@ class CreatorCustomerSyncer:
         return records
 
     def identify_orphaned_records(
-        self, creator_records: List[Dict[str, Any]], valid_books_keys: Set[str]
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        self, creator_records: list[dict[str, Any]], valid_books_keys: set[str]
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Separate Creator records into orphaned (missing in Books) and matched records."""
-        orphaned: List[Dict[str, Any]] = []
-        matched: List[Dict[str, Any]] = []
+        orphaned: list[dict[str, Any]] = []
+        matched: list[dict[str, Any]] = []
 
         for record in creator_records:
             raw_val = record.get(self.config.creator_id_field)
@@ -158,7 +158,7 @@ class CreatorCustomerSyncer:
                     f"exceeds maximum allowed limit ({self.config.max_deletion_percentage:.2f}%). Aborting execution."
                 )
 
-    def execute_sync(self) -> Dict[str, Any]:
+    def execute_sync(self) -> dict[str, Any]:
         """Plan all changes, validate safety, then apply creates, updates and deletes."""
         books = self.fetch_books_customers()
         records = self.fetch_creator_customers()
@@ -247,8 +247,8 @@ class CreatorCustomerSyncer:
             write_atomic_json(report_path, summary)
         return summary
 
-    def _verify_selected_customers(self, books: Dict[str, Dict[str, Any]],
-                                   mapping: Dict[str, str], summary: Dict[str, Any]) -> None:
+    def _verify_selected_customers(self, books: dict[str, dict[str, Any]],
+                                   mapping: dict[str, str], summary: dict[str, Any]) -> None:
         records = self.fetch_creator_customers()
         for key, customer in books.items():
             matches = [row for row in records
@@ -264,10 +264,10 @@ class CreatorCustomerSyncer:
                     raise ReconciliationError(f"Selected customer {key} failed read-back for {target}.")
         summary["verified_customer_ids"] = list(books)
 
-    def _apply_changes(self, changes: List[Dict[str, Any]], summary: Dict[str, Any],
+    def _apply_changes(self, changes: list[dict[str, Any]], summary: dict[str, Any],
                        report_path: Path) -> None:
         creates = [change for change in changes if change["operation"] == "CREATE"]
-        created_ids: Set[str] = set()
+        created_ids: set[str] = set()
         for start in range(0, len(creates), 200):
             batch = creates[start:start + 200]
             # An interrupted request may have committed; persist that uncertainty first.
@@ -327,7 +327,7 @@ class CreatorCustomerSyncer:
             write_atomic_json(report_path, summary)
 
     @staticmethod
-    def _require_mutation_success(response: Any, change: Dict[str, Any], report_path: Path) -> None:
+    def _require_mutation_success(response: Any, change: dict[str, Any], report_path: Path) -> None:
         results = response.get("result", []) if isinstance(response, dict) else None
         if (not isinstance(response, dict) or response.get("code") != 3000
                 or not isinstance(results, list)

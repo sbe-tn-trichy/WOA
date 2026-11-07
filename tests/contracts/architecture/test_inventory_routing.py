@@ -22,7 +22,7 @@ def http(monkeypatch):
     response.text = '{"code": 0}'
     response.json.return_value = {"code": 0}
     request = MagicMock(return_value=response)
-    monkeypatch.setattr("requests.request", request)
+    monkeypatch.setattr("utils.http_transport.Session.request", request)
     return request
 
 
@@ -74,7 +74,7 @@ def test_rso_refuses_empty_scope_before_lookup():
 def test_catalyst_inventory_does_not_fall_back_to_books(monkeypatch):
     response = MagicMock()
     response.json.return_value = {"tokens": {"books": "books-token"}}
-    monkeypatch.setattr("requests.post", MagicMock(return_value=response))
+    monkeypatch.setattr("utils.http_transport.post", MagicMock(return_value=response))
     with pytest.raises(ZohoAuthError):
         fetch_token_from_catalyst("https://broker.example/tokens", "inventory")
 

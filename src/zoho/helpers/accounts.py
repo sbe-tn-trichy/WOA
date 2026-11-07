@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 logger = logging.getLogger("zoho.helpers.accounts")
 
@@ -29,7 +30,7 @@ def _get_accounts_iterable(accounts_resource: Any) -> Any:
 def find_bank_account_by_name(
     books_client: Any,
     account_name: str,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Look up a bank account by case-insensitive account_name."""
     expected = str(account_name or "").strip().casefold()
     if not expected:
@@ -50,9 +51,9 @@ def find_bank_account_by_name(
 
 def fetch_bank_accounts_map(
     books_client: Any,
-) -> Dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """Fetch all bank accounts and index them by case-folded account_name."""
-    lookup: Dict[str, Dict[str, Any]] = {}
+    lookup: dict[str, dict[str, Any]] = {}
     try:
         accounts = _get_accounts_iterable(books_client.bank_accounts)
         for account in accounts:
@@ -68,9 +69,9 @@ def fetch_bank_accounts_map(
 
 def extract_bank_withdrawals(
     transactions: Sequence[Mapping[str, Any]],
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Filter a list of bank transactions down to outflows (withdrawals / debits)."""
-    withdrawals: List[Dict[str, Any]] = []
+    withdrawals: list[dict[str, Any]] = []
     for tx in transactions:
         amount_val = 0.0
         try:
@@ -93,9 +94,9 @@ def extract_bank_withdrawals(
 
 def extract_bank_deposits(
     transactions: Sequence[Mapping[str, Any]],
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Filter a list of bank transactions down to inflows (deposits / credits / receipts)."""
-    deposits: List[Dict[str, Any]] = []
+    deposits: list[dict[str, Any]] = []
     for tx in transactions:
         amount_val = 0.0
         try:

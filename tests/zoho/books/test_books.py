@@ -6,12 +6,12 @@ from unittest.mock import patch, MagicMock
 from zoho.books import ZohoBooksAPI, ZohoBooksError
 from zoho.books.base import BaseResource
 from workflows.customer_validation import CustomerValidator
-from zoho.books.resources.contacts import ChartOfAccounts, Contacts
-from zoho.books.resources.gst import GST, parse_doc_number
-from zoho.books.resources.projects import Projects, TimeEntries
-from zoho.books.resources.banking import BankTransactions
-from zoho.books.resources.settings import CustomFields
-from zoho.books.resources.purchases import Expenses
+from zoho.books.custom.contacts import ChartOfAccounts, Contacts
+from zoho.books.custom.gst import GST, parse_doc_number
+from zoho.books.custom.projects import Projects, TimeEntries
+from zoho.books.custom.banking import BankTransactions
+from zoho.books.custom.contacts import CustomFields
+from zoho.books.custom.purchases import Expenses
 
 class TestZohoBooksAPI(unittest.TestCase):
     def setUp(self):
@@ -28,7 +28,7 @@ class TestZohoBooksAPI(unittest.TestCase):
         with self.assertRaises(ValueError):
             ZohoBooksAPI(access_token=self.access_token, organization_id="")
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_success(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -52,7 +52,7 @@ class TestZohoBooksAPI(unittest.TestCase):
             timeout=30
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_supports_form_data(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -76,7 +76,7 @@ class TestZohoBooksAPI(unittest.TestCase):
             timeout=30,
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_token_refresh(self, mock_request):
         token_callback = MagicMock(return_value="new_token")
         client = ZohoBooksAPI(access_token="old_token", organization_id="org123", token_refresh_callback=token_callback)
@@ -461,10 +461,10 @@ class TestGST(unittest.TestCase):
 
 
 class TestSalesOrders(unittest.TestCase):
-    @patch("zoho.books.resources.sales.open", new_callable=unittest.mock.mock_open)
-    @patch("zoho.books.resources.sales.os.path.isfile", return_value=True)
+    @patch("zoho.books.custom.sales.open", new_callable=unittest.mock.mock_open)
+    @patch("zoho.books.custom.sales.os.path.isfile", return_value=True)
     def test_add_attachment(self, mock_isfile, mock_open):
-        from zoho.books.resources.sales import SalesOrders
+        from zoho.books.custom.sales import SalesOrders
 
         client = MagicMock()
         sales_orders = SalesOrders(client)
@@ -480,9 +480,9 @@ class TestSalesOrders(unittest.TestCase):
             ("rso.pdf", mock_open()),
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_create_from_yaml(self, mock_request):
-        from zoho.books.resources.sales import SalesOrders
+        from zoho.books.custom.sales import SalesOrders
         client = ZohoBooksAPI(access_token="tok", organization_id="org123", domain="com")
         sales_orders = SalesOrders(client)
 
@@ -532,8 +532,8 @@ class TestProjectsAndTimeEntries(unittest.TestCase):
 
 
 class TestBooksCatalystAuth(unittest.TestCase):
-    @patch("requests.request")
-    @patch("requests.post")
+    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_transport.post")
     def test_catalyst_auth_all_mutations(self, mock_post, mock_request):
         mock_response_catalyst = MagicMock()
         mock_response_catalyst.status_code = 200
@@ -591,7 +591,7 @@ class TestContactsAndVendorsStatements(unittest.TestCase):
     def setUp(self):
         self.client = MagicMock()
         self.client.organization_id = "org123"
-        from zoho.books.resources.contacts import Contacts, Vendors
+        from zoho.books.custom.contacts import Contacts, Vendors
         self.contacts = Contacts(self.client)
         self.vendors = Vendors(self.client)
 
@@ -624,7 +624,7 @@ class TestContactsAndVendorsStatements(unittest.TestCase):
 
 class TestBillsPartialUpdate(unittest.TestCase):
     def test_bill_partial_update_does_not_require_creation_fields(self):
-        from zoho.books.resources.purchases import Bills
+        from zoho.books.custom.purchases import Bills
         client = MagicMock()
         bills = Bills(client)
 

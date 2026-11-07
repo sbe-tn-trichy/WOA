@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from zoho.inventory import ZohoInventoryAPI
 
 logger = logging.getLogger("zoho.helpers.items")
 
 
-def _get_items_iterable(items_resource: Any, params: Dict[str, Any]) -> Any:
+def _get_items_iterable(items_resource: Any, params: dict[str, Any]) -> Any:
     """Safely obtain iterable over items supporting list_all, list_iter, or list."""
     if hasattr(items_resource, "list_all") and callable(items_resource.list_all):
         res = items_resource.list_all(params=params, resource_key="items")
@@ -33,18 +33,18 @@ def fetch_items_lookup(
     inventory_client: ZohoInventoryAPI,
     key_field: str = "name",
     status: str = "active",
-    purchase_account_id: Optional[str] = None,
-) -> Dict[str, Dict[str, Any]]:
+    purchase_account_id: str | None = None,
+) -> dict[str, dict[str, Any]]:
     """Fetch all items from Zoho Inventory and index them by `key_field`.
 
     Supports `name`, `sku`, `item_id`, `item_name`, etc. Optional `purchase_account_id`
     scopes the query to a specific purchase account.
     """
-    params: Dict[str, Any] = {"filter_by": f"Status.{status.title()}"}
+    params: dict[str, Any] = {"filter_by": f"Status.{status.title()}"}
     if purchase_account_id:
         params["purchase_account_id"] = str(purchase_account_id).strip()
 
-    lookup: Dict[str, Dict[str, Any]] = {}
+    lookup: dict[str, dict[str, Any]] = {}
 
     try:
         items = _get_items_iterable(inventory_client.items, params)
@@ -71,7 +71,7 @@ def fetch_items_by_purchase_account(
     purchase_account_id: str,
     key_field: str = "sku",
     status: str = "all",
-) -> Dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """Fetch items scoped to a specific purchase account and index them by `key_field`."""
     account_id = str(purchase_account_id or "").strip()
     if not account_id:
@@ -88,15 +88,15 @@ def fetch_items_by_purchase_account(
 def find_item_by_sku_or_name(
     inventory_client: ZohoInventoryAPI,
     query: str,
-    purchase_account_id: Optional[str] = None,
-) -> Optional[Dict[str, Any]]:
+    purchase_account_id: str | None = None,
+) -> dict[str, Any] | None:
     """Search for an item by matching SKU or name, optionally scoped by purchase_account_id."""
     cleaned = str(query or "").strip()
     if not cleaned:
         return None
 
     target = cleaned.lower()
-    params: Dict[str, Any] = {"search_text": cleaned}
+    params: dict[str, Any] = {"search_text": cleaned}
     if purchase_account_id:
         params["purchase_account_id"] = str(purchase_account_id).strip()
 
@@ -123,7 +123,7 @@ def find_item_by_exact_sku(
     inventory_client: ZohoInventoryAPI,
     sku: str,
     purchase_account_id: str,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Find an exact Inventory SKU in one purchase account, preferring active items."""
     account_id = str(purchase_account_id or "").strip()
     if not account_id:

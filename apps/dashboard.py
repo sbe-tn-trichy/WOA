@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 import os
 import secrets
 import subprocess
@@ -15,7 +15,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 from urllib.parse import urlparse
 
 from workflows.core.config import Config
@@ -30,13 +31,13 @@ class WorkflowSpec:
     number: int
     name: str
     description: str
-    command: Optional[tuple[str, ...]]
+    command: tuple[str, ...] | None
     category: str
     safety: str = "Read-only"
-    open_url: Optional[str] = None
+    open_url: str | None = None
     workflow: str = ""
-    setup: Optional[str] = None
-    file_accept: Optional[str] = None
+    setup: str | None = None
+    file_accept: str | None = None
 
 
 WORKFLOWS = (
@@ -259,7 +260,7 @@ class WorkflowRunner:
     def __init__(
         self,
         repo_root: Path = PROJECT_ROOT,
-        workflows: Optional[Sequence[WorkflowSpec]] = None,
+        workflows: Sequence[WorkflowSpec] | None = None,
     ) -> None:
         self.repo_root = repo_root
         if workflows is None:
@@ -302,7 +303,7 @@ class WorkflowRunner:
     def start(
         self,
         number: int,
-        source_file: Optional[dict[str, Any]] = None,
+        source_file: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         spec = self.workflows.get(number)
         if spec is None:
@@ -311,7 +312,7 @@ class WorkflowRunner:
             raise ValueError(spec.setup or f"{spec.name} needs setup before it can run.")
 
         command = list(spec.command)
-        temporary_source: Optional[Path] = None
+        temporary_source: Path | None = None
         if spec.file_accept:
             if not isinstance(source_file, dict):
                 raise ValueError(f"Choose a source file for {spec.name}.")
@@ -502,7 +503,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.host not in ("127.0.0.1", "localhost", "::1"):
         raise SystemExit("The project dashboard may only bind to a loopback address.")

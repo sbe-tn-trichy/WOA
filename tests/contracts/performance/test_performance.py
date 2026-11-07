@@ -4,10 +4,10 @@ import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 from zoho.base_client import BaseZohoClient
-from zoho.downloads import write_response_to_file
+from utils.http import write_response_to_file
 from zoho.books import ZohoBooksAPI
-from zoho.books.resources.sales import SalesOrders
-from zoho.books.resources.gst import GST
+from zoho.books.custom.sales import SalesOrders
+from zoho.books.custom.gst import GST
 from workflows.duplicate_payment_check import DuplicatePaymentChecker
 from zoho.exceptions import ZohoBooksError
 

@@ -5,8 +5,9 @@ from __future__ import annotations
 from datetime import date
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-import json
-from typing import Any, Mapping, TypedDict
+from utils import json
+from collections.abc import Mapping
+from typing import Any, TypedDict
 
 from .equity_ledger import resolve_excluded_location_name
 
@@ -55,7 +56,7 @@ def fetch_inter_branch_general_ledger(
     ], "criteria_string": "( 1 AND 2 )"}
     response = books_client.reports.general_ledger(
         from_date=from_date, to_date=to_date,
-        rule=json.dumps(rule, separators=(",", ":")), cash_based=False,
+        rule=json.dumps(rule), cash_based=False,
     )
     rows = response["generalledger"]
     if len(rows) != 1 or str(rows[0].get("account_id") or "") != account_id:

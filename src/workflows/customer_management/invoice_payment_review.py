@@ -2,7 +2,8 @@
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Mapping, TypedDict
+from collections.abc import Mapping
+from typing import Any, TypedDict
 import time
 
 from ..core.exceptions import ReconciliationError

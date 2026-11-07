@@ -54,7 +54,7 @@ not migrate existing workflows to ERP.
 ## Regeneration
 
 From the repository root with the existing workspace environment and the
-declared workflow PyYAML dependency available:
+declared base YAMLRocks dependency available:
 
 ```powershell
 .\.venv\Scripts\python.exe apps/generate_erp_sdk.py D:\path\to\zoho_erp_api_doc

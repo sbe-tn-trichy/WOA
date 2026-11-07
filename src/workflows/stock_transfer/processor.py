@@ -4,7 +4,8 @@ from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import re
-from typing import Dict, List, Mapping, NotRequired, Optional, Sequence, TypedDict
+from collections.abc import Mapping, Sequence
+from typing import NotRequired, TypedDict
 
 from workflows.core.matching import to_decimal
 from zoho.validation import require_record, require_records, require_text
@@ -76,7 +77,7 @@ def stocks(item: Mapping[str, object], source: str, destination: str) -> tuple[D
 def build_plan(
     items: Sequence[Mapping[str, object]], source: str, destination: str,
     purchase_account_ids: Sequence[str], markup_percentage: Decimal = Decimal('1'),
-) -> List[TransferLine]:
+) -> list[TransferLine]:
     """Match exact item IDs and cap shortage quantities at uncommitted source stock."""
     if not source or not destination or source == destination:
         raise ValueError('Two different locations are required')
@@ -134,7 +135,7 @@ def build_plan(
     return result
 
 
-def transaction_dates(starting_date: date, ending_date: date) -> List[date]:
+def transaction_dates(starting_date: date, ending_date: date) -> list[date]:
     """Return the inclusive transaction dates, excluding Sundays."""
     if starting_date > ending_date:
         raise ValueError('starting_date must not be after ending_date')
@@ -149,7 +150,7 @@ def transaction_dates(starting_date: date, ending_date: date) -> List[date]:
     return dates
 
 
-def invoice_numbers(starting_number: str, prefix: str, count: int) -> List[str]:
+def invoice_numbers(starting_number: str, prefix: str, count: int) -> list[str]:
     """Expand an explicit invoice number, preserving the numeric suffix width."""
     suffix = starting_number.removeprefix(prefix)
     if not prefix or not starting_number.startswith(prefix) or not re.fullmatch(r'[0-9]+', suffix):
@@ -161,7 +162,7 @@ def invoice_numbers(starting_number: str, prefix: str, count: int) -> List[str]:
 
 def validate_series_start_date(
     starting_date: date, invoices: Sequence[Mapping[str, object]], invoice_number_prefix: str,
-) -> Optional[date]:
+) -> date | None:
     """Require a transfer start date on or after the latest invoice in a series."""
     if not invoice_number_prefix:
         raise ValueError('Explicit invoice number prefix required')
@@ -179,7 +180,7 @@ def validate_series_start_date(
     return latest
 
 
-def line_total(line: TransferLine, quantity: Optional[Decimal] = None) -> Decimal:
+def line_total(line: TransferLine, quantity: Decimal | None = None) -> Decimal:
     """Estimate the final line total using Zoho's two-decimal tax rounding."""
     quantity = line.quantity if quantity is None else quantity
     subtotal = (quantity * line.rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
@@ -189,13 +190,13 @@ def line_total(line: TransferLine, quantity: Optional[Decimal] = None) -> Decima
     return subtotal + tax
 
 
-def split_plan(lines: Sequence[TransferLine], maximum_invoice_total: Decimal) -> List[List[TransferLine]]:
+def split_plan(lines: Sequence[TransferLine], maximum_invoice_total: Decimal) -> list[list[TransferLine]]:
     """Split quantities so every estimated invoice total stays within the cap."""
     limit = number(maximum_invoice_total).quantize(Decimal('0.01'))
     if limit <= 0:
         raise ValueError('maximum_invoice_total must be positive')
-    documents: List[List[TransferLine]] = []
-    current: List[TransferLine] = []
+    documents: list[list[TransferLine]] = []
+    current: list[TransferLine] = []
     current_total = Decimal('0')
     for original in lines:
         remaining = original.quantity

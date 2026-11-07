@@ -26,6 +26,10 @@ JSON blobs, avoiding duplicate catalog and per-object files while preserving
 the complete API response. Integer entity keys keep the relationship indexes
 compact. A generated `summary.md` provides a human-readable inventory.
 
+The [JSON codec contract](json-codec.md#compatibility-boundaries) retains legacy
+canonical snapshot hashes while using RapidJSON for decoding; changing the codec
+does not trigger a metadata refresh or catalog rewrite.
+
 `WorkspaceMetadataStore` supports indexed view-name/type searches, column
 lookup by view ID, and incoming/outgoing relationship traversal without loading
 the complete snapshot into memory.

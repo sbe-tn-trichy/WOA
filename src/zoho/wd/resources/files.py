@@ -1,11 +1,11 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any
 from ..base import BaseResource
 import logging
 import os
 import re
 from zoho.security import resolve_output_path, sanitize_filename
-from zoho.downloads import write_response_to_file
+from utils.http import write_response_to_file
 
 # Logger setup
 
@@ -19,13 +19,13 @@ class Files(BaseResource):
     def __init__(self, client: Any):
         super().__init__(client, "files")
 
-    def list_files(self, folder_id: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def list_files(self, folder_id: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """List files and folders within a specific folder."""
         app_logger.info(f"Listing files in folder: {folder_id} with params: {params}")
         endpoint = f"files/{folder_id}/files"
         return self.client.request('GET', endpoint, params=params)
 
-    def list_all_files(self, folder_id: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def list_all_files(self, folder_id: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         """Fetch all files and folders across all pages using limit/offset pagination."""
         all_data = []
         page_limit = 100 # WorkDrive limit is often 50 or 100
@@ -54,11 +54,11 @@ class Files(BaseResource):
         app_logger.info(f"Successfully downloaded file {file_id}")
 
 
-    def _safe_download_name(self, name: Optional[str], fallback: str) -> str:
+    def _safe_download_name(self, name: str | None, fallback: str) -> str:
         """Return a filesystem-safe filename while keeping it readable."""
         return sanitize_filename(name, fallback=fallback)
 
-    def _is_folder_item(self, item: Dict[str, Any]) -> bool:
+    def _is_folder_item(self, item: dict[str, Any]) -> bool:
         """Detect folder records across the shapes returned by WorkDrive APIs."""
         attrs = item.get("attributes") or {}
         return bool(
@@ -68,11 +68,11 @@ class Files(BaseResource):
             or attrs.get("resource_type") == "folder"
         )
 
-    def _item_name(self, item: Dict[str, Any]) -> str:
+    def _item_name(self, item: dict[str, Any]) -> str:
         attrs = item.get("attributes") or {}
         return str(attrs.get("name") or item.get("name") or item.get("id") or "unnamed")
 
-    def _next_available_download_path(self, path: Path, reserved_paths: Set[Path]) -> Path:
+    def _next_available_download_path(self, path: Path, reserved_paths: set[Path]) -> Path:
         """Avoid duplicate source names in one run while keeping reruns idempotent."""
         if path not in reserved_paths:
             reserved_paths.add(path)
@@ -92,16 +92,16 @@ class Files(BaseResource):
     def download_folder(
         self,
         folder_id: str,
-        destination: Union[os.PathLike, str],
+        destination: os.PathLike | str,
         *,
         dry_run: bool = False,
-    ) -> List[Path]:
+    ) -> list[Path]:
         """Recursively download all files from a Zoho WorkDrive folder."""
         dest_path = Path(resolve_output_path(str(destination)))
         root = dest_path.expanduser().resolve()
 
-        downloaded: List[Path] = []
-        reserved_paths: Set[Path] = set()
+        downloaded: list[Path] = []
+        reserved_paths: set[Path] = set()
 
         def walk(current_folder_id: str, current_local_dir: Path) -> None:
             app_logger.info(f"Listing WorkDrive folder {current_folder_id}")
@@ -134,24 +134,24 @@ class Files(BaseResource):
         walk(folder_id, root)
         return downloaded
 
-    def move(self, file_id: str, destination_folder_id: str) -> Dict[str, Any]:
+    def move(self, file_id: str, destination_folder_id: str) -> dict[str, Any]:
         """Move a file to a new folder."""
         app_logger.info(f"Moving file {file_id} to folder {destination_folder_id}")
         payload = {"data": {"attributes": {"parent_id": destination_folder_id}, "type": "files"}}
         return self._action('PATCH', file_id, '', data=payload)
 
-    def create_folder(self, name: str, parent_id: str) -> Dict[str, Any]:
+    def create_folder(self, name: str, parent_id: str) -> dict[str, Any]:
         """Create a new folder in WorkDrive."""
         app_logger.info(f"Creating folder '{name}' in parent '{parent_id}'")
         payload = {"data": {"attributes": {"name": name, "parent_id": parent_id}, "type": "files"}}
         return self.client.request('POST', 'files', json=payload)
 
-    def delete(self, resource_id: str) -> Dict[str, Any]:
+    def delete(self, resource_id: str) -> dict[str, Any]:
         """Move a file or folder to the trash."""
         app_logger.info(f"Deleting (trashing) resource: {resource_id}")
         return self.client.request('DELETE', f"files/{resource_id}")
 
-    def search(self, name: str, parent_id: Optional[str] = None, resource_type: Optional[str] = "folder") -> List[Dict[str, Any]]:
+    def search(self, name: str, parent_id: str | None = None, resource_type: str | None = "folder") -> list[dict[str, Any]]:
         """Search for files and folders using organization records search."""
         team_id = self.client.get_team_id()
         endpoint = f"organization/{team_id}/records"
@@ -164,7 +164,7 @@ class Files(BaseResource):
         res = self.client.request('GET', endpoint, params=params)
         return res.get('data', [])
 
-    def upload(self, folder_id: str, file_path: str, file_name: Optional[str] = None) -> Dict[str, Any]:
+    def upload(self, folder_id: str, file_path: str, file_name: str | None = None) -> dict[str, Any]:
         """Upload a file to WorkDrive."""
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")

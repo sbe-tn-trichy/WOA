@@ -29,11 +29,9 @@ LINE DETAILS
 
 
 @patch("workflows.polycab_rso.processor.os.path.isfile", return_value=True)
-@patch("workflows.polycab_rso.processor.pdfplumber.open")
+@patch("workflows.polycab_rso.processor.read_pdf_pages")
 def test_parser_stops_at_total_and_ignores_repeated_table(mock_open, mock_isfile):
-    page = MagicMock()
-    page.extract_text.return_value = EXTRACTED_RSO
-    mock_open.return_value.__enter__.return_value.pages = [page]
+    mock_open.return_value = [EXTRACTED_RSO]
 
     parsed = parse_polycab_rso_pdf("RSO_262707003493.pdf")
 

@@ -2,18 +2,16 @@
 
 from dataclasses import dataclass
 from time import monotonic
-from typing import Generic, Hashable, TypeVar
-
-T = TypeVar("T")
+from collections.abc import Hashable
 
 
 @dataclass
-class _Entry(Generic[T]):
+class _Entry[T]:
     expires_at: float
     value: T
 
 
-class PreviewCache(Generic[T]):
+class PreviewCache[T]:
     def __init__(self) -> None:
         self._entries: dict[Hashable, _Entry[T]] = {}
 

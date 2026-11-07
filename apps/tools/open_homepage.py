@@ -4,13 +4,13 @@
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 import subprocess
 import sys
 import time
 import webbrowser
 from pathlib import Path
-from typing import Optional, Sequence
+from collections.abc import Sequence
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -65,9 +65,9 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    process: Optional[subprocess.Popen[bytes]] = None
+    process: subprocess.Popen[bytes] | None = None
     if not dashboard_is_running():
         process = start_dashboard()
         deadline = time.monotonic() + args.timeout

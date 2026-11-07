@@ -44,32 +44,23 @@ checks after an OS, Python or native-tool upgrade before resuming live mutations
 Create a separate virtual environment on every machine. Do not copy `.venv`:
 its interpreter paths and installed binaries belong to the local machine.
 Use the pinned CPython 3.14.10. Run from the repository root.
+Use uv for environment provisioning and package management; pip is not required.
 With uv installed, these commands work on Windows, Linux and macOS:
 
 ```text
 uv venv --python 3.14.10
-uv pip install --python .venv -e ".[workflows,test]"
+uv pip install --python .venv -c constraints.txt -e ".[workflows,test]"
 ```
 
-Without uv, explicitly select an installed CPython 3.14.10 interpreter to bootstrap
-`.venv`, then use only its local interpreter. Windows PowerShell:
+Install uv using the [official installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
+Verify the resulting workspace interpreter with `.venv/bin/python --version`
+(Windows: `.\.venv\Scripts\python.exe --version`). Routine execution uses this
+interpreter directly; do not use commands that automatically sync dependencies.
 
-```powershell
-py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e ".[workflows,test]"
-```
-
-Linux/macOS:
-
-```bash
-python3.14 -m venv .venv
-.venv/bin/python -m pip install -e ".[workflows,test]"
-```
-
-The `py -3.14` and `python3.14` selectors identify a minor version only; confirm
-that the selected interpreter reports exactly 3.14.10 before provisioning, or
-use its explicit executable path. Verify the resulting workspace interpreter
-with `.venv/bin/python --version` (Windows: `.\.venv\Scripts\python.exe --version`).
+After renaming a checkout, rebuild its virtual environment and reinstall the
+editable project at the new location. Clear disposable test bytecode caches:
+pytest assertion-rewritten bytecode can retain the former absolute source path
+and break source inspection even when the source files are unchanged.
 
 Do not borrow another checkout's environment. If the interpreter referenced by
 `.venv` is missing, recreate the environment with a compatible interpreter;
@@ -79,7 +70,7 @@ need separate installation when required by the selected workflow.
 
 Base dependencies include `tzdata` so `zoneinfo` can resolve IANA names such
 as `Asia/Kolkata` on Windows without a system timezone database, and
-`PyYAML>=6.0.3` for YAML configuration parsing. Text fixtures
+`yamlrocks==0.7.1` for YAML configuration parsing. Text fixtures
 containing a BOM or other Unicode characters must specify UTF-8 explicitly.
 Pytest stores its cache under ignored `output/pytest-cache`, avoiding legacy
 root cache directories that may retain permissions from another installation.
@@ -155,7 +146,7 @@ once for the entire run. See the [xdist distribution contract](https://pytest-xd
 and [fixture guidance](https://pytest-xdist.readthedocs.io/en/stable/how-to.html#making-session-scoped-fixtures-execute-only-once).
 For genuinely shared resources, fix the owning fixture or explicitly coordinate
 access; avoid grouping or suppressing flaky tests merely to obtain a passing run.
-Compiler contract tests already use temporary mypy caches and API-generation tests
+Compiler contract tests already use isolated ty subprocess checks and API-generation tests
 write generated files to temporary destinations.
 
 Push and pull-request CI jobs use the configured default, including type-check
@@ -195,14 +186,13 @@ Tests using standard-library `tempfile` may additionally need process-local
 not require changing the virtual environment or machine configuration.
 
 ```text
-.venv/bin/python -m pip check
+uv pip check --python .venv
 .venv/bin/python -c "import zoho; import workflows.core.auth"
 .venv/bin/python -m pytest -q
 ```
 
 On Windows replace `.venv/bin/python` with `.\.venv\Scripts\python.exe`.
-For environments without pip, use `uv pip check --python .venv` for read-only
-dependency validation. If pytest is absent, report the missing dependency;
+The uv dependency check is read-only and uses the existing `.venv`. If pytest is absent, report the missing dependency;
 installation requires explicit user instruction. Unittest discovery is not an
 equivalent replacement for the full suite.
 
@@ -219,8 +209,9 @@ investigating machine-specific failures. Runner details are documented in the
 
 ## Type checking
 
-Base dependencies pin `mypy==2.4.1` and `types-requests==2.32.4.20250913` so
-every project installation includes the type checker and requests stubs. The
+Base dependencies pin `ty==0.0.99` so every project installation includes the
+type checker. pyqwest provides its own types; Requests stubs are no longer a
+project dependency. The
 empty `typing` extra preserves existing installation commands. Existing
 environments need an explicitly authorized reinstall to receive missing
 dependencies. Do not synchronize or replace the environment to run a check.
@@ -228,19 +219,18 @@ dependencies. Do not synchronize or replace the environment to run a check.
 Run the blocking scope from the repository root:
 
 ```powershell
-.\.venv\Scripts\python.exe -m mypy
+.\.venv\Scripts\python.exe -m ty check
 .\.venv\Scripts\python.exe -m pytest -q tests/contracts/architecture/test_type_safety.py tests/zoho/test_resource_validation.py
 ```
 
-On macOS/Linux use `.venv/bin/python` for both commands. `tool.mypy.files` in
+On macOS/Linux use `.venv/bin/python` for both commands. `tool.ty.src.include` in
 `pyproject.toml` owns the growing checked scope; imported legacy modules are
-followed normally but are not all strict targets. A passing check does not mean
-the entire repository is typed. Explicit Any and Any from missing imports are
-rejected in checked targets; do not fix diagnostics using blanket ignores or
-casts of external data. Positive/negative contract tests run the same pinned
-checker, including actual SDK clients and a typed fake. They skip only when the
-checker is absent in an incomplete environment; base installation supplies it
-before the type-check CI job runs them.
+resolved but are not all checked targets. A passing check does not mean
+the entire repository is typed. ty uses its default rules; it does not reproduce mypy strict-mode explicit-Any
+prohibitions. Do not fix diagnostics using blanket ignores or casts of external
+data. Positive/negative contract tests run the same pinned
+checker, including actual SDK clients and a typed fake. A missing checker fails the contract test with an actionable setup error;
+base installation supplies it before the type-check CI job runs them.
 
 The CI gate is configured on all three existing runner platforms. Actual hosted
 results and primary-machine smoke results remain required. See the
@@ -283,10 +273,14 @@ See [Package Architecture](architecture.md), [Configuration Reference](configura
 ## Application dependency baseline (APPS-003)
 
 `constraints.txt` pins the base, workflows, test and typing dependency closure
-from the 2026-11-06 macOS environment. Provision application deployments with the
-workspace interpreter using `-m pip install -c constraints.txt -e
+from the 2026-11-06 macOS environment. Provision application deployments with
+uv using `uv pip install --python .venv -c constraints.txt -e
 ".[workflows,test,typing]"` only when environment provisioning is authorized.
-CI applies the same constraints to its install jobs. Library consumers retain
+CI provisions a fresh `.venv` with uv and applies the same constraints to its
+install jobs. CI uses `uv run --no-sync` to execute checks in that environment
+without resolving or changing installed packages. `constraints.txt` remains the
+application baseline. Use explicit installs rather than automatic project syncing.
+Library consumers retain
 compatibility ranges in `pyproject.toml`; constraints are an application policy,
 not mandatory library dependency pins. Optional OCR/Jupyter tools are outside
 this baseline. Windows also constrains its pytest colorama dependency.

@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 import sys
 from pathlib import Path
-from typing import Sequence
+from collections.abc import Sequence
 
 try:
     from . import _bootstrap  # noqa: F401

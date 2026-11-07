@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import json
+from utils import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, MutableMapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
+from typing import Any
 
 from workflows.core.checkpoint import atomic_text_writer, write_atomic_json
 
@@ -139,7 +140,7 @@ def refresh_mapping_account_names(
 def write_mapping_config(path: Path, config: Mapping[str, Any]) -> None:
     """Atomically write refreshed mapping metadata."""
     if path.suffix.lower() in {".yaml", ".yml"}:
-        import yaml
+        from utils import yaml
 
         text = yaml.safe_dump(dict(config), allow_unicode=True, sort_keys=False)
         with atomic_text_writer(path) as staged:

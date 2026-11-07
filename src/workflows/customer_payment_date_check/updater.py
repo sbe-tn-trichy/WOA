@@ -6,7 +6,8 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from zoho.helpers import unwrap_record
 
@@ -22,7 +23,7 @@ class PaymentUpdateResult:
     status: str  # "updated", "skipped", "failed", "planned"
     total_allocations: int
     updated_allocations: int
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class CustomerPaymentDateUpdater:
@@ -35,7 +36,7 @@ class CustomerPaymentDateUpdater:
         self,
         payment_detail: Mapping[str, Any],
         target_allocations_by_inv: Mapping[str, str],  # invoice_id -> target_date (YYYY-MM-DD)
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Construct the update payload for a customer payment preserving existing amounts and other fields."""
         invoices_payload = []
         for inv in payment_detail.get("invoices") or []:
@@ -44,7 +45,7 @@ class CustomerPaymentDateUpdater:
             if not inv_id or amt <= 0:
                 continue
 
-            inv_entry: Dict[str, Any] = {
+            inv_entry: dict[str, Any] = {
                 "invoice_id": inv_id,
                 "amount_applied": amt,
             }
@@ -66,7 +67,7 @@ class CustomerPaymentDateUpdater:
 
             invoices_payload.append(inv_entry)
 
-        payload: Dict[str, Any] = {"invoices": invoices_payload}
+        payload: dict[str, Any] = {"invoices": invoices_payload}
         for field in ("customer_id", "payment_mode", "date", "account_id", "reference_number", "description", "exchange_rate", "bank_charges"):
             val = payment_detail.get(field)
             if val is not None:
@@ -81,11 +82,11 @@ class CustomerPaymentDateUpdater:
         plan: Mapping[str, Any],
         *,
         execute: bool = False,
-        checkpoint_path: Optional[Path] = None,
-    ) -> Dict[str, Any]:
+        checkpoint_path: Path | None = None,
+    ) -> dict[str, Any]:
         """Execute the date update plan across all affected customer payments."""
         by_payment = plan.get("by_payment") or {}
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         success_count = 0
         failed_count = 0
         skipped_count = 0

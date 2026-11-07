@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Sequence, Union
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from google_sheets import GoogleSheetsClient
 from zoho import HttpTokenProvider
@@ -21,11 +22,11 @@ logger = logging.getLogger(__name__)
 
 
 def get_erp_client(
-    token: Optional[str] = None,
+    token: str | None = None,
     org_id: str = Config.ORG_ID,
     domain: str = Config.DOMAIN,
     token_url: str = Config.TOKEN_URL,
-    token_refresh_callback: Optional[Callable[[], str]] = None,
+    token_refresh_callback: Callable[[], str] | None = None,
 ) -> ZohoERPAPI:
     """Construct ERP with an ERP-scoped token; never substitute Books tokens."""
     refresh = token_refresh_callback or (
@@ -35,7 +36,7 @@ def get_erp_client(
 
 
 def get_inventory_client(
-    token: Optional[str] = None,
+    token: str | None = None,
     org_id: str = Config.ORG_ID,
     domain: str = Config.DOMAIN,
     token_url: str = Config.TOKEN_URL,
@@ -46,10 +47,10 @@ def get_inventory_client(
 
 
 def get_sheet_client(
-    token: Optional[str] = None,
+    token: str | None = None,
     domain: str = Config.DOMAIN,
     token_url: str = Config.TOKEN_URL,
-    token_refresh_callback: Optional[Callable[[], str]] = None,
+    token_refresh_callback: Callable[[], str] | None = None,
 ) -> ZohoSheetAPI:
     """Create an authenticated Zoho Sheet client with token refresh support."""
     if not token:
@@ -62,7 +63,7 @@ def get_sheet_client(
     return ZohoSheetAPI(access_token=token, domain=domain, token_refresh_callback=refresh_cb)
 
 
-def fetch_access_tokens(token_url: str = Config.TOKEN_URL) -> Dict[str, Optional[str]]:
+def fetch_access_tokens(token_url: str = Config.TOKEN_URL) -> dict[str, str | None]:
     """Retrieve runtime-only access tokens from the configured token broker."""
     logger.info("Retrieving access tokens from configured token service.")
     try:
@@ -99,11 +100,11 @@ def get_token_for(service_key: str, fallback_key: str = "", token_url: str = Con
 
 
 def get_books_client(
-    token: Optional[str] = None,
+    token: str | None = None,
     org_id: str = Config.ORG_ID,
     domain: str = Config.DOMAIN,
     token_url: str = Config.TOKEN_URL,
-    token_refresh_callback: Optional[Callable[[], str]] = None,
+    token_refresh_callback: Callable[[], str] | None = None,
 ) -> ZohoBooksAPI:
     """Create an authenticated Zoho Books client with token refresh support."""
     if not token:
@@ -120,11 +121,11 @@ def get_books_client(
 
 
 def get_creator_client(
-    token: Optional[str] = None,
-    owner_name: Optional[str] = None,
+    token: str | None = None,
+    owner_name: str | None = None,
     domain: str = Config.DOMAIN,
     token_url: str = Config.TOKEN_URL,
-    token_refresh_callback: Optional[Callable[[], str]] = None,
+    token_refresh_callback: Callable[[], str] | None = None,
 ) -> ZohoCreatorAPI:
     """Create an authenticated Zoho Creator client with token refresh support."""
     owner_name = owner_name or Config.CREATOR_OWNER_NAME
@@ -148,11 +149,11 @@ def get_creator_client(
 
 
 def get_analytics_client(
-    token: Optional[str] = None,
+    token: str | None = None,
     org_id: str = Config.ANALYTICS_ORG_ID,
     domain: str = Config.DOMAIN,
     token_url: str = Config.TOKEN_URL,
-    token_refresh_callback: Optional[Callable[[], str]] = None,
+    token_refresh_callback: Callable[[], str] | None = None,
 ) -> ZohoAnalyticsAPI:
     """Create an authenticated Zoho Analytics client with token refresh support."""
     if not str(org_id or "").strip():
@@ -171,10 +172,10 @@ def get_analytics_client(
 
 
 def get_workdrive_client(
-    token: Optional[str] = None,
+    token: str | None = None,
     domain: str = Config.DOMAIN,
     token_url: str = Config.TOKEN_URL,
-    token_refresh_callback: Optional[Callable[[], str]] = None,
+    token_refresh_callback: Callable[[], str] | None = None,
 ) -> ZohoWorkdriveAPI:
     """Create an authenticated Zoho WorkDrive client with token refresh support."""
     if not token:
@@ -194,10 +195,10 @@ def get_workdrive_client(
 
 
 def get_google_sheets_client(
-    token: Optional[str] = None,
-    service_account_file: Optional[Union[str, Path]] = None,
-    service_account_info: Optional[Dict[str, Any]] = None,
-    scopes: Optional[Sequence[str]] = None,
+    token: str | None = None,
+    service_account_file: str | Path | None = None,
+    service_account_info: dict[str, Any] | None = None,
+    scopes: Sequence[str] | None = None,
 ) -> GoogleSheetsClient:
     """Create an authenticated Google Sheets client.
 

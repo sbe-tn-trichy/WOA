@@ -14,6 +14,8 @@ status: active
 
 # Configuration Hierarchy
 
+HTTP TLS bundle overrides are owned by the [HTTP transport reference](http-transport.md#tls-and-verification).
+
 Runtime configuration is loaded using a prioritized multi-tier hierarchy:
 
 1. **Environment Variables**: Explicit process environment variables (`os.environ`).
@@ -30,7 +32,11 @@ non-object configuration, and missing active profiles fail closed instead of
 falling through to a lower-priority file, preventing accidental cross-tenant
 identifier selection.
 
-YAML uses safe loading and requires the existing workflows extra (PyYAML).
+YAML uses YAMLRocks from the base dependencies through `utils.yaml`. The shared
+loader retains legacy scalar interpretation, rejects custom/Python tags and
+multiple documents, and validates source tags before conversion.
+YAMLRocks may normalize formatting on writes; date objects are emitted as quoted
+ISO strings, so date-sensitive consumers must parse them explicitly.
 Quote identifiers and string values such as `"00123"` or `"on"` to preserve their
 types. YAML files take precedence over legacy JSON; invalid higher-priority
 files never fall through. Environment-variable object values remain JSON.

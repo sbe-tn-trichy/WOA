@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import json
+from utils import json
 import logging
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any
 
 from zoho.helpers import get_month_range, parse_date
 from zoho.helpers.gst import normalize_gstin
@@ -75,7 +76,7 @@ def _is_reverse_charge(document: Mapping[str, Any]) -> bool:
         for key in ('reverse_charge_tax_amount', 'reverse_charge_tax_total'))
 
 
-def _parse_portal_date(date_str: Any) -> Optional[date]:
+def _parse_portal_date(date_str: Any) -> date | None:
     """Parse GST portal date in DD-MM-YYYY or YYYY-MM-DD format."""
     if not date_str:
         return None
@@ -94,30 +95,28 @@ class GSTR2Verifier:
     def __init__(
         self,
         books_client: Any,
-        config: Optional[GSTR2VerificationConfig] = None,
-        bill_snapshot: Optional[Sequence[Mapping[str, Any]]] = None,
-        zero_tax_expense_modified: Optional[Mapping[str, datetime]] = None,
-        expense_snapshot: Optional[Sequence[Mapping[str, Any]]] = None,
-        credit_snapshot: Optional[Sequence[Mapping[str, Any]]] = None,
+        config: GSTR2VerificationConfig | None = None,
+        bill_snapshot: Sequence[Mapping[str, Any]] | None = None,
+        zero_tax_expense_modified: Mapping[str, datetime] | None = None,
+        expense_snapshot: Sequence[Mapping[str, Any]] | None = None,
+        credit_snapshot: Sequence[Mapping[str, Any]] | None = None,
     ):
         self.books = books_client
         self.config = config or GSTR2VerificationConfig()
-        self._cached_bills: Optional[List[Dict[str, Any]]] = (
+        self._cached_bills: list[dict[str, Any]] | None = (
             [dict(bill) for bill in bill_snapshot] if bill_snapshot is not None else None
         )
-        self._bills_by_posting_month: Optional[
-            Dict[Tuple[int, int], List[Tuple[int, date, Dict[str, Any]]]]
-        ] = None
-        self._expense_cache: Dict[str, Mapping[str, Any]] = {}
+        self._bills_by_posting_month: dict[tuple[int, int], list[tuple[int, date, dict[str, Any]]]] | None = None
+        self._expense_cache: dict[str, Mapping[str, Any]] = {}
         self._zero_tax_expense_modified = dict(zero_tax_expense_modified or {})
-        self._vendor_credit_cache: Dict[str, Mapping[str, Any]] = {}
+        self._vendor_credit_cache: dict[str, Mapping[str, Any]] = {}
         self._cached_expenses = ([dict(row) for row in expense_snapshot]
                                  if expense_snapshot is not None else None)
         self._cached_credits = ([dict(row) for row in credit_snapshot]
                                 if credit_snapshot is not None else None)
 
     @staticmethod
-    def _books_net_taxable(document: Mapping[str, Any]) -> Optional[float]:
+    def _books_net_taxable(document: Mapping[str, Any]) -> float | None:
         """Return taxable subtotal after an entity-level, pre-tax discount."""
         subtotal = document.get("sub_total")
         if subtotal in (None, ""):
@@ -134,8 +133,8 @@ class GSTR2Verifier:
     def run(
         self,
         gstr2_source: str | Path | Mapping[str, Any],
-        month: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        month: str | None = None,
+    ) -> dict[str, Any]:
         """
         Execute full cross-check of GSTR-2/2B data against Zoho Books.
 
@@ -166,7 +165,7 @@ class GSTR2Verifier:
         itc_summary_portal = portal_data.get("itcsumm", {})
 
         # 3. Fetch Zoho Books bills, GST-bearing expenses, and vendor credits
-        fetch_errors: List[Dict[str, str]] = []
+        fetch_errors: list[dict[str, str]] = []
         if not recipient_gstin:
             fetch_errors.append({"source": "locations", "error": "Portal recipient GSTIN is missing"})
         location_gstins = self._configured_location_gstins(fetch_errors)
@@ -238,10 +237,10 @@ class GSTR2Verifier:
         with path.open("r", encoding="utf-8") as f:
             return json.load(f)
 
-    def _parse_portal_documents(self, portal_data: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    def _parse_portal_documents(self, portal_data: Mapping[str, Any]) -> list[dict[str, Any]]:
         """Parse b2b and cdnr documents from GSTR-2B JSON."""
         docdata = portal_data.get("docdata", {})
-        documents: List[Dict[str, Any]] = []
+        documents: list[dict[str, Any]] = []
 
         # 1. B2B Invoices
         for supplier in docdata.get("b2b", []):
@@ -366,8 +365,8 @@ class GSTR2Verifier:
         return documents
 
     def _configured_location_gstins(
-        self, errors: List[Dict[str, str]],
-    ) -> Dict[str, Dict[str, str]]:
+        self, errors: list[dict[str, str]],
+    ) -> dict[str, dict[str, str]]:
         """Invert the configured registration-to-location mapping."""
         configured = self.config.location_gstin_map
         if not configured:
@@ -377,7 +376,7 @@ class GSTR2Verifier:
             })
             return {}
 
-        locations: Dict[str, Dict[str, str]] = {}
+        locations: dict[str, dict[str, str]] = {}
         for raw_gstin, raw_location_ids in configured.items():
             gstin = normalize_gstin(raw_gstin)
             if (not gstin or isinstance(raw_location_ids, (str, bytes))
@@ -410,7 +409,7 @@ class GSTR2Verifier:
         document: Mapping[str, Any],
         location_gstins: Mapping[str, Mapping[str, str]],
         recipient_gstin: str,
-        errors: List[Dict[str, str]],
+        errors: list[dict[str, str]],
     ) -> bool:
         location_id = str(document.get("location_id") or document.get("branch_id") or "")
         if not location_id or location_id not in location_gstins:
@@ -426,10 +425,10 @@ class GSTR2Verifier:
         self,
         start_date: date,
         end_date: date,
-        errors: List[Dict[str, str]],
-        location_gstins: Optional[Mapping[str, Mapping[str, str]]] = None,
+        errors: list[dict[str, str]],
+        location_gstins: Mapping[str, Mapping[str, str]] | None = None,
         recipient_gstin: str = "",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Fetch bills whose transaction posting date falls in the period."""
         if self._cached_bills is not None:
             raw_bills = self._cached_bills
@@ -445,7 +444,7 @@ class GSTR2Verifier:
                 return []
 
         if self._bills_by_posting_month is None:
-            by_month: Dict[Tuple[int, int], List[Tuple[int, date, Dict[str, Any]]]] = {}
+            by_month: dict[tuple[int, int], list[tuple[int, date, dict[str, Any]]]] = {}
             for position, bill in enumerate(raw_bills):
                 posting_date = parse_date(bill.get("txn_value_date") or bill.get("date"))
                 if posting_date:
@@ -459,7 +458,7 @@ class GSTR2Verifier:
              if (start_date.year, start_date.month) <= month <= (end_date.year, end_date.month)
              for entry in entries), key=lambda entry: entry[0],
         )
-        cleaned_bills: List[Dict[str, Any]] = []
+        cleaned_bills: list[dict[str, Any]] = []
         for _, posting_date, b in selected:
             b_date = parse_date(b.get("date"))
             if posting_date < start_date or posting_date > end_date:
@@ -508,7 +507,7 @@ class GSTR2Verifier:
         return cleaned_bills
 
     @staticmethod
-    def _expense_tax_amount(expense: Mapping[str, Any]) -> Optional[float]:
+    def _expense_tax_amount(expense: Mapping[str, Any]) -> float | None:
         """Return forward-tax amount, or ``None`` when the response is inconclusive."""
         if expense.get("tax_amount") not in (None, ""):
             return _to_float(expense.get("tax_amount"))
@@ -544,11 +543,11 @@ class GSTR2Verifier:
         self,
         start_date: date,
         end_date: date,
-        errors: List[Dict[str, str]],
-        location_gstins: Optional[Mapping[str, Mapping[str, str]]] = None,
+        errors: list[dict[str, str]],
+        location_gstins: Mapping[str, Mapping[str, str]] | None = None,
         recipient_gstin: str = "",
-        rcm_doc_numbers: Optional[Set[str]] = None,
-    ) -> List[Dict[str, Any]]:
+        rcm_doc_numbers: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """Fetch period expenses with forward GST or recorded reverse-charge tax."""
         params = {
             "date_start": start_date.isoformat(),
@@ -566,7 +565,7 @@ class GSTR2Verifier:
                 errors.append({"source": "expenses", "error": str(exc)})
                 return []
 
-        cleaned_expenses: List[Dict[str, Any]] = []
+        cleaned_expenses: list[dict[str, Any]] = []
         for summary in raw_expenses:
             expense_date = parse_date(summary.get("date"))
             if expense_date and (expense_date < start_date or expense_date > end_date):
@@ -665,10 +664,10 @@ class GSTR2Verifier:
         self,
         start_date: date,
         end_date: date,
-        errors: List[Dict[str, str]],
-        location_gstins: Optional[Mapping[str, Mapping[str, str]]] = None,
+        errors: list[dict[str, str]],
+        location_gstins: Mapping[str, Mapping[str, str]] | None = None,
         recipient_gstin: str = "",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Fetch vendor credits from Zoho Books for the period."""
         if self._cached_credits is not None:
             raw_credits = self._cached_credits
@@ -688,7 +687,7 @@ class GSTR2Verifier:
                 errors.append({"source": "vendor_credits", "error": str(exc)})
                 return []
 
-        cleaned_credits: List[Dict[str, Any]] = []
+        cleaned_credits: list[dict[str, Any]] = []
         for c in raw_credits:
             c_date = parse_date(c.get("date"))
             if c_date and (c_date < start_date or c_date > end_date):
@@ -732,22 +731,22 @@ class GSTR2Verifier:
 
     def _reconcile(
         self,
-        gstr2_docs: List[Dict[str, Any]],
-        books_bills: List[Dict[str, Any]],
-        books_expenses: List[Dict[str, Any]],
-        books_credits: List[Dict[str, Any]],
+        gstr2_docs: list[dict[str, Any]],
+        books_bills: list[dict[str, Any]],
+        books_expenses: list[dict[str, Any]],
+        books_credits: list[dict[str, Any]],
         target_month: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform bi-directional reconciliation between GSTR-2B and Zoho Books."""
-        matched_items: List[Dict[str, Any]] = []
-        value_mismatches: List[Dict[str, Any]] = []
-        missing_in_books: List[Dict[str, Any]] = []
-        ineligible_itc_items: List[Dict[str, Any]] = []
-        rcm_items: List[Dict[str, Any]] = []
+        matched_items: list[dict[str, Any]] = []
+        value_mismatches: list[dict[str, Any]] = []
+        missing_in_books: list[dict[str, Any]] = []
+        ineligible_itc_items: list[dict[str, Any]] = []
+        rcm_items: list[dict[str, Any]] = []
 
-        used_books_bill_ids: Set[str] = set()
-        used_books_expense_ids: Set[str] = set()
-        used_books_credit_ids: Set[str] = set()
+        used_books_bill_ids: set[str] = set()
+        used_books_expense_ids: set[str] = set()
+        used_books_credit_ids: set[str] = set()
         purchase_documents = [*books_bills, *books_expenses]
 
         # Reconcile each GSTR-2B document
@@ -878,9 +877,9 @@ class GSTR2Verifier:
             and not expense.get("reverse_charge")
         ]
 
-        missing_in_gstr2_bills: List[Dict[str, Any]] = []
-        missing_in_gstr2_credits: List[Dict[str, Any]] = []
-        zero_tax_bills: List[Dict[str, Any]] = []
+        missing_in_gstr2_bills: list[dict[str, Any]] = []
+        missing_in_gstr2_credits: list[dict[str, Any]] = []
+        zero_tax_bills: list[dict[str, Any]] = []
 
         for b in raw_missing_in_gstr2_bills:
             b_id = b.get("bill_id")
@@ -982,8 +981,8 @@ class GSTR2Verifier:
             else:
                 missing_in_gstr2_credits.append(c)
 
-        aggregate_matches: List[Dict[str, Any]] = []
-        aggregate_warnings: List[str] = []
+        aggregate_matches: list[dict[str, Any]] = []
+        aggregate_warnings: list[str] = []
         cents = lambda value: Decimal(str(value)).quantize(Decimal("0.01"))
         for mapping in self.config.aggregate_mappings:
             if mapping.month != target_month:
@@ -1112,10 +1111,10 @@ class GSTR2Verifier:
 
     def _find_best_match(
         self,
-        g_doc: Dict[str, Any],
-        books_docs: Sequence[Dict[str, Any]],
-        used_ids: Set[str],
-    ) -> Optional[Dict[str, Any]]:
+        g_doc: dict[str, Any],
+        books_docs: Sequence[dict[str, Any]],
+        used_ids: set[str],
+    ) -> dict[str, Any] | None:
         """
         Find candidate document in Books using multi-stage matching:
         1. Exact number match on bill_number or reference_number.
@@ -1166,15 +1165,15 @@ class GSTR2Verifier:
 
     @staticmethod
     def _build_vendor_summary(
-        gstr2_docs: List[Dict[str, Any]],
-        books_bills: List[Dict[str, Any]],
-        matched_items: List[Dict[str, Any]],
-        missing_in_books: List[Dict[str, Any]],
-        missing_in_gstr2: List[Dict[str, Any]],
-        aggregate_matches: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
+        gstr2_docs: list[dict[str, Any]],
+        books_bills: list[dict[str, Any]],
+        matched_items: list[dict[str, Any]],
+        missing_in_books: list[dict[str, Any]],
+        missing_in_gstr2: list[dict[str, Any]],
+        aggregate_matches: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """Build vendor-wise comparative breakdown."""
-        vendor_map: Dict[str, Dict[str, Any]] = {}
+        vendor_map: dict[str, dict[str, Any]] = {}
 
         for doc in gstr2_docs:
             key = doc["supplier_gstin"] or doc["supplier_name"]
@@ -1241,9 +1240,9 @@ class GSTR2Verifier:
         results.sort(key=lambda x: x["gstr2_tax"], reverse=True)
         return results
 
-    def lookup_hsn(self, query: str) -> Dict[str, Any]:
+    def lookup_hsn(self, query: str) -> dict[str, Any]:
         """Search Zoho Books bills, credits, contacts, and items for HSN/SAC codes."""
-        results: Dict[str, Any] = {
+        results: dict[str, Any] = {
             "query": query,
             "bills": [],
             "vendor_credits": [],
@@ -1358,7 +1357,7 @@ class GSTR2Verifier:
         return results
 
 
-def render_markdown_report(result: Dict[str, Any]) -> str:
+def render_markdown_report(result: dict[str, Any]) -> str:
     """Render a comprehensive GitHub Flavored Markdown report."""
     from datetime import datetime
     from zoneinfo import ZoneInfo
@@ -1372,7 +1371,7 @@ def render_markdown_report(result: Dict[str, Any]) -> str:
         for location in meta.get("included_locations", [])
     ) or "None"
 
-    lines: List[str] = [
+    lines: list[str] = [
         f"# GSTR-2B vs Zoho Books Reconciliation Report ({meta['target_month']})",
         "",
         f"- **Last Run:** {last_run}",
@@ -1587,9 +1586,9 @@ def render_markdown_report(result: Dict[str, Any]) -> str:
 def verify_gstr2(
     books_client: Any,
     gstr2_source: str | Path | Mapping[str, Any],
-    month: Optional[str] = None,
-    config: Optional[GSTR2VerificationConfig] = None,
-) -> Dict[str, Any]:
+    month: str | None = None,
+    config: GSTR2VerificationConfig | None = None,
+) -> dict[str, Any]:
     """Convenience wrapper for :class:`GSTR2Verifier`."""
     return GSTR2Verifier(books_client, config=config).run(
         gstr2_source=gstr2_source,

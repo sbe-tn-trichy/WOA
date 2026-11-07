@@ -3,8 +3,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from zoho.books.resources.sales import CustomerPayments
-from zoho.books.resources.purchases import VendorPayments
+from zoho.books.custom.sales import CustomerPayments
+from zoho.books.custom.purchases import VendorPayments
 
 
 def test_multipart_series_update_uses_jsonstring_and_ignore_flag():

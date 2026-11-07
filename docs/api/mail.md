@@ -34,7 +34,7 @@ Main Zoho Mail API Client.
 ##### `ZohoMailAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, domain: str = 'com', token_refresh_callback: Optional[Any] = None)
+def __init__(self, access_token: str, domain: str = 'com', token_refresh_callback: Any | None = None)
 ```
 
 Initialize the Zoho Mail API client.
@@ -50,7 +50,7 @@ Returns a helper object to access account-specific resources.
 ##### `ZohoMailAPI.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None, stream: bool = False, override_url: Optional[str] = None, is_mutation: Optional[bool] = None, timeout: Optional[int] = None) -> Any
+def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, files: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
 ```
 
 Internal HTTP request handler with logging.
@@ -69,8 +69,8 @@ Base class for Zoho Mail modules providing standard CRUD operations.
 
 | Attribute | Type | Default Value | Notes |
 |---|---|---|---|
-| `required_fields` | `List[str]` | `[]` | - |
-| `defaults` | `Dict[str, Any]` | `{}` | - |
+| `required_fields` | `list[str]` | `[]` | - |
+| `defaults` | `dict[str, Any]` | `{}` | - |
 
 #### Methods
 
@@ -83,7 +83,7 @@ def __init__(self, client: Any, endpoint: str)
 ##### `BaseResource._prepare_payload`
 
 ```python
-def _prepare_payload(self, data: Dict[str, Any], check_required: bool = True) -> Dict[str, Any]
+def _prepare_payload(self, data: dict[str, Any], check_required: bool = True) -> dict[str, Any]
 ```
 
 Merge defaults (if creating) and check if all required fields are present.
@@ -91,37 +91,37 @@ Merge defaults (if creating) and check if all required fields are present.
 ##### `BaseResource.list`
 
 ```python
-def list(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def list(self, params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 ##### `BaseResource.get`
 
 ```python
-def get(self, resource_id: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def get(self, resource_id: str, params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 ##### `BaseResource.create`
 
 ```python
-def create(self, data: Dict[str, Any], params: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def create(self, data: dict[str, Any], params: dict[str, Any] | None = None, files: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 ##### `BaseResource.update`
 
 ```python
-def update(self, resource_id: str, data: Dict[str, Any], params: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def update(self, resource_id: str, data: dict[str, Any], params: dict[str, Any] | None = None, files: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 ##### `BaseResource.delete`
 
 ```python
-def delete(self, resource_id: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def delete(self, resource_id: str, params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 ##### `BaseResource._action`
 
 ```python
-def _action(self, method: str, resource_id: Optional[str], action: str, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def _action(self, method: str, resource_id: str | None, action: str, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 Helper for action endpoints.
@@ -191,13 +191,13 @@ def __init__(self, client, account_id: str)
 ##### `Folders.create`
 
 ```python
-def create(self, folder_name: str, parent_folder_id: Optional[str] = None) -> Dict[str, Any]
+def create(self, folder_name: str, parent_folder_id: str | None = None) -> dict[str, Any]
 ```
 
 ##### `Folders.rename`
 
 ```python
-def rename(self, folder_id: str, new_name: str) -> Dict[str, Any]
+def rename(self, folder_id: str, new_name: str) -> dict[str, Any]
 ```
 
 ---
@@ -234,7 +234,7 @@ def __init__(self, client, account_id: str)
 ##### `Messages.list`
 
 ```python
-def list(self, folder_id: Optional[str] = None, page: int = 1, limit: int = 50, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
+def list(self, folder_id: str | None = None, page: int = 1, limit: int = 50, params: dict[str, Any] | None = None) -> dict[str, Any]
 ```
 
 List messages summary.
@@ -246,7 +246,7 @@ List messages summary.
 ##### `Messages.get_content`
 
 ```python
-def get_content(self, message_id: str) -> Dict[str, Any]
+def get_content(self, message_id: str) -> dict[str, Any]
 ```
 
 Get full message content.
@@ -254,7 +254,7 @@ Get full message content.
 ##### `Messages.send`
 
 ```python
-def send(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> Dict[str, Any]
+def send(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> dict[str, Any]
 ```
 
 Send an email.
@@ -262,7 +262,7 @@ Send an email.
 ##### `Messages.save_draft`
 
 ```python
-def save_draft(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> Dict[str, Any]
+def save_draft(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> dict[str, Any]
 ```
 
 Save a draft email.
@@ -270,7 +270,7 @@ Save a draft email.
 ##### `Messages.mark_as_read`
 
 ```python
-def mark_as_read(self, message_id: str) -> Dict[str, Any]
+def mark_as_read(self, message_id: str) -> dict[str, Any]
 ```
 
 Mark message as read.
@@ -278,7 +278,7 @@ Mark message as read.
 ##### `Messages.mark_as_unread`
 
 ```python
-def mark_as_unread(self, message_id: str) -> Dict[str, Any]
+def mark_as_unread(self, message_id: str) -> dict[str, Any]
 ```
 
 Mark message as unread.
@@ -286,7 +286,7 @@ Mark message as unread.
 ##### `Messages.get_attachments_info`
 
 ```python
-def get_attachments_info(self, folder_id: str, message_id: str) -> Dict[str, Any]
+def get_attachments_info(self, folder_id: str, message_id: str) -> dict[str, Any]
 ```
 
 Get attachment information for a message.
@@ -311,7 +311,7 @@ Returns the final file path.
 ##### `Messages.list_iter`
 
 ```python
-def list_iter(self, folder_id: Optional[str] = None, start: int = 1, limit: int = 50)
+def list_iter(self, folder_id: str | None = None, start: int = 1, limit: int = 50)
 ```
 
 Iterator for messages in a folder.
@@ -319,7 +319,7 @@ Iterator for messages in a folder.
 ##### `Messages.message_has_attachment`
 
 ```python
-def message_has_attachment(self, message: Dict[str, Any]) -> bool
+def message_has_attachment(self, message: dict[str, Any]) -> bool
 ```
 
 Return True when a Zoho message summary indicates attachments.
@@ -327,7 +327,7 @@ Return True when a Zoho message summary indicates attachments.
 ##### `Messages.extract_attachments`
 
 ```python
-def extract_attachments(self, response: Dict[str, Any]) -> List[Dict[str, Any]]
+def extract_attachments(self, response: dict[str, Any]) -> list[dict[str, Any]]
 ```
 
 Normalize Zoho attachment metadata response shapes.
@@ -335,7 +335,7 @@ Normalize Zoho attachment metadata response shapes.
 ##### `Messages.resolve_download_path`
 
 ```python
-def resolve_download_path(self, download_dir: str, attachment_name: str, sequence_index: Optional[int] = None) -> str
+def resolve_download_path(self, download_dir: str, attachment_name: str, sequence_index: int | None = None) -> str
 ```
 
 Return a collision-safe path for an attachment in the target directory.
@@ -343,7 +343,7 @@ Return a collision-safe path for an attachment in the target directory.
 ##### `Messages.download_folder_attachments`
 
 ```python
-def download_folder_attachments(self, folder_id: str, download_dir: str, filename: Optional[str] = None) -> List[str]
+def download_folder_attachments(self, folder_id: str, download_dir: str, filename: str | None = None) -> list[str]
 ```
 
 Downloads all attachments from all messages in a specific folder.

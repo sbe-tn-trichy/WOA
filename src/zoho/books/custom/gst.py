@@ -2,10 +2,10 @@ import re
 import logging
 import calendar
 from datetime import datetime
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import copy_context
-from zoho.downloads import write_response_to_file
+from utils.http import write_response_to_file
 from zoho.exceptions import ZohoBooksError
 from zoho.security import resolve_output_path
 from ..base import BaseResource
@@ -21,7 +21,7 @@ class GST(BaseResource):
     def __init__(self, client: Any):
         super().__init__(client, 'gst')
 
-    def get_month_date_range(self, month_str: str) -> Tuple[str, str]:
+    def get_month_date_range(self, month_str: str) -> tuple[str, str]:
         """
         Parses a month string ('YYYY-MM') and returns ('YYYY-MM-01', 'YYYY-MM-DD').
         """
@@ -34,7 +34,7 @@ class GST(BaseResource):
         except ValueError as e:
             raise ValueError(f"Invalid month format '{month_str}'. Must be 'YYYY-MM'.") from e
 
-    def validate_gst_data(self, month_str: str) -> Dict[str, Any]:
+    def validate_gst_data(self, month_str: str) -> dict[str, Any]:
         """
         Executes outward GST validations:
         1. Checks invoice number sequence gaps and chronology.
@@ -96,8 +96,8 @@ class GST(BaseResource):
         }
 
     def _validate_document_sequence_and_status(
-        self, docs: List[Dict[str, Any]], num_key: str, id_key: str, date_key: str
-    ) -> Dict[str, Any]:
+        self, docs: list[dict[str, Any]], num_key: str, id_key: str, date_key: str
+    ) -> dict[str, Any]:
         """
         Performs status classification and sequence/chronological order check on list of documents.
         """
@@ -182,8 +182,8 @@ class GST(BaseResource):
         }
 
     def _fetch_details_concurrently(
-        self, client_module: Any, docs: List[Dict[str, Any]], id_key: str, doc_key: str
-    ) -> List[Dict[str, Any]]:
+        self, client_module: Any, docs: list[dict[str, Any]], id_key: str, doc_key: str
+    ) -> list[dict[str, Any]]:
         """
         Fetch complete details with bounded concurrency; transport owns retries.
         """
@@ -194,7 +194,7 @@ class GST(BaseResource):
         if not all(identifiers) or len(set(identifiers)) != len(identifiers):
             raise ZohoBooksError(f"GST {doc_key} list has missing or duplicate {id_key}; summary aborted.")
 
-        def fetch_one(doc_id: str) -> Dict[str, Any]:
+        def fetch_one(doc_id: str) -> dict[str, Any]:
             try:
                 response = client_module.get(doc_id)
             except Exception as exc:
@@ -222,8 +222,8 @@ class GST(BaseResource):
 
 
     def _generate_tax_summary(
-        self, detailed_invoices: List[Dict[str, Any]], detailed_credit_notes: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, detailed_invoices: list[dict[str, Any]], detailed_credit_notes: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         Aggregates taxable value, tax, and totals grouped by HSN and GST rate.
         Generates separate sums for Invoices, Credit Notes, and Net Consolidated.
@@ -304,13 +304,15 @@ class GST(BaseResource):
             "consolidated": finalize_summary(net_agg)
         }
 
-    def get_gstr_outward_supplies(self, params: Optional[Dict[str, Any]] = None) -> bytes:
+    def get_gstr_outward_supplies(self, params: dict[str, Any] | None = None, *, stream: bool = False) -> Any:
         """
         Retrieve GSTR-1 Outward Supplies report content (e.g. XLSX, XLS or PDF).
         """
+        if stream:
+            return self.client.request('GET', 'reports/gstroutwardsupplies', params=params, stream=True)
         return self.client.request('GET', 'reports/gstroutwardsupplies', params=params)
 
-    def download_gstr_outward_supplies(self, save_path: str, params: Optional[Dict[str, Any]] = None) -> str:
+    def download_gstr_outward_supplies(self, save_path: str, params: dict[str, Any] | None = None) -> str:
         """
         Download GSTR-1 Outward Supplies report and save it to the specified path.
         """
@@ -320,16 +322,18 @@ class GST(BaseResource):
             params['accept'] = 'xlsx'
 
         save_path = resolve_output_path(save_path)
-        response = self.client.request('GET', 'reports/gstroutwardsupplies', params=params, stream=True)
+        response = self.get_gstr_outward_supplies(params=params, stream=True)
         return write_response_to_file(response, save_path)
 
-    def get_gstr_inward_supplies(self, params: Optional[Dict[str, Any]] = None) -> bytes:
+    def get_gstr_inward_supplies(self, params: dict[str, Any] | None = None, *, stream: bool = False) -> Any:
         """
         Retrieve GSTR-2 Inward Supplies report content (e.g. XLSX, XLS or PDF).
         """
+        if stream:
+            return self.client.request('GET', 'reports/gstrinwardsupplies', params=params, stream=True)
         return self.client.request('GET', 'reports/gstrinwardsupplies', params=params)
 
-    def download_gstr_inward_supplies(self, save_path: str, params: Optional[Dict[str, Any]] = None) -> str:
+    def download_gstr_inward_supplies(self, save_path: str, params: dict[str, Any] | None = None) -> str:
         """
         Download GSTR-2 Inward Supplies report and save it to the specified path.
         """
@@ -339,5 +343,5 @@ class GST(BaseResource):
             params['accept'] = 'xlsx'
 
         save_path = resolve_output_path(save_path)
-        response = self.client.request('GET', 'reports/gstrinwardsupplies', params=params, stream=True)
+        response = self.get_gstr_inward_supplies(params=params, stream=True)
         return write_response_to_file(response, save_path)

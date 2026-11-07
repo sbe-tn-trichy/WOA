@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 import re
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from zoho.books import ZohoBooksAPI
 

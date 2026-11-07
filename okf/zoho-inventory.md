@@ -27,7 +27,7 @@ The naming updater retains dry-run, backup snapshots, and per-item audit results
 
 ## Public API migration
 
-- Replace `books.items` and imports from `zoho.books.resources.inventory` with
+- Replace `books.items` and imports from `zoho.books.custom.inventory` with
   `inventory.items` and `zoho.inventory.resources.items`. The Books item resource
   has been removed; it is not a proxy that reuses Books credentials.
 - Replace `books.sales_orders.create_from_yaml(...)` with

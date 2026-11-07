@@ -35,7 +35,7 @@ def test_parse_module_auth() -> None:
 
 
 def test_parse_module_purchases_attributes_and_mixins() -> None:
-    purchases_file = ROOT / "src/zoho/books/resources/purchases.py"
+    purchases_file = ROOT / "src/zoho/books/custom/purchases.py"
     mod_doc = parse_module(purchases_file)
 
     bills_cls = next(c for c in mod_doc.classes if c.name == "Bills")

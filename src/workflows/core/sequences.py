@@ -2,7 +2,8 @@
 
 from collections import Counter, defaultdict
 from datetime import date
-from typing import Mapping, Sequence, TypedDict
+from collections.abc import Mapping, Sequence
+from typing import TypedDict
 
 from zoho.helpers.sequences import parse_doc_number
 from .matching import parse_date

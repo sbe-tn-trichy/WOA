@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
+from utils import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 try:
     from . import _bootstrap  # noqa: F401
@@ -21,7 +22,7 @@ from workflows.core.config import Config
 from workflows.neoseal_audit import audit_neoseal_items, render_markdown_report
 
 
-def load_items_from_csv(csv_path: Path) -> List[Dict[str, Any]]:
+def load_items_from_csv(csv_path: Path) -> list[dict[str, Any]]:
     """Load items from a local exported inventory CSV."""
     with csv_path.open("r", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
@@ -68,10 +69,10 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
-    price_list: Optional[List[Dict[str, Any]]] = None
+    price_list: list[dict[str, Any]] | None = None
     if args.price_list_csv:
         if not args.price_list_csv.exists():
             print(f"Error: Price-list CSV '{args.price_list_csv}' does not exist.", file=sys.stderr)

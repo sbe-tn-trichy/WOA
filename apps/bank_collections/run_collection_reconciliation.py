@@ -10,12 +10,13 @@ Outputs are written under `output/collection_reconciliation/`.
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 try:
     from . import _bootstrap  # noqa: F401
@@ -38,19 +39,19 @@ logger = logging.getLogger("run_collection_reconciliation")
 
 
 def run_collection_reconciliation(
-    bank_account_id: Optional[str] = None,
-    creator_app_link_name: Optional[str] = None,
-    creator_owner_name: Optional[str] = None,
-    analytics_workspace_id: Optional[str] = None,
+    bank_account_id: str | None = None,
+    creator_app_link_name: str | None = None,
+    creator_owner_name: str | None = None,
+    analytics_workspace_id: str | None = None,
     dry_run: bool = True,
     token_url: str = Config.TOKEN_URL,
     org_id: str = Config.ORG_ID,
     domain: str = Config.DOMAIN,
-    output_path: Optional[Path] = None,
-    creator_client: Optional[ZohoCreatorAPI] = None,
-    books_client: Optional[ZohoBooksAPI] = None,
-    analytics_client: Optional[ZohoAnalyticsAPI] = None,
-) -> Dict[str, Any]:
+    output_path: Path | None = None,
+    creator_client: ZohoCreatorAPI | None = None,
+    books_client: ZohoBooksAPI | None = None,
+    analytics_client: ZohoAnalyticsAPI | None = None,
+) -> dict[str, Any]:
     """Execute collection reconciliation in a single function call.
 
     Args:
@@ -203,7 +204,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 

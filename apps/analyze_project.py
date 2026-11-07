@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import ast
 from datetime import datetime, timezone
-import json
+from utils import json
 from pathlib import Path
 import re
 import subprocess
@@ -157,16 +157,18 @@ def inspect(root: Path, since: str | None = None) -> Snapshot:
         dependencies = imports(tree, module, path.endswith("/__init__.py"))
         graph[path] = sorted({name for _, name in dependencies})
         forbidden = {"apps", "scripts"}
-        if path.startswith("src/zoho/"):
+        if path.startswith("src/utils/"):
+            forbidden.update({"zoho", "workflows", "google_sheets"})
+        elif path.startswith("src/zoho/"):
             forbidden.add("workflows")
-        if path.startswith(("src/zoho/", "src/workflows/")):
+        if path.startswith(("src/utils/", "src/zoho/", "src/workflows/")):
             for line, name in dependencies:
                 if name.split(".")[0] in forbidden:
                     diagnostic: Diagnostic = {"file": path, "line": line, "rule": "import-layer", "message": f"Forbidden import: {name}"}
                     if diagnostic not in diagnostics:
                         diagnostics.append(diagnostic)
     config = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-    targets = config.get("tool", {}).get("mypy", {}).get("files", [])
+    targets = config.get("tool", {}).get("ty", {}).get("src", {}).get("include", [])
     covered = [p for p in files if any(p == t.rstrip("/") or p.startswith(t.rstrip("/") + "/") for t in targets)]
     optional_docs = [p for p in ("AGENTS.md", "GEMINI.md", "CHANGELOG.md") if (root / p).is_file()]
     okf_docs = sorted(p.relative_to(root).as_posix() for p in (root / "okf").glob("*.md") if p.is_file()) if (root / "okf").is_dir() else []
@@ -217,7 +219,7 @@ def inspect(root: Path, since: str | None = None) -> Snapshot:
         p for p in (reached | (set(changed_paths) & set(files)))
         if p.startswith("tests/") or Path(p).name.startswith("test_") or Path(p).name.endswith("_test.py")
     )
-    broad = [p for p in changed_paths if p.startswith(("src/workflows/core/", "src/zoho/", ".github/", "tests/", "okf/")) or p in {"pyproject.toml", "AGENTS.md", ".python-version", *DOCUMENTS}]
+    broad = [p for p in changed_paths if p.startswith(("src/utils/", "src/workflows/core/", "src/zoho/", ".github/", "tests/", "okf/")) or p in {"pyproject.toml", "AGENTS.md", ".python-version", *DOCUMENTS}]
     return {"schema_version": 1, "revision": revision, "baseline": baseline, "changes": changes,
             "python_files": files, "typing": {"configured_targets": targets, "explicitly_covered": covered,
             "outside_explicit_targets": sorted(set(files) - set(covered))},
@@ -232,14 +234,14 @@ def inspect(root: Path, since: str | None = None) -> Snapshot:
             },
             "diagnostics": diagnostics, "errors": errors,
             "limitations": ["Static imports only; dynamic imports and indirect dependencies require review.",
-                            "Explicit mypy targets are not transitive type-check coverage.",
+                            "Explicit ty targets are not transitive type-check coverage.",
                             "Link checks cover designated navigation, changelog, and OKF Markdown files (including cross-file heading anchors), not in-page anchors or all Markdown syntax.",
                             "Incremental candidates do not establish financial safety or verify unchanged code."]}
 
 
 def verify(root: Path) -> list[Verification]:
     results: list[Verification] = []
-    for args in (["apps/generate_api_reference.py", "--check"], ["-m", "mypy"]):
+    for args in (["apps/generate_api_reference.py", "--check"], ["-m", "ty", "check"]):
         start = perf_counter()
         command = [sys.executable, *args]
         try:
@@ -255,7 +257,7 @@ def verify(root: Path) -> list[Verification]:
 
 def render(report: Snapshot) -> str:
     lines = ["# Project analysis snapshot", "", f"Revision: `{report['revision']}`", "",
-             f"Python files: {len(report['python_files'])}; explicit mypy targets cover {len(report['typing']['explicitly_covered'])} files.",
+             f"Python files: {len(report['python_files'])}; explicit ty targets cover {len(report['typing']['explicitly_covered'])} files.",
              f"Diagnostics: {len(report['diagnostics'])}; inspection errors: {len(report['errors'])}.",
              f"Comparison baseline: `{report['baseline'] or 'not requested'}`.", ""]
     if "capture" in report:
@@ -282,7 +284,7 @@ def render(report: Snapshot) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--since", help="Commit to compare with HEAD; local changes are also reported")
-    parser.add_argument("--verify", action="store_true", help="Also run API reference check and configured mypy")
+    parser.add_argument("--verify", action="store_true", help="Also run API reference check and configured ty")
     args = parser.parse_args()
     start = perf_counter()
     try:

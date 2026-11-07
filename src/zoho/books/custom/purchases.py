@@ -1,7 +1,8 @@
 from collections import defaultdict
-from typing import Any, Dict, Iterable, Optional, List
+from collections.abc import Iterable
+from typing import Any
 from ..base import BaseResource
-from ..mixins import StatusMixin, ApprovalMixin, CreditsMixin
+from .mixins import StatusMixin, ApprovalMixin, CreditsMixin
 
 class Bills(BaseResource, StatusMixin, ApprovalMixin, CreditsMixin):
     # Top-level requirements
@@ -43,7 +44,7 @@ class Bills(BaseResource, StatusMixin, ApprovalMixin, CreditsMixin):
         return str(bill_number).strip()
 
     @classmethod
-    def find_duplicate_groups(cls, bills: Iterable[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    def find_duplicate_groups(cls, bills: Iterable[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
         """Group bill records with repeated non-blank bill numbers."""
         groups = defaultdict(list)
 
@@ -58,23 +59,14 @@ class Bills(BaseResource, StatusMixin, ApprovalMixin, CreditsMixin):
             if len(bill_group) > 1
         }
 
-    def list_duplicate_bill_groups(self) -> Dict[str, List[Dict[str, Any]]]:
+    def list_duplicate_bill_groups(self) -> dict[str, list[dict[str, Any]]]:
         """Fetch all bills and return groups with duplicate bill numbers."""
         bills = self.list_all(resource_key="bills")
         return self.find_duplicate_groups(bills)
 
-    def update(self, bill_id: str, data: Dict[str, Any], params: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Update an existing bill.
-        
-        Note: Zoho Books typically requires the full payload for updates.
-        Missing fields may be reset to defaults or cleared.
-        """
-        payload = self._prepare_payload(data, check_required=False)
-        return self.client.request('PUT', f"{self.endpoint}/{bill_id}", json=payload, params=params, files=files)
 
 
-    def add_attachment(self, bill_id: str, file_content: Any, filename: str) -> Dict[str, Any]:
+    def add_attachment(self, bill_id: str, file_content: Any, filename: str) -> dict[str, Any]:
         """
         Attach a file to an existing bill.
         """
@@ -87,26 +79,26 @@ class PurchaseOrders(BaseResource, StatusMixin):
     def __init__(self, client: Any):
         super().__init__(client, 'purchaseorders')
 
-    def mark_as_billed(self, po_id: str) -> Dict[str, Any]:
+    def mark_as_billed(self, po_id: str) -> dict[str, Any]:
         return self._action('POST', po_id, 'status/billed')
 
-    def mark_as_cancelled(self, po_id: str) -> Dict[str, Any]:
+    def mark_as_cancelled(self, po_id: str) -> dict[str, Any]:
         return self._action('POST', po_id, 'status/cancelled')
 
 class VendorPayments(BaseResource):
     def __init__(self, client: Any):
         super().__init__(client, 'vendorpayments')
 
-    def update_with_number_series(self, payment_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def update_with_number_series(self, payment_id: str, data: dict[str, Any]) -> dict[str, Any]:
         """Update location and chosen payment number without auto numbering."""
-        import json
+        from utils import json
 
         if not payment_id or not data.get("location_id"):
             raise ValueError("Payment ID and destination location are required")
         if not data.get("payment_number_prefix") or not data.get("payment_number_suffix"):
             raise ValueError("Payment number prefix and suffix are required")
-        return self.client.request(
-            "PUT", f"{self.endpoint}/{payment_id}",
+        return self.update(
+            payment_id, {},
             files={"JSONString": (None, json.dumps(data)),
                    "ignore_auto_number_generation": (None, "true")},
         )

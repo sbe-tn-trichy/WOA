@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 import sys
 from pathlib import Path
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 try:
     from . import _bootstrap  # noqa: F401
@@ -51,7 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     audit_file = ROOT_DIR / "output" / "customer_payment_date_mismatches.json"
 

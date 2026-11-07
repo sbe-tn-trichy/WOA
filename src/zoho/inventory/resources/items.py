@@ -1,5 +1,5 @@
-from typing import Any, Dict, List
-import json
+from typing import Any
+from utils import json
 from ..base import BaseResource
 
 class Items(BaseResource):
@@ -7,15 +7,15 @@ class Items(BaseResource):
     def __init__(self, client: Any):
         super().__init__(client, 'items')
 
-    def mark_as_active(self, item_id: str) -> Dict[str, Any]:
+    def mark_as_active(self, item_id: str) -> dict[str, Any]:
         """Activate an Inventory item."""
         return self._action('POST', item_id, 'active')
 
-    def mark_as_inactive(self, item_id: str) -> Dict[str, Any]:
+    def mark_as_inactive(self, item_id: str) -> dict[str, Any]:
         """Deactivate an Inventory item."""
         return self._action('POST', item_id, 'inactive')
 
-    def get_details(self, item_ids: List[str], batch_size: int = 50) -> List[Dict[str, Any]]:
+    def get_details(self, item_ids: list[str], batch_size: int = 50) -> list[dict[str, Any]]:
         """Bulk-fetch complete items through GET /itemdetails; require every ID."""
         if not 1 <= batch_size <= 50:
             raise ValueError("batch_size must be between 1 and 50")
@@ -34,7 +34,7 @@ class Items(BaseResource):
             result.extend(by_id[item_id] for item_id in batch)
         return result
 
-    def list_bins(self, item_id: str, location_id: str) -> List[Dict[str, Any]]:
+    def list_bins(self, item_id: str, location_id: str) -> list[dict[str, Any]]:
         """Read item-specific bin balances at one location."""
         if not item_id or not location_id:
             raise ValueError("item_id and location_id required")
@@ -43,7 +43,7 @@ class Items(BaseResource):
             resource_key='storage_locations',
         )
 
-    def group_items(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def group_items(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Group existing items under a new item group.
         """
@@ -57,8 +57,8 @@ class Items(BaseResource):
             data=payload
         )
 
-    def list_by_status(self, status: str = "active") -> List[Dict[str, Any]]:
-        params: Dict[str, Any] = {}
+    def list_by_status(self, status: str = "active") -> list[dict[str, Any]]:
+        params: dict[str, Any] = {}
         if status:
             params["filter_by"] = f"Status.{status.title()}"
         return self.list_all(params=params)
@@ -67,20 +67,20 @@ class Items(BaseResource):
         self,
         account_id: str,
         status: str = "all",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         account_id = str(account_id or "").strip()
         if not account_id:
             raise ValueError("purchase_account_id is required.")
-        params: Dict[str, Any] = {"purchase_account_id": account_id}
+        params: dict[str, Any] = {"purchase_account_id": account_id}
         if status:
             params["filter_by"] = f"Status.{status.title()}"
         return self.list_all(params=params)
 
     def mark_inactive_bulk(
         self,
-        item_ids: List[str],
+        item_ids: list[str],
         batch_size: int = 200,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         if batch_size < 1 or batch_size > 200:
             raise ValueError("batch_size must be between 1 and 200")
         clean_ids = [str(item_id).strip() for item_id in item_ids if str(item_id).strip()]

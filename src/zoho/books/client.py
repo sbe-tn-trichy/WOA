@@ -1,19 +1,15 @@
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 from zoho.base_client import BaseZohoClient
-from .resources.contacts import Contacts, Organizations, ChartOfAccounts, Vendors
-from .resources.sales import Invoices, Estimates, SalesOrders, CreditNotes, VendorCredits, SalesReturns, CustomerPayments
-from .resources.purchases import Bills, Expenses, PurchaseOrders, VendorPayments
-from .resources.banking import BankAccounts, BankTransactions, Journals
-from .resources.projects import Projects, Tasks, TimeEntries
-from .resources.gst import GST
-from .resources.settings import CustomFields, Locations
-from .resources.ledger import Registers
-from .resources.reports import Reports
-from .resources.fixed_assets import FixedAssets
+from .custom.contacts import Vendors
+from .custom.sales import SalesReturns
+from .custom.gst import GST
+from .custom.contacts import CustomFields
+from .custom.reports import Reports
+from .openapi import BooksResources, RESOURCE_TYPES
 
-class ZohoBooksAPI(BaseZohoClient):
+class ZohoBooksAPI(BaseZohoClient, BooksResources):
     """
     Main Zoho Books API Client linking all modules together.
     """
@@ -22,8 +18,8 @@ class ZohoBooksAPI(BaseZohoClient):
         access_token: str,
         organization_id: str,
         domain: str = "com",
-        on_request_completed: Optional[Any] = None,
-        token_refresh_callback: Optional[Any] = None
+        on_request_completed: Any | None = None,
+        token_refresh_callback: Any | None = None
     ):
         """
         Initialize the Zoho Books API client.
@@ -44,47 +40,27 @@ class ZohoBooksAPI(BaseZohoClient):
         self.organization_id = organization_id
         
         # Initialize modules
-        self.organizations = Organizations(self)
-        self.contacts = Contacts(self)
         self.vendors = Vendors(self)
-        self.invoices = Invoices(self)
-        self.estimates = Estimates(self)
-        self.sales_orders = SalesOrders(self)
-        self.credit_notes = CreditNotes(self)
-        self.vendor_credits = VendorCredits(self)
         self.sales_returns = SalesReturns(self)
-        self.customer_payments = CustomerPayments(self)
-        self.bills = Bills(self)
-        self.purchase_orders = PurchaseOrders(self)
-        self.vendor_payments = VendorPayments(self)
-        self.expenses = Expenses(self)
-        self.bank_accounts = BankAccounts(self)
-        self.bank_transactions = BankTransactions(self)
-        self.journals = Journals(self)
-        self.chart_of_accounts = ChartOfAccounts(self)
-        self.registers = Registers(self)
         self.reports = Reports(self)
-        self.fixed_assets = FixedAssets(self)
-        self.projects = Projects(self)
-        self.tasks = Tasks(self)
-        self.time_entries = TimeEntries(self)
         self.gst = GST(self)
         self.custom_fields = CustomFields(self)
-        self.locations = Locations(self)
+        for name, resource_type in RESOURCE_TYPES.items():
+            setattr(self, name, resource_type(self))
 
     def request(
         self,
         method: str,
         endpoint: str,
-        json: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
-        files: Optional[Dict[str, Any]] = None,
+        json: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
         stream: bool = False,
-        override_url: Optional[str] = None,
-        is_mutation: Optional[bool] = None,
-        timeout: Optional[int] = None,
+        override_url: str | None = None,
+        is_mutation: bool | None = None,
+        timeout: int | None = None,
     ) -> Any:
         """
         Internal HTTP request handler with logging.

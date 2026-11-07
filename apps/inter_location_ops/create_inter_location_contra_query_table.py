@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 try:
     from . import _bootstrap  # noqa: F401
@@ -15,7 +15,7 @@ except ImportError:
     from manage_inter_location_contra_query_table import main as _manage
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """Retain the historical command defaults using the shared manager."""
     return _manage(argv, default_view_id=None)
 

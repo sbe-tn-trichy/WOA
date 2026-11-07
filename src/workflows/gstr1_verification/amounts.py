@@ -1,6 +1,7 @@
 """Books document GST amounts and decimal-safe summaries."""
 from decimal import Decimal
-from typing import Any, Mapping, Sequence, TypedDict
+from collections.abc import Mapping, Sequence
+from typing import Any, TypedDict
 
 
 class GSTAmounts(TypedDict):

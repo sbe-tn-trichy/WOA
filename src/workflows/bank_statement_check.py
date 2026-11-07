@@ -8,7 +8,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 import csv
 import re
-from typing import Any, Literal, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal
 
 from workflows.analytics_catalog import AnalyticsCatalog
 from workflows.core.matching import normalize_payment_reference, parse_currency_amount, parse_date, to_text

@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 import csv
-import json
+from utils import json
 from pathlib import Path
 
 from workflows.analytics_catalog import AnalyticsCatalog

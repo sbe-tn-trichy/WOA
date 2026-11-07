@@ -2,18 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any
 from zoho.helpers import normalize_cheque_number
 from ..core.matching import to_text as _text
 
 
 
 def attach_presented_dates(
-    payments: Sequence[Dict[str, Any]],
+    payments: Sequence[dict[str, Any]],
     cheque_details: Sequence[Mapping[str, Any]],
 ) -> None:
     """Join presented dates from Creator All_Cheque_Details onto payment records."""
-    details_by_key: Dict[Tuple[str, str], List[Mapping[str, Any]]] = {}
+    details_by_key: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
     for detail in cheque_details:
         lookup = (
             detail.get("Payment_ID.Customer_Name")

@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from google.auth.credentials import Credentials as BaseCredentials
 from google.oauth2.credentials import Credentials as OAuth2Credentials

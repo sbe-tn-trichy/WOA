@@ -9,13 +9,18 @@ description = "WOA — Workflows, Ops and Automations for Zoho-focused business 
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "mypy==2.4.1",
-    "types-requests==2.32.4.20250913",
+    "ty==0.0.99",
+    "ruff>=0.17.0",
     "tzdata",
-    "PyYAML>=6.0.3",
+    "yamlrocks==0.7.1",
     "pytest>=8.0.0",
     "pytest-xdist==3.8.0",
-    "requests>=2.25.0",
+    "pyqwest==0.13.0",
+    "python-rapidjson==1.26",
+    "pydantic-core>=2.20.0",
+    "regex>=2024.0.0",
+    "chardetng-py>=0.3.5",
+    "certifi>=2026.6.17",
     "google-api-python-client>=2.0.0",
     "google-auth>=2.0.0",
     "google-auth-httplib2>=0.2.0",
@@ -24,10 +29,10 @@ dependencies = [
 
 [project.optional-dependencies]
 workflows = [
-    "xlrd>=2.0.1",
-    "pdfplumber>=0.10.0",
+    "python-calamine==0.9.1",
+    "pypdfium2==5.9.0",
+    "dotenvy-py>=0.1.0",
     "python-dotenv>=1.0.0",
-    "openpyxl>=3.1.5",
 ]
 ocr = ["pytesseract>=0.3.13", "Pillow>=11.0.0"]
 # Compatibility alias for existing installation commands; testing is mandatory.
@@ -35,11 +40,24 @@ test = []
 # Compatibility alias for existing installation commands; typing is mandatory.
 typing = []
 
-[tool.mypy]
-python_version = "3.14"
-mypy_path = "$MYPY_CONFIG_FILE_DIR/src"
-cache_dir = "output/mypy-cache"
-files = [
+[tool.ruff]
+target-version = "py314"
+extend-exclude = ["scripts", "output"]
+
+[tool.ruff.lint]
+select = ["UP006", "UP007", "UP035", "UP045", "UP046", "UP047"]
+
+[tool.ty.environment]
+python-version = "3.14"
+extra-paths = ["src"]
+
+[tool.ty.src]
+include = [
+    "src/utils/http.py",
+    "src/utils/json.py",
+    "src/utils/http_transport.py",
+    "src/utils/yaml.py",
+    "src/utils/pdf.py",
     "src/workflows/core/sequences.py",
     "src/workflows/core/dates.py",
     "src/workflows/core/checkpoint.py",
@@ -62,18 +80,13 @@ files = [
     "apps/analyze_project.py",
     "tests/typecheck/renumber_contracts.py",
 ]
-strict = true
-follow_imports = "normal"
-disallow_any_explicit = true
-disallow_any_unimported = true
-warn_unused_ignores = true
-show_error_codes = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
 "zoho.erp" = ["manifest.json"]
+"zoho.books.openapi" = ["manifest.json"]
 
 [tool.pytest.ini_options]
 cache_dir = "output/pytest-cache"

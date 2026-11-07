@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import re
-import json
+from utils import json
 from pathlib import Path
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from math import isfinite
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from collections.abc import Iterable, Mapping, Sequence
 
 from zoho.helpers import (
     GSTIN_PATTERN,
@@ -40,13 +40,13 @@ class VendorCustomerOffsetConfig:
     """Policy and posting settings for customer/vendor balance offsets."""
 
     bank_account_name: str = "Vendor To Customer"
-    bank_account_id: Optional[str] = None
+    bank_account_id: str | None = None
     payment_mode: str = "banktransfer"
     reference_prefix: str = "Vendor-Customer Offset"
     dry_run: bool = True
     ensure_linked: bool = True
-    vendor_id: Optional[str] = None
-    checkpoint_path: Optional[Path] = None
+    vendor_id: str | None = None
+    checkpoint_path: Path | None = None
 
     def __post_init__(self) -> None:
         if not self.bank_account_id and not self.bank_account_name.strip():
@@ -76,18 +76,18 @@ def _contact_type(contact: Mapping[str, object]) -> str:
 
 def _unique_gstin_pairs(
     contacts: Iterable[Mapping[str, object]],
-) -> Tuple[
-    List[Tuple[str, Mapping[str, object], Mapping[str, object]]],
-    List[AmbiguousPair],
+) -> tuple[
+    list[tuple[str, Mapping[str, object], Mapping[str, object]]],
+    list[AmbiguousPair],
 ]:
-    grouped: Dict[str, List[Mapping[str, object]]] = defaultdict(list)
+    grouped: dict[str, list[Mapping[str, object]]] = defaultdict(list)
     for contact in contacts:
         gstin = normalize_gstin(contact.get("gst_no"))
         if gstin:
             grouped[gstin].append(contact)
 
-    pairs: List[Tuple[str, Mapping[str, object], Mapping[str, object]]] = []
-    skipped: List[AmbiguousPair] = []
+    pairs: list[tuple[str, Mapping[str, object], Mapping[str, object]]] = []
+    skipped: list[AmbiguousPair] = []
     for gstin, matches in grouped.items():
         customers = [item for item in matches if _contact_type(item) == "customer"]
         vendors = [item for item in matches if _contact_type(item) == "vendor"]
@@ -127,7 +127,7 @@ def _resolve_bank_account_id(books_client: OffsetBooksClient, config: VendorCust
     return account_id
 
 
-def _document_sort_key(document: Mapping[str, object]) -> Tuple[str, str, str]:
+def _document_sort_key(document: Mapping[str, object]) -> tuple[str, str, str]:
     return (
         str(document.get("due_date") or "9999-12-31"),
         str(document.get("date") or "9999-12-31"),
@@ -139,7 +139,7 @@ def _allocate_documents(
     documents: Sequence[Mapping[str, object]],
     amount: Decimal,
     id_key: str,
-) -> Tuple[List[Dict[str, object]], Decimal]:
+) -> tuple[list[dict[str, object]], Decimal]:
     if amount <= 0:
         return [], Decimal("0")
     allocations, remaining = allocate_documents_fifo(amount, documents, id_key=id_key)
@@ -150,7 +150,7 @@ def _build_bill_payment_tranches(
     invoices: Sequence[Mapping[str, object]],
     bills: Sequence[Mapping[str, object]],
     amount: Decimal,
-) -> Tuple[List[OffsetTranche], Decimal, str]:
+) -> tuple[list[OffsetTranche], Decimal, str]:
     """Split an offset into one same-dated payment pair per vendor bill."""
     invoice_allocations, invoice_remaining = _allocate_documents(
         invoices, amount, "invoice_id"
@@ -174,7 +174,7 @@ def _build_bill_payment_tranches(
         if typed_invoices
         else Decimal("0")
     )
-    tranches: List[OffsetTranche] = []
+    tranches: list[OffsetTranche] = []
     for bill_allocation in typed_bills:
         bill_id = str(bill_allocation["bill_id"])
         bill = bill_by_id[bill_id]
@@ -185,7 +185,7 @@ def _build_bill_payment_tranches(
 
         tranche_amount = _money(_decimal(bill_allocation["amount_applied"]))
         tranche_remaining = tranche_amount
-        tranche_invoices: List[InvoiceAllocation] = []
+        tranche_invoices: list[InvoiceAllocation] = []
         while tranche_remaining > 0 and invoice_index < len(typed_invoices):
             applied = min(invoice_available, tranche_remaining)
             tranche_invoices.append(
@@ -216,7 +216,7 @@ def _build_bill_payment_tranches(
     return tranches, Decimal("0"), ""
 
 
-def _open_documents(books_client: OffsetBooksClient, customer_id: str, vendor_id: str) -> Tuple[List[Dict[str, object]], List[Dict[str, object]]]:
+def _open_documents(books_client: OffsetBooksClient, customer_id: str, vendor_id: str) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     return (
         require_records(fetch_open_invoices(books_client, customer_id), "Open invoices"),
         require_records(fetch_open_bills(books_client, vendor_id), "Open bills"),
@@ -309,7 +309,7 @@ def _reconcile_operation(books_client: OffsetBooksClient, operation: dict[str, o
 
 def _run_vendor_customer_offset(
     books_client: OffsetBooksClient,
-    config: Optional[VendorCustomerOffsetConfig] = None,
+    config: VendorCustomerOffsetConfig | None = None,
 ) -> OffsetReport:
     """Create paired, fully-applied payments for linked customer/vendor contacts.
 
@@ -532,7 +532,7 @@ def _run_vendor_customer_offset(
 
 def run_vendor_customer_offset(
     books_client: OffsetBooksClient,
-    config: Optional[VendorCustomerOffsetConfig] = None,
+    config: VendorCustomerOffsetConfig | None = None,
 ) -> OffsetReport:
     """Plan offsets or post with an exclusive, durable recovery checkpoint.
 

@@ -1,14 +1,14 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import time
-import requests
+from utils import http_transport
 from zoho.auth import CatalystAuth, HttpTokenProvider, ZohoOAuth2Manager
 from zoho.exceptions import ZohoAuthError
 from workflows.core import auth as workflow_auth
 
 
 class TestHttpTokenProvider(unittest.TestCase):
-    @patch("requests.post")
+    @patch("utils.http_transport.post")
     def test_get_token_from_wrapped_string_body(self, mock_post):
         response = MagicMock()
         response.json.return_value = {"body": '{"tokens":{"books":"secret"}}'}
@@ -24,7 +24,7 @@ class TestHttpTokenProvider(unittest.TestCase):
             timeout=10.0,
         )
 
-    @patch("requests.post")
+    @patch("utils.http_transport.post")
     def test_explicit_service_fallback(self, mock_post):
         response = MagicMock()
         response.json.return_value = {"tokens": {"books": "secret"}}
@@ -35,7 +35,7 @@ class TestHttpTokenProvider(unittest.TestCase):
         )
         self.assertEqual(provider.get_token("inventory"), "secret")
 
-    @patch("requests.post")
+    @patch("utils.http_transport.post")
     def test_malformed_response_is_sanitized(self, mock_post):
         response = MagicMock()
         response.json.return_value = {"access_token": "must-not-leak"}
@@ -57,17 +57,17 @@ class TestWorkflowClientFactories(unittest.TestCase):
 
 
 class TestCatalystAuth(unittest.TestCase):
-    @patch("requests.post")
+    @patch("utils.http_transport.post")
     def test_mutation_fails_closed_when_broker_is_unavailable(self, mock_post):
-        mock_post.side_effect = requests.ConnectionError("broker unavailable")
+        mock_post.side_effect = http_transport.TransportError("broker unavailable")
         auth = CatalystAuth("direct", "http://localhost/tokens", "books")
 
         with self.assertRaises(ZohoAuthError):
             auth.get_token_for_request(is_mutation=True)
 
-    @patch("requests.post")
+    @patch("utils.http_transport.post")
     def test_direct_fallback_requires_explicit_opt_in(self, mock_post):
-        mock_post.side_effect = requests.ConnectionError("broker unavailable")
+        mock_post.side_effect = http_transport.TransportError("broker unavailable")
         auth = CatalystAuth(
             "direct",
             "http://localhost/tokens",
@@ -104,7 +104,7 @@ class TestZohoOAuth2Manager(unittest.TestCase):
         manager_in = ZohoOAuth2Manager("cid", "sec", "ref", domain="in")
         self.assertEqual(manager_in.get_token_url(), "https://accounts.zoho.in/oauth/v2/token")
 
-    @patch("requests.post")
+    @patch("utils.http_transport.post")
     def test_refresh_access_token_success(self, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -130,7 +130,7 @@ class TestZohoOAuth2Manager(unittest.TestCase):
             timeout=10
         )
 
-    @patch("requests.post")
+    @patch("utils.http_transport.post")
     def test_refresh_access_token_failure(self, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -142,7 +142,7 @@ class TestZohoOAuth2Manager(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.manager.refresh_access_token()
 
-    @patch("requests.post")
+    @patch("utils.http_transport.post")
     def test_get_access_token_expired(self, mock_post):
         # Setup expired token
         self.manager._access_token = "old_token"
@@ -160,7 +160,7 @@ class TestZohoOAuth2Manager(unittest.TestCase):
         self.assertEqual(token, "refreshed_token")
         mock_post.assert_called_once()
 
-    @patch("requests.post")
+    @patch("utils.http_transport.post")
     def test_get_access_token_cached(self, mock_post):
         # Setup valid token
         self.manager._access_token = "valid_cached_token"

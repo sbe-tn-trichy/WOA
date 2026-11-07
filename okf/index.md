@@ -15,6 +15,10 @@ okf_version: "0.2"
 
 ## Reference
 
+* [JSON Codec](json-codec.md) - RapidJSON number handling, recovery compatibility and canonical cache hashes.
+
+* [HTTP Transport](http-transport.md) - pyqwest request adaptation, streaming, timeout and TLS contracts.
+
 * [Python Type-safety Plan](type-safety-plan.md) - Phased static checking, validated boundaries, and financial workflow migration criteria.
 
 * [Project Changelog](../CHANGELOG.md) - Reasons, changes and verification for each logical project change.
@@ -36,7 +40,7 @@ okf_version: "0.2"
 * [Configuration Reference](configuration.md) - OAuth credentials, organization settings, environment variables, and CLI dry-run flags.
 * [Google Sheets SDK](google-sheets-sdk.md) - Client, authentication helpers, and range operations for Google Sheets API v4.
 * [Zoho Inventory Client](zoho-inventory.md) - Item and inventory API routing, purchase-account scoping, and migration requirements.
-* [Zoho Books Client](zoho-books.md) - Books resource access, pagination, and customer-only contact retrieval.
+* [Zoho Books Client](zoho-books.md) - Canonical endpoint ownership, OpenAPI/custom resources, pagination, and customer-only contact retrieval.
 * [Zoho ERP SDK](zoho-erp.md) - Generated ERP v1/v3 resources, authentication and YAML regeneration.
 * [Books Financial Statement Sheet](books-statement-sheet.md) - Reviewed Books report mappings into the linked FY 2025–26 Google Sheets template.
 * [NCE document Preparation](statement-schedules.md) - Two-year Schedule III notes, Google statement links, and current-year fixed-asset depreciation verification.

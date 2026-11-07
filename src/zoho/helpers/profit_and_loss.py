@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import json
-from typing import Any, Mapping
+from utils import json
+from collections.abc import Mapping
+from typing import Any
 
 
 def fetch_profit_and_loss_schedule_format(
@@ -25,7 +26,7 @@ def fetch_profit_and_loss_schedule_format(
             "group": "branch",
         }],
         "criteria_string": "1",
-    }, separators=(",", ":"))
+    })
     return books_client.reports.profit_and_loss_schedule_format(
         from_date=from_date,
         to_date=to_date,

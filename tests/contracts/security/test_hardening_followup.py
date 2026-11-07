@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-import yaml
+from utils import yaml
 
 from workflows.core.auth import get_creator_client
 from workflows.core.config import Config, _load_config_dict, _flatten_profile
@@ -311,7 +311,7 @@ def test_core_auth_import_does_not_require_workflow_extras():
 import builtins
 real_import = builtins.__import__
 def blocked(name, *args, **kwargs):
-    if name.split('.')[0] in {'pdfplumber', 'xlrd', 'openpyxl'}:
+    if name.split('.')[0] in {'pypdfium2', 'python_calamine'}:
         raise ImportError('blocked optional dependency')
     return real_import(name, *args, **kwargs)
 builtins.__import__ = blocked

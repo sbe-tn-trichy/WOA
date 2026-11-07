@@ -9,15 +9,14 @@ account_ids (stable Zoho Books account IDs). Optional multiplier is a decimal.
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 import os
 import re
 from decimal import Decimal
 from pathlib import Path
 
-import requests
-import yaml
-import yaml
+from utils import http_transport
+from utils import yaml
 
 from workflows.books_statement_sheet import (
     EquityMapping,
@@ -101,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         if partner_interest is None or args.apply:
             if not token:
                 parser.error("Provide --partner-interest for a preview or set GOOGLE_SHEETS_ACCESS_TOKEN")
-            response = requests.get(base_url, headers=headers, params={
+            response = http_transport.get(base_url, headers=headers, params={
                 "ranges": [pnl["partner_interest_cell"]], "valueRenderOption": "UNFORMATTED_VALUE",
             }, timeout=30)
             response.raise_for_status()
@@ -119,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({key: str(value) for key, value in updates.items()}, indent=2))
         if not args.apply:
             return 0
-        response = requests.get(base_url, headers=headers, params={
+        response = http_transport.get(base_url, headers=headers, params={
             "ranges": list(updates), "valueRenderOption": "FORMULA",
         }, timeout=30)
         response.raise_for_status()
@@ -134,7 +133,7 @@ def main(argv: list[str] | None = None) -> int:
             {"range": address, "values": [[float(value)]]}
             for address, value in updates.items()
         ]}
-        response = requests.post(
+        response = http_transport.post(
             f"https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values:batchUpdate",
             headers=headers, json=body, timeout=30,
         )
@@ -252,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
         f"'{item.sheet.replace(chr(39), chr(39) * 2)}'!{item.closing_cell}"
         for item in equity_mappings
     }
-    response = requests.get(base, headers=headers, params={"ranges": list(updates) + sorted(closing_cells), "valueRenderOption": "FORMULA"}, timeout=30)
+    response = http_transport.get(base, headers=headers, params={"ranges": list(updates) + sorted(closing_cells), "valueRenderOption": "FORMULA"}, timeout=30)
     response.raise_for_status()
     seen_closing: set[str] = set()
     for entry in response.json().get("valueRanges", []):
@@ -270,7 +269,7 @@ def main(argv: list[str] | None = None) -> int:
         {"range": address, "values": [[float(value) if isinstance(value, Decimal) else value]]}
         for address, value in updates.items()
     ]}
-    response = requests.post(
+    response = http_transport.post(
         f"https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values:batchUpdate",
         headers=headers, json=body, timeout=30,
     )

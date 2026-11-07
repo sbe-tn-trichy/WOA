@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 from ..base import BaseResource
 
 class TransferOrders(BaseResource):
@@ -6,22 +6,22 @@ class TransferOrders(BaseResource):
     def __init__(self, client: Any):
         super().__init__(client, 'transferorders')
 
-    def mark_as_in_transit(self, transfer_order_id: str) -> Dict[str, Any]:
+    def mark_as_in_transit(self, transfer_order_id: str) -> dict[str, Any]:
         """Mark a transfer order as in-transit."""
         return self._action('POST', transfer_order_id, 'status/intransit')
 
-    def mark_as_received(self, transfer_order_id: str) -> Dict[str, Any]:
+    def mark_as_received(self, transfer_order_id: str) -> dict[str, Any]:
         """Mark a transfer order as received."""
         return self._action('POST', transfer_order_id, 'status/received')
 
-    def submit_for_approval(self, transfer_order_id: str) -> Dict[str, Any]:
+    def submit_for_approval(self, transfer_order_id: str) -> dict[str, Any]:
         """Submit a transfer order for approval."""
         return self._action('POST', transfer_order_id, 'submit')
 
-    def approve(self, transfer_order_id: str) -> Dict[str, Any]:
+    def approve(self, transfer_order_id: str) -> dict[str, Any]:
         """Approve a transfer order."""
         return self._action('POST', transfer_order_id, 'approve')
 
-    def reject(self, transfer_order_id: str) -> Dict[str, Any]:
+    def reject(self, transfer_order_id: str) -> dict[str, Any]:
         """Reject a transfer order."""
         return self._action('POST', transfer_order_id, 'reject')

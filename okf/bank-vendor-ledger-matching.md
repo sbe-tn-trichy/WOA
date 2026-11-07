@@ -14,6 +14,12 @@ status: active
 
 # Bank–Vendor Ledger Matching
 
+Vendor XLS ledgers use python-calamine, retaining worksheet coordinates and
+converting native date/datetime cells to ISO dates. Zeiss PDF statement text uses
+pypdfium2 via `utils.pdf.read_pdf_pages`; representative source-file layout
+verification remains required after the reader migration.
+
+
 `workflows.bank_vendor_ledger_matching` reads Zoho Books bank transactions and
 matches withdrawals one-to-one against either Books vendor payments or receipts
 from a cleaned external vendor ledger. It returns exact, strong, weak,

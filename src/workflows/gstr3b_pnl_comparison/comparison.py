@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import csv
-import json
+from utils import json
 from calendar import month_name, monthrange
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Mapping, TypedDict
+from collections.abc import Mapping
+from typing import Any, TypedDict
 
 from workflows.core.checkpoint import atomic_text_writer
 
@@ -88,7 +89,7 @@ def _pnl_totals(
     }
     response = books.request("GET", "reports/profitandloss", params={
         "from_date": start, "to_date": end, "cash_based": "false",
-        "is_hierarchy_report": "true", "rule": json.dumps(rule, separators=(",", ":")),
+        "is_hierarchy_report": "true", "rule": json.dumps(rule),
         "show_rows": "all",
     })
     if response.get("code") != 0:

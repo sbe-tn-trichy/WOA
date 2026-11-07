@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path

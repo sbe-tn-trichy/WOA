@@ -6,7 +6,8 @@ import re
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from zoho.helpers import get_custom_field_value
 from zoho.inventory import ZohoInventoryAPI

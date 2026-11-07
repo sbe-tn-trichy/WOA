@@ -2,7 +2,8 @@
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,7 @@ def check_gst_cash_ledger(report: Mapping[str, Any], *, tolerance: Decimal = Dec
 
 def fetch_gst_cash_ledger_report(books: Any, *, from_date: str, to_date: str, firm: str | None = None) -> Mapping[str, Any]:
     from workflows.audited_financials.reports import _firm_rule
-    import json
+    from utils import json
     if date.fromisoformat(from_date) > date.fromisoformat(to_date):
         raise ValueError('Start date must not follow end date')
     rule = _firm_rule(firm, None)

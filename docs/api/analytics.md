@@ -35,14 +35,14 @@ Client for Zoho Analytics Data and Bulk Export APIs.
 ##### `ZohoAnalyticsAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, organization_id: str, domain: str = 'com', token_refresh_callback: Optional[Any] = None)
+def __init__(self, access_token: str, organization_id: str, domain: str = 'com', token_refresh_callback: Any | None = None)
 ```
 
 ##### `ZohoAnalyticsAPI.from_token_provider`
 
 ```python
 @classmethod
-def from_token_provider(cls, token_url: str = 'http://localhost:3000/server/new/tokens', organization_id: Optional[str] = None, domain: str = 'com', token_service_key: str = 'zoho_analytics_conn', token_refresh_callback: Optional[Any] = None) -> 'ZohoAnalyticsAPI'
+def from_token_provider(cls, token_url: str = 'http://localhost:3000/server/new/tokens', organization_id: str | None = None, domain: str = 'com', token_service_key: str = 'zoho_analytics_conn', token_refresh_callback: Any | None = None) -> 'ZohoAnalyticsAPI'
 ```
 
 Create a client using an access token from an HTTP token broker.
@@ -50,7 +50,7 @@ Create a client using an access token from an HTTP token broker.
 ##### `ZohoAnalyticsAPI.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, Any]] = None, files: Optional[Dict[str, Any]] = None, stream: bool = False, override_url: Optional[str] = None, is_mutation: Optional[bool] = None, timeout: Optional[int] = None) -> Any
+def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, files: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
 ```
 
 ---
@@ -88,25 +88,25 @@ Replace the SQL of an existing saved Query Table.
 ##### `Views.export_data`
 
 ```python
-def export_data(self, workspace_id: str, view_id: str, response_format: str = 'csv', config: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]
+def export_data(self, workspace_id: str, view_id: str, response_format: str = 'csv', config: dict[str, Any] | None = None) -> list[dict[str, Any]]
 ```
 
 ##### `Views.export_all`
 
 ```python
-def export_all(self, workspace_id: str, view_id: str, poll_interval: float = 2.0, max_attempts: int = 12, response_format: str = 'csv', config: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]
+def export_all(self, workspace_id: str, view_id: str, poll_interval: float = 2.0, max_attempts: int = 12, response_format: str = 'csv', config: dict[str, Any] | None = None) -> list[dict[str, Any]]
 ```
 
 ##### `Views.export_bulk`
 
 ```python
-def export_bulk(self, workspace_id: str, view_id: str, poll_interval: float = 2.0, max_attempts: int = 12, response_format: str = 'csv', config: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]
+def export_bulk(self, workspace_id: str, view_id: str, poll_interval: float = 2.0, max_attempts: int = 12, response_format: str = 'csv', config: dict[str, Any] | None = None) -> list[dict[str, Any]]
 ```
 
 ##### `Views.query_data`
 
 ```python
-def query_data(self, workspace_id: str, sql_query: str, poll_interval: float = 2.0, max_attempts: int = 12, response_format: str = 'csv', config: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]
+def query_data(self, workspace_id: str, sql_query: str, poll_interval: float = 2.0, max_attempts: int = 12, response_format: str = 'csv', config: dict[str, Any] | None = None) -> list[dict[str, Any]]
 ```
 
 Execute a dynamic SQL SELECT query through ZA's asynchronous export API.
@@ -126,7 +126,7 @@ def __init__(self, client: Any)
 ##### `Queries.execute`
 
 ```python
-def execute(self, workspace_id: str, sql_query: str, poll_interval: float = 2.0, max_attempts: int = 12, config: Optional[Mapping[str, Any]] = None) -> List[Dict[str, Any]]
+def execute(self, workspace_id: str, sql_query: str, poll_interval: float = 2.0, max_attempts: int = 12, config: Mapping[str, Any] | None = None) -> list[dict[str, Any]]
 ```
 
 ---
@@ -145,7 +145,7 @@ def execute(self, workspace_id: str, sql_query: str, poll_interval: float = 2.0,
 ##### `_RequestController.__init__`
 
 ```python
-def __init__(self, requests_per_minute: float, max_retries: int, show_progress: bool, sleep: Optional[Any] = None, clock: Optional[Any] = None, jitter: Optional[Any] = None)
+def __init__(self, requests_per_minute: float, max_retries: int, show_progress: bool, sleep: Any | None = None, clock: Any | None = None, jitter: Any | None = None)
 ```
 
 ##### `_RequestController.pace`
@@ -187,55 +187,55 @@ def __init__(self, client: Any)
 ##### `Metadata._request`
 
 ```python
-def _request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any
+def _request(self, endpoint: str, params: dict[str, Any] | None = None) -> Any
 ```
 
 ##### `Metadata.get_workspace`
 
 ```python
-def get_workspace(self, workspace_id: str) -> Dict[str, Any]
+def get_workspace(self, workspace_id: str) -> dict[str, Any]
 ```
 
 ##### `Metadata.list_folders`
 
 ```python
-def list_folders(self, workspace_id: str) -> List[Dict[str, Any]]
+def list_folders(self, workspace_id: str) -> list[dict[str, Any]]
 ```
 
 ##### `Metadata.list_datasources`
 
 ```python
-def list_datasources(self, workspace_id: str) -> List[Dict[str, Any]]
+def list_datasources(self, workspace_id: str) -> list[dict[str, Any]]
 ```
 
 ##### `Metadata.list_all_views`
 
 ```python
-def list_all_views(self, workspace_id: str, page_size: int = 200, view_types: Optional[List[int]] = None) -> List[Dict[str, Any]]
+def list_all_views(self, workspace_id: str, page_size: int = 200, view_types: list[int] | None = None) -> list[dict[str, Any]]
 ```
 
 ##### `Metadata.get_view_details`
 
 ```python
-def get_view_details(self, view_id: str, include_involved: bool = True) -> Dict[str, Any]
+def get_view_details(self, view_id: str, include_involved: bool = True) -> dict[str, Any]
 ```
 
 ##### `Metadata.get_table_metadata`
 
 ```python
-def get_table_metadata(self, workspace_id: str, view_id: str) -> Dict[str, Any]
+def get_table_metadata(self, workspace_id: str, view_id: str) -> dict[str, Any]
 ```
 
 ##### `Metadata.get_column_dependents`
 
 ```python
-def get_column_dependents(self, workspace_id: str, view_id: str, column_id: str) -> Dict[str, Any]
+def get_column_dependents(self, workspace_id: str, view_id: str, column_id: str) -> dict[str, Any]
 ```
 
 ##### `Metadata.get_query_table`
 
 ```python
-def get_query_table(self, workspace_id: str, view_id: str) -> Dict[str, Any]
+def get_query_table(self, workspace_id: str, view_id: str) -> dict[str, Any]
 ```
 
 Read the complete saved SQL definition of a query table.
@@ -243,7 +243,7 @@ Read the complete saved SQL definition of a query table.
 ##### `Metadata.download_workspace`
 
 ```python
-def download_workspace(self, workspace_id: str, output_dir: Any, include_column_dependents: bool = False, requests_per_minute: float = 50, max_retries: int = 5, resume: bool = True, show_progress: bool = True, page_size: int = 200) -> Dict[str, Any]
+def download_workspace(self, workspace_id: str, output_dir: Any, include_column_dependents: bool = False, requests_per_minute: float = 50, max_retries: int = 5, resume: bool = True, show_progress: bool = True, page_size: int = 200) -> dict[str, Any]
 ```
 
 Download a resumable metadata snapshot into an indexed SQLite database.
@@ -251,7 +251,7 @@ Download a resumable metadata snapshot into an indexed SQLite database.
 ##### `Metadata.sync_workspace`
 
 ```python
-def sync_workspace(self, workspace_id: str, output_dir: Any, include_column_dependents: bool = False, requests_per_minute: float = 50, max_retries: int = 5, show_progress: bool = True, page_size: int = 200) -> Dict[str, Any]
+def sync_workspace(self, workspace_id: str, output_dir: Any, include_column_dependents: bool = False, requests_per_minute: float = 50, max_retries: int = 5, show_progress: bool = True, page_size: int = 200) -> dict[str, Any]
 ```
 
 Incrementally refresh only new or modified workspace metadata.
@@ -260,7 +260,7 @@ Incrementally refresh only new or modified workspace metadata.
 
 ```python
 @staticmethod
-def migrate_json_snapshot(source_dir: Any, output_path: Optional[Any] = None) -> Dict[str, int]
+def migrate_json_snapshot(source_dir: Any, output_path: Any | None = None) -> dict[str, int]
 ```
 
 Convert a legacy expanded JSON snapshot to the indexed SQLite format.
@@ -303,7 +303,7 @@ Indexed, single-file storage for a Zoho Analytics workspace snapshot.
 ##### `WorkspaceMetadataStore.__init__`
 
 ```python
-def __init__(self, path: Any, workspace_id: Optional[str] = None)
+def __init__(self, path: Any, workspace_id: str | None = None)
 ```
 
 ##### `WorkspaceMetadataStore._upgrade_v3_to_v4`
@@ -323,13 +323,13 @@ def close(self) -> None
 ##### `WorkspaceMetadataStore.put_query_table`
 
 ```python
-def put_query_table(self, view_id: str, definition: Dict[str, Any], source_modified_time: str = '') -> bool
+def put_query_table(self, view_id: str, definition: dict[str, Any], source_modified_time: str = '') -> bool
 ```
 
 ##### `WorkspaceMetadataStore.get_query_table`
 
 ```python
-def get_query_table(self, view_id: str) -> Dict[str, Any]
+def get_query_table(self, view_id: str) -> dict[str, Any]
 ```
 
 ##### `WorkspaceMetadataStore.query_table_is_current`
@@ -347,7 +347,7 @@ def replace_workflow_usage(self, records: Iterable[WorkflowViewUsage]) -> None
 ##### `WorkspaceMetadataStore.workflow_impact`
 
 ```python
-def workflow_impact(self, view_id: str) -> List[Dict[str, Any]]
+def workflow_impact(self, view_id: str) -> list[dict[str, Any]]
 ```
 
 Find direct consumers and consumers of transitively dependent views.
@@ -361,43 +361,43 @@ def set_info(self, key: str, value: Any) -> None
 ##### `WorkspaceMetadataStore.get_info`
 
 ```python
-def get_info(self, key: str, default: Optional[str] = None) -> Optional[str]
+def get_info(self, key: str, default: str | None = None) -> str | None
 ```
 
 ##### `WorkspaceMetadataStore.put_workspace`
 
 ```python
-def put_workspace(self, workspace: Dict[str, Any], workspace_id: str) -> None
+def put_workspace(self, workspace: dict[str, Any], workspace_id: str) -> None
 ```
 
 ##### `WorkspaceMetadataStore.replace_folders`
 
 ```python
-def replace_folders(self, workspace_id: str, folders: Iterable[Dict[str, Any]]) -> None
+def replace_folders(self, workspace_id: str, folders: Iterable[dict[str, Any]]) -> None
 ```
 
 ##### `WorkspaceMetadataStore.replace_datasources`
 
 ```python
-def replace_datasources(self, workspace_id: str, datasources: Iterable[Dict[str, Any]]) -> None
+def replace_datasources(self, workspace_id: str, datasources: Iterable[dict[str, Any]]) -> None
 ```
 
 ##### `WorkspaceMetadataStore.replace_views`
 
 ```python
-def replace_views(self, workspace_id: str, views: Iterable[Dict[str, Any]]) -> None
+def replace_views(self, workspace_id: str, views: Iterable[dict[str, Any]]) -> None
 ```
 
 ##### `WorkspaceMetadataStore.put_view_details`
 
 ```python
-def put_view_details(self, view_id: str, details: Dict[str, Any], source_modified_time: str = '') -> bool
+def put_view_details(self, view_id: str, details: dict[str, Any], source_modified_time: str = '') -> bool
 ```
 
 ##### `WorkspaceMetadataStore.get_view_details`
 
 ```python
-def get_view_details(self, view_id: str) -> Dict[str, Any]
+def get_view_details(self, view_id: str) -> dict[str, Any]
 ```
 
 ##### `WorkspaceMetadataStore.view_details_are_current`
@@ -409,13 +409,13 @@ def view_details_are_current(self, view_id: str, source_modified_time: str) -> b
 ##### `WorkspaceMetadataStore.put_table_metadata`
 
 ```python
-def put_table_metadata(self, view_id: str, metadata: Dict[str, Any], source_modified_time: str = '') -> bool
+def put_table_metadata(self, view_id: str, metadata: dict[str, Any], source_modified_time: str = '') -> bool
 ```
 
 ##### `WorkspaceMetadataStore.get_table_metadata`
 
 ```python
-def get_table_metadata(self, view_id: str) -> Dict[str, Any]
+def get_table_metadata(self, view_id: str) -> dict[str, Any]
 ```
 
 ##### `WorkspaceMetadataStore.table_metadata_is_current`
@@ -427,7 +427,7 @@ def table_metadata_is_current(self, view_id: str, source_modified_time: str) -> 
 ##### `WorkspaceMetadataStore.view_sync_states`
 
 ```python
-def view_sync_states(self) -> Dict[str, Dict[str, str]]
+def view_sync_states(self) -> dict[str, dict[str, str]]
 ```
 
 ##### `WorkspaceMetadataStore.remove_table_metadata_except`
@@ -439,13 +439,13 @@ def remove_table_metadata_except(self, view_ids: Iterable[str]) -> None
 ##### `WorkspaceMetadataStore.put_column_dependents`
 
 ```python
-def put_column_dependents(self, view_id: str, column_id: str, dependents: Dict[str, Any]) -> None
+def put_column_dependents(self, view_id: str, column_id: str, dependents: dict[str, Any]) -> None
 ```
 
 ##### `WorkspaceMetadataStore.get_column_dependents`
 
 ```python
-def get_column_dependents(self, view_id: str, column_id: str) -> Dict[str, Any]
+def get_column_dependents(self, view_id: str, column_id: str) -> dict[str, Any]
 ```
 
 ##### `WorkspaceMetadataStore.is_completed`
@@ -457,43 +457,43 @@ def is_completed(self, object_type: str, object_id: str) -> bool
 ##### `WorkspaceMetadataStore.completed_ids`
 
 ```python
-def completed_ids(self, object_type: str) -> List[str]
+def completed_ids(self, object_type: str) -> list[str]
 ```
 
 ##### `WorkspaceMetadataStore.replace_relationships`
 
 ```python
-def replace_relationships(self, edges: Iterable[Dict[str, Any]]) -> None
+def replace_relationships(self, edges: Iterable[dict[str, Any]]) -> None
 ```
 
 ##### `WorkspaceMetadataStore.replace_errors`
 
 ```python
-def replace_errors(self, errors: Iterable[Dict[str, Any]]) -> None
+def replace_errors(self, errors: Iterable[dict[str, Any]]) -> None
 ```
 
 ##### `WorkspaceMetadataStore.find_views`
 
 ```python
-def find_views(self, name: Optional[str] = None, view_type: Optional[str] = None) -> List[Dict[str, Any]]
+def find_views(self, name: str | None = None, view_type: str | None = None) -> list[dict[str, Any]]
 ```
 
 ##### `WorkspaceMetadataStore.get_columns`
 
 ```python
-def get_columns(self, view_id: str) -> List[Dict[str, Any]]
+def get_columns(self, view_id: str) -> list[dict[str, Any]]
 ```
 
 ##### `WorkspaceMetadataStore.get_relationships`
 
 ```python
-def get_relationships(self, entity_id: str, direction: str = 'both') -> List[Dict[str, Any]]
+def get_relationships(self, entity_id: str, direction: str = 'both') -> list[dict[str, Any]]
 ```
 
 ##### `WorkspaceMetadataStore.counts`
 
 ```python
-def counts(self) -> Dict[str, int]
+def counts(self) -> dict[str, int]
 ```
 
 ##### `WorkspaceMetadataStore.write_summary`

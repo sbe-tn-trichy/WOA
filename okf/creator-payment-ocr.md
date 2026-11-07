@@ -25,7 +25,7 @@ image `Payment_Image`, amount `Payment_Amount`, reference `Reference`. Online
 payments use `Payment_Date`; cheques use `Cheque_Date`, not their clearing date.
 All report fields are requested so attachment values remain available.
 
-Install the optional Python dependencies with `.venv/bin/pip install -e '.[ocr]'`
+Install the optional Python dependencies with `uv pip install --python .venv -c constraints.txt -e '.[ocr]'`
 and install the Tesseract executable separately. The workflow runs pytesseract
 locally with a 60-second timeout per image after EXIF orientation and grayscale
 conversion, polarity normalization for dark images, and 2× enlargement for images

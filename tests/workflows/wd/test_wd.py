@@ -17,7 +17,7 @@ class TestZohoWorkdriveAPI(unittest.TestCase):
         self.assertEqual(self.client.base_url, "https://www.zohoapis.in/workdrive/api/v1")
         self.assertEqual(self.client.get_team_id(), "team123")
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_get_team_id_fallback(self, mock_request):
         client = ZohoWorkdriveAPI(access_token="tok", domain="in", team_id=None)
         mock_response = MagicMock()
@@ -30,7 +30,7 @@ class TestZohoWorkdriveAPI(unittest.TestCase):
         self.assertEqual(team_id, "team456")
         self.assertEqual(client._team_id, "team456")
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_get_team_id_failure(self, mock_request):
         client = ZohoWorkdriveAPI(access_token="tok", domain="in", team_id=None)
         mock_response = MagicMock()
@@ -42,7 +42,7 @@ class TestZohoWorkdriveAPI(unittest.TestCase):
         with self.assertRaises(ZohoWorkdriveError):
             client.get_team_id()
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_token_refresh(self, mock_request):
         token_callback = MagicMock(return_value="new_token")
         client = ZohoWorkdriveAPI(access_token="old_token", domain="in", token_refresh_callback=token_callback)
@@ -63,7 +63,7 @@ class TestZohoWorkdriveAPI(unittest.TestCase):
         token_callback.assert_called_once()
         self.assertEqual(mock_request.call_count, 2)
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_parses_vendor_json_api_content_type(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -226,8 +226,8 @@ class TestWorkdriveFiles(unittest.TestCase):
         self.files.delete.assert_called_once_with("f_dup")
 
 class TestWorkdriveCatalystAuth(unittest.TestCase):
-    @patch("requests.request")
-    @patch("requests.post")
+    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_transport.post")
     def test_catalyst_auth_mutations(self, mock_post, mock_request):
         mock_response_catalyst = MagicMock()
         mock_response_catalyst.status_code = 200

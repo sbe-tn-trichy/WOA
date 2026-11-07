@@ -7,7 +7,8 @@ Public functions:
 """
 
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from ..core.matching import parse_date, reconcile_rows, to_decimal
 from .cleaner import clean_ledger_file, get_ledger_metadata
@@ -17,7 +18,7 @@ from workflows.core.matching import references_intersect
 logger = logging.getLogger(__name__)
 
 
-def _within_date_range(row: Dict[str, Any], start_date: Any, end_date: Any) -> bool:
+def _within_date_range(row: dict[str, Any], start_date: Any, end_date: Any) -> bool:
     """Keep invalid dates for unmatched reporting; filter only valid dates."""
     parsed = parse_date(row.get("date"))
     return parsed is None or start_date <= parsed <= end_date
@@ -27,7 +28,7 @@ def _within_date_range(row: Dict[str, Any], start_date: Any, end_date: Any) -> b
 # Paginated fetch helpers
 # ---------------------------------------------------------------------------
 
-def fetch_vendor_credits(books_client: Any, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+def fetch_vendor_credits(books_client: Any, params: dict[str, Any]) -> list[dict[str, Any]]:
     """Fetch all vendor credits through the SDK resource."""
     return books_client.vendor_credits.list_all(params=params, resource_key="vendor_credits")
 
@@ -36,21 +37,21 @@ def fetch_vendor_credits(books_client: Any, params: Dict[str, Any]) -> List[Dict
 # Document-type reference matchers
 # ---------------------------------------------------------------------------
 
-def check_credit_ref(vc: Dict[str, Any], l_cm: Dict[str, Any]) -> bool:
+def check_credit_ref(vc: dict[str, Any], l_cm: dict[str, Any]) -> bool:
     return references_intersect(
         (vc.get("vendor_credit_number"), vc.get("reference_number")),
         (l_cm.get("transaction_no"), l_cm.get("transaction_reference")),
     )
 
 
-def check_bill_ref(b: Dict[str, Any], l_inv: Dict[str, Any]) -> bool:
+def check_bill_ref(b: dict[str, Any], l_inv: dict[str, Any]) -> bool:
     return references_intersect(
         (b.get("bill_number"), b.get("reference_number")),
         (l_inv.get("transaction_no"), l_inv.get("transaction_reference")),
     )
 
 
-def check_payment_ref(p: Dict[str, Any], l_rec: Dict[str, Any]) -> bool:
+def check_payment_ref(p: dict[str, Any], l_rec: dict[str, Any]) -> bool:
     return references_intersect(
         (p.get("reference_number"),),
         (l_rec.get("transaction_no"), l_rec.get("transaction_reference")),
@@ -62,8 +63,8 @@ def check_payment_ref(p: Dict[str, Any], l_rec: Dict[str, Any]) -> bool:
 # ---------------------------------------------------------------------------
 
 def reconcile_document_group(
-    books_entries: List[Dict[str, Any]],
-    ledger_entries: List[Dict[str, Any]],
+    books_entries: list[dict[str, Any]],
+    ledger_entries: list[dict[str, Any]],
     books_id_fn: Callable,
     books_date_fn: Callable,
     books_amount_fn: Callable,
@@ -73,7 +74,7 @@ def reconcile_document_group(
     ref_match_fn: Callable,
     date_tolerance_days: int = 7,
     amount_tolerance: float = 0.0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generic 3-pass reconciliation algorithm for a single document type."""
     parsed_books = [
         {"id": books_id_fn(b), "date": books_date_fn(b), "amount": books_amount_fn(b), "raw": b}
@@ -131,7 +132,7 @@ def reconcile_vendor_account(
     date_tolerance_days: int = 7,
     amount_tolerance: float = 0.0,
     skip_vendor_credits: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Full 4-way reconciliation of a vendor account:
     Bills, Vendor Payments, Vendor Credits, and Debit Memos vs the ledger file.
@@ -149,7 +150,7 @@ def reconcile_vendor_account(
             if _within_date_range(e, start_date, end_date)
         ]
 
-    def _ledger_by_type(doc_type: str) -> List[Dict[str, Any]]:
+    def _ledger_by_type(doc_type: str) -> list[dict[str, Any]]:
         return [
             e for e in ledger_entries
             if str(e.get("document_type") or "").strip().lower() == doc_type
@@ -175,8 +176,8 @@ def reconcile_vendor_account(
             if _within_date_range(b, start_date, end_date)
         ]
 
-    books_sales_invoices: List[Dict[str, Any]] = []
-    books_debit_memos: List[Dict[str, Any]] = []
+    books_sales_invoices: list[dict[str, Any]] = []
+    books_debit_memos: list[dict[str, Any]] = []
     for b in zoho_bills:
         try:
             total_val = float(b.get("total") or b.get("amount") or 0.0)
@@ -272,11 +273,11 @@ def reconcile_vendor_account(
 
 def reconcile_vendor(
     vendor_ledger_path: str,
-    vendor_id: Optional[str] = None,
+    vendor_id: str | None = None,
     date_tolerance_days: int = 7,
     amount_tolerance: float = 0.0,
-    books_client: Optional[Any] = None,
-) -> Dict[str, Any]:
+    books_client: Any | None = None,
+) -> dict[str, Any]:
     """
     High-level wrapper to reconcile a vendor account.
     - Initialises the Zoho Books client automatically if books_client is None.

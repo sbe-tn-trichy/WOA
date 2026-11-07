@@ -1,8 +1,9 @@
 import csv
 import io
-import json
+from utils import json
 import time
-from typing import Any, Dict, List, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from .exceptions import ZohoAnalyticsError
 
@@ -20,7 +21,7 @@ def _response_format(value: str) -> str:
     return normalized
 
 
-def _rows(payload: Any, response_format: str = "csv") -> List[Dict[str, Any]]:
+def _rows(payload: Any, response_format: str = "csv") -> list[dict[str, Any]]:
     response_format = _response_format(response_format)
     if isinstance(payload, bytes):
         text = payload.decode("utf-8-sig")
@@ -47,7 +48,7 @@ def _download_export(
     poll_interval: float,
     max_attempts: int,
     response_format: str = "csv",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1.")
     if poll_interval < 0:
@@ -114,9 +115,9 @@ class Views:
     @staticmethod
     def _config(
         response_format: str,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         **required: Any,
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         response_format = _response_format(response_format)
         export_config = dict(config or {})
         export_config.update(required)
@@ -128,8 +129,8 @@ class Views:
         workspace_id: str,
         view_id: str,
         response_format: str = "csv",
-        config: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
+        config: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         payload = self.client.request(
             "GET",
             f"workspaces/{workspace_id}/views/{view_id}/data",
@@ -144,8 +145,8 @@ class Views:
         poll_interval: float = 2.0,
         max_attempts: int = 12,
         response_format: str = "csv",
-        config: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
+        config: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         try:
             return self.export_data(
                 workspace_id,
@@ -172,8 +173,8 @@ class Views:
         poll_interval: float = 2.0,
         max_attempts: int = 12,
         response_format: str = "csv",
-        config: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
+        config: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         base = f"bulk/workspaces/{workspace_id}"
         created = self.client.request(
             "GET",
@@ -195,8 +196,8 @@ class Views:
         poll_interval: float = 2.0,
         max_attempts: int = 12,
         response_format: str = "csv",
-        config: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
+        config: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         """Execute a dynamic SQL SELECT query through ZA's asynchronous export API."""
         if not sql_query or not sql_query.strip():
             raise ValueError("sql_query is required.")
@@ -220,7 +221,7 @@ class Views:
         poll_interval: float,
         max_attempts: int,
         response_format: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         base = f"bulk/workspaces/{workspace_id}"
         job_id = created.get("data", {}).get("jobId") if isinstance(created, dict) else None
         if not job_id:
@@ -248,8 +249,8 @@ class Queries:
         sql_query: str,
         poll_interval: float = 2.0,
         max_attempts: int = 12,
-        config: Optional[Mapping[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
+        config: Mapping[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         if not workspace_id:
             raise ValueError("workspace_id is required.")
         if not isinstance(sql_query, str) or not sql_query.strip():
@@ -265,7 +266,7 @@ class Queries:
         created = self.client.request(
             "GET",
             f"{base}/data",
-            params={"CONFIG": json.dumps(export_config, separators=(",", ":"))},
+            params={"CONFIG": json.dumps(export_config)},
         )
         job_id = created.get("data", {}).get("jobId") if isinstance(created, dict) else None
         if not job_id:

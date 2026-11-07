@@ -2,7 +2,8 @@ import logging
 import re
 from datetime import datetime, date
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Set
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any
 
 from .config import Config
 
@@ -15,7 +16,7 @@ _ICICI_NEFT_REFERENCE = re.compile(
 )
 
 
-def to_decimal(value: object) -> Optional[Decimal]:
+def to_decimal(value: object) -> Decimal | None:
     """Safely coerce an arbitrary value or numeric string to a Decimal."""
     if value is None or value == "":
         return None
@@ -27,7 +28,7 @@ def to_decimal(value: object) -> Optional[Decimal]:
         return None
 
 
-def to_finite_decimal(value: object, *, allow_commas: bool = False) -> Optional[Decimal]:
+def to_finite_decimal(value: object, *, allow_commas: bool = False) -> Decimal | None:
     """Parse a finite Decimal, optionally accepting grouped numeric strings."""
     if allow_commas:
         amount = to_decimal(value)
@@ -65,7 +66,7 @@ def normalize_payment_reference(value: object) -> str:
     return "".join(character for character in to_text(value).casefold() if character.isalnum())
 
 
-def parse_date(date_str: object) -> Optional[date]:
+def parse_date(date_str: object) -> date | None:
     """Safely parse various date formats into a datetime.date object."""
     if not date_str:
         return None
@@ -85,7 +86,7 @@ def parse_date(date_str: object) -> Optional[date]:
         return None
 
 
-def get_abs_amount(tx: Dict[str, Any]) -> float:
+def get_abs_amount(tx: dict[str, Any]) -> float:
     """Extract absolute amount from a bank transaction dict."""
     try:
         return abs(float(tx.get("amount", 0.0)))
@@ -120,16 +121,14 @@ def ref_match(ref1: Any, ref2: Any) -> bool:
 
 
 def reconcile_rows(
-    left_rows: Sequence[Dict[str, Any]],
-    right_rows: Sequence[Dict[str, Any]],
+    left_rows: Sequence[dict[str, Any]],
+    right_rows: Sequence[dict[str, Any]],
     *,
-    reference_matches: Callable[[Dict[str, Any], Dict[str, Any]], bool],
+    reference_matches: Callable[[dict[str, Any], dict[str, Any]], bool],
     date_tolerance_days: int,
-    reference_conflicts: Optional[
-        Callable[[Dict[str, Any], Dict[str, Any]], bool]
-    ] = None,
+    reference_conflicts: Callable[[dict[str, Any], dict[str, Any]], bool] | None = None,
     amount_tolerance: Any = Decimal("0"),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Conservatively reconcile parsed rows without relying on external IDs.
 
     Each row must contain ``date``, ``amount``, and ``raw``. A match is accepted
@@ -144,23 +143,23 @@ def reconcile_rows(
 
     left = list(left_rows)
     right = list(right_rows)
-    matched_left: Set[int] = set()
-    matched_right: Set[int] = set()
-    ambiguous_left: Set[int] = set()
-    ambiguous_right: Set[int] = set()
-    result: Dict[str, Any] = {
+    matched_left: set[int] = set()
+    matched_right: set[int] = set()
+    ambiguous_left: set[int] = set()
+    ambiguous_right: set[int] = set()
+    result: dict[str, Any] = {
         "exact_matches": [],
         "strong_matches": [],
         "weak_matches": [],
         "ambiguous_matches": [],
     }
 
-    def eligible_amount(row: Dict[str, Any]) -> Optional[Decimal]:
+    def eligible_amount(row: dict[str, Any]) -> Decimal | None:
         amount = to_decimal(row.get("amount"))
         return abs(amount) if amount is not None else None
 
-    def candidates_for(pass_name: str) -> Dict[int, List[int]]:
-        candidates: Dict[int, List[int]] = {}
+    def candidates_for(pass_name: str) -> dict[int, list[int]]:
+        candidates: dict[int, list[int]] = {}
         for left_index, left_row in enumerate(left):
             if left_index in matched_left or left_index in ambiguous_left:
                 continue
@@ -202,7 +201,7 @@ def reconcile_rows(
         if pass_name == "weak" and tolerance == 0:
             continue
         candidates = candidates_for(pass_name)
-        right_to_left: Dict[int, List[int]] = {}
+        right_to_left: dict[int, list[int]] = {}
         for left_index, right_indexes in candidates.items():
             for right_index in right_indexes:
                 right_to_left.setdefault(right_index, []).append(left_index)

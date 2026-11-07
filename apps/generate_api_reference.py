@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import re
 import sys
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
 # Bootstrap workspace paths
 _SRC = Path(__file__).resolve().parent.parent / "src"
@@ -20,53 +21,53 @@ ROOT = Path(__file__).resolve().parents[1]
 @dataclass
 class AttributeDoc:
     name: str
-    annotation: Optional[str]
-    value: Optional[str]
-    comments: List[str] = field(default_factory=list)
+    annotation: str | None
+    value: str | None
+    comments: list[str] = field(default_factory=list)
 
 
 @dataclass
 class MethodDoc:
     name: str
     signature: str
-    decorators: List[str] = field(default_factory=list)
-    docstring: Optional[str] = None
-    comments: List[str] = field(default_factory=list)
+    decorators: list[str] = field(default_factory=list)
+    docstring: str | None = None
+    comments: list[str] = field(default_factory=list)
     is_async: bool = False
 
 
 @dataclass
 class ClassDoc:
     name: str
-    bases: List[str] = field(default_factory=list)
-    docstring: Optional[str] = None
-    comments: List[str] = field(default_factory=list)
-    attributes: List[AttributeDoc] = field(default_factory=list)
-    methods: List[MethodDoc] = field(default_factory=list)
+    bases: list[str] = field(default_factory=list)
+    docstring: str | None = None
+    comments: list[str] = field(default_factory=list)
+    attributes: list[AttributeDoc] = field(default_factory=list)
+    methods: list[MethodDoc] = field(default_factory=list)
 
 
 @dataclass
 class FunctionDoc:
     name: str
     signature: str
-    decorators: List[str] = field(default_factory=list)
-    docstring: Optional[str] = None
-    comments: List[str] = field(default_factory=list)
+    decorators: list[str] = field(default_factory=list)
+    docstring: str | None = None
+    comments: list[str] = field(default_factory=list)
 
 
 @dataclass
 class ModuleDoc:
     module_path: str
     rel_path: str
-    docstring: Optional[str] = None
-    header_comments: List[str] = field(default_factory=list)
-    classes: List[ClassDoc] = field(default_factory=list)
-    functions: List[FunctionDoc] = field(default_factory=list)
-    constants: List[AttributeDoc] = field(default_factory=list)
-    all_exports: List[str] = field(default_factory=list)
+    docstring: str | None = None
+    header_comments: list[str] = field(default_factory=list)
+    classes: list[ClassDoc] = field(default_factory=list)
+    functions: list[FunctionDoc] = field(default_factory=list)
+    constants: list[AttributeDoc] = field(default_factory=list)
+    all_exports: list[str] = field(default_factory=list)
 
 
-KNOWN_MIXIN_METHODS: Dict[str, List[Tuple[str, str]]] = {
+KNOWN_MIXIN_METHODS: dict[str, list[tuple[str, str]]] = {
     "BaseResource": [
         ("list(params=None)", "Fetch one page of records from the resource endpoint."),
         ("list_iter(params=None, resource_key=None, per_page=200)", "Generator yielding records across pages without buffering all in memory."),
@@ -100,7 +101,7 @@ KNOWN_MIXIN_METHODS: Dict[str, List[Tuple[str, str]]] = {
 }
 
 
-def _format_arg(arg: ast.arg, default: Optional[ast.expr] = None) -> str:
+def _format_arg(arg: ast.arg, default: ast.expr | None = None) -> str:
     parts = [arg.arg]
     if arg.annotation:
         parts.append(f": {ast.unparse(arg.annotation)}")
@@ -110,7 +111,7 @@ def _format_arg(arg: ast.arg, default: Optional[ast.expr] = None) -> str:
 
 
 def format_func_signature(func_node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
-    args_list: List[str] = []
+    args_list: list[str] = []
 
     posonly = func_node.args.posonlyargs
     pos_args = func_node.args.args
@@ -152,8 +153,8 @@ def format_func_signature(func_node: ast.FunctionDef | ast.AsyncFunctionDef) -> 
     return f"{prefix}{func_node.name}({', '.join(args_list)}){ret}"
 
 
-def get_leading_comments(source_lines: Sequence[str], lineno: int) -> List[str]:
-    comments: List[str] = []
+def get_leading_comments(source_lines: Sequence[str], lineno: int) -> list[str]:
+    comments: list[str] = []
     idx = lineno - 2
     while idx >= 0:
         line = source_lines[idx].strip()
@@ -166,8 +167,8 @@ def get_leading_comments(source_lines: Sequence[str], lineno: int) -> List[str]:
     return comments
 
 
-def get_header_comments(source_lines: Sequence[str]) -> List[str]:
-    comments: List[str] = []
+def get_header_comments(source_lines: Sequence[str]) -> list[str]:
+    comments: list[str] = []
     for line in source_lines:
         line_s = line.strip()
         if not line_s:
@@ -180,7 +181,7 @@ def get_header_comments(source_lines: Sequence[str]) -> List[str]:
     return comments
 
 
-def get_trailing_comment(line: str) -> Optional[str]:
+def get_trailing_comment(line: str) -> str | None:
     if "#" in line:
         parts = line.split("#", 1)
         comment = parts[1].strip()
@@ -203,18 +204,18 @@ def parse_module(filepath: Path) -> ModuleDoc:
     docstring = ast.get_docstring(tree)
     header_comments = get_header_comments(source_lines)
 
-    classes: List[ClassDoc] = []
-    functions: List[FunctionDoc] = []
-    constants: List[AttributeDoc] = []
-    all_exports: List[str] = []
+    classes: list[ClassDoc] = []
+    functions: list[FunctionDoc] = []
+    constants: list[AttributeDoc] = []
+    all_exports: list[str] = []
 
     for node in tree.body:
         if isinstance(node, ast.ClassDef):
             c_doc = ast.get_docstring(node)
             c_comments = get_leading_comments(source_lines, node.lineno)
             bases = [ast.unparse(b) for b in node.bases]
-            c_attrs: List[AttributeDoc] = []
-            c_methods: List[MethodDoc] = []
+            c_attrs: list[AttributeDoc] = []
+            c_methods: list[MethodDoc] = []
 
             for item in node.body:
                 if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -305,7 +306,7 @@ def parse_module(filepath: Path) -> ModuleDoc:
     )
 
 
-def clean_docstring(doc: Optional[str]) -> str:
+def clean_docstring(doc: str | None) -> str:
     if not doc:
         return ""
     lines = doc.strip().splitlines()
@@ -322,7 +323,7 @@ def render_markdown_section(
     custom_intro: str = "",
     custom_appendix: str = "",
 ) -> str:
-    lines: List[str] = [
+    lines: list[str] = [
         "<!-- Auto-generated by apps/generate_api_reference.py. Do not edit directly. -->",
         f"# {title}",
         "",
@@ -486,7 +487,7 @@ def render_erp_summary(erp_generated_file: Path) -> str:
     content = erp_generated_file.read_text(encoding="utf-8")
     tree = ast.parse(content)
 
-    resources: List[Tuple[str, str, int, List[str]]] = []
+    resources: list[tuple[str, str, int, list[str]]] = []
     for node in tree.body:
         if isinstance(node, ast.ClassDef) and node.name != "ERPResources":
             doc = ast.get_docstring(node) or "ERP resource operations"
@@ -522,17 +523,22 @@ class SectionSpec:
     filename: str
     title: str
     description: str
-    file_patterns: List[str]
+    file_patterns: list[str]
     custom_intro: str = ""
     is_erp: bool = False
 
 
-SECTIONS: List[SectionSpec] = [
+SECTIONS: list[SectionSpec] = [
     SectionSpec(
         filename="core.md",
         title="Core SDK & Transport Architecture",
         description="Shared HTTP transport, authentication managers, base resource abstractions, exception hierarchies, security path sanitizers, validators, custom identifiers, and file download utilities.",
         file_patterns=[
+            "src/utils/http.py",
+            "src/utils/json.py",
+            "src/utils/http_transport.py",
+            "src/utils/yaml.py",
+            "src/utils/pdf.py",
             "src/zoho/auth.py",
             "src/zoho/base_client.py",
             "src/zoho/base_resource.py",
@@ -541,7 +547,6 @@ SECTIONS: List[SectionSpec] = [
             "src/zoho/validation.py",
             "src/zoho/identifiers.py",
             "src/zoho/logging.py",
-            "src/zoho/downloads.py",
         ],
     ),
     SectionSpec(
@@ -551,17 +556,15 @@ SECTIONS: List[SectionSpec] = [
         file_patterns=[
             "src/zoho/books/client.py",
             "src/zoho/books/base.py",
-            "src/zoho/books/mixins.py",
-            "src/zoho/books/resources/contacts.py",
-            "src/zoho/books/resources/sales.py",
-            "src/zoho/books/resources/purchases.py",
-            "src/zoho/books/resources/banking.py",
-            "src/zoho/books/resources/gst.py",
-            "src/zoho/books/resources/settings.py",
-            "src/zoho/books/resources/projects.py",
-            "src/zoho/books/resources/reports.py",
-            "src/zoho/books/resources/ledger.py",
-            "src/zoho/books/resources/fixed_assets.py",
+            "src/zoho/books/custom/mixins.py",
+            "src/zoho/books/custom/contacts.py",
+            "src/zoho/books/custom/sales.py",
+            "src/zoho/books/custom/purchases.py",
+            "src/zoho/books/custom/banking.py",
+            "src/zoho/books/custom/gst.py",
+            "src/zoho/books/custom/projects.py",
+            "src/zoho/books/custom/reports.py",
+            "src/zoho/books/custom/ledger.py",
         ],
     ),
     SectionSpec(
@@ -689,7 +692,7 @@ SECTIONS: List[SectionSpec] = [
 ]
 
 
-def render_api_index(sections: Sequence[SectionSpec], all_modules: Dict[str, List[ModuleDoc]]) -> str:
+def render_api_index(sections: Sequence[SectionSpec], all_modules: dict[str, list[ModuleDoc]]) -> str:
     lines = [
         "<!-- Auto-generated by apps/generate_api_reference.py. Do not edit directly. -->",
         "# WOA — Generated API Reference",
@@ -712,7 +715,7 @@ def render_api_index(sections: Sequence[SectionSpec], all_modules: Dict[str, Lis
 
     for sec in sections:
         mods = all_modules.get(sec.filename, [])
-        primary_classes: List[str] = []
+        primary_classes: list[str] = []
         for m in mods:
             for c in m.classes:
                 if not c.name.startswith("_"):
@@ -889,17 +892,17 @@ def generate_all_docs(
     output_dir: Path,
     check_only: bool = False,
     verbose: bool = False,
-) -> Tuple[bool, List[str]]:
+) -> tuple[bool, list[str]]:
     """Generate all API reference documents and Sphinx configuration.
     
     Returns (is_in_sync, list_of_changed_or_missing_files).
     """
-    plan: Dict[Path, str] = {}
+    plan: dict[Path, str] = {}
 
-    all_modules_by_sec: Dict[str, List[ModuleDoc]] = {}
+    all_modules_by_sec: dict[str, list[ModuleDoc]] = {}
 
     for sec in SECTIONS:
-        modules: List[ModuleDoc] = []
+        modules: list[ModuleDoc] = []
         for pattern in sec.file_patterns:
             p = ROOT / pattern
             if p.exists():
@@ -933,7 +936,7 @@ def generate_all_docs(
     plan[docs_root / "index.rst"] = render_sphinx_index_rst()
     plan[docs_root / "index.md"] = render_root_index_md()
 
-    changed_files: List[str] = []
+    changed_files: list[str] = []
 
     for file_path, expected_content in plan.items():
         if file_path.exists():

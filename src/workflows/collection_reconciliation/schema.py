@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Mapping, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from zoho.helpers import ensure_books_custom_fields
 from ..core.exceptions import SchemaValidationError
@@ -8,13 +9,13 @@ from ..core.exceptions import SchemaValidationError
 @dataclass(frozen=True)
 class CreatorFieldRequirement:
     api_name: str
-    allowed_types: Tuple[int, ...]
-    required_choices: Tuple[str, ...] = ()
+    allowed_types: tuple[int, ...]
+    required_choices: tuple[str, ...] = ()
     expected_default: str = ""
     must_be_lookup: bool = False
 
 
-COLLECTION_FIELD_REQUIREMENTS: Tuple[CreatorFieldRequirement, ...] = (
+COLLECTION_FIELD_REQUIREMENTS: tuple[CreatorFieldRequirement, ...] = (
     CreatorFieldRequirement("Record_ID", (9,)),
     CreatorFieldRequirement("Payment_ID", (1, 9)),
     CreatorFieldRequirement("Payment_Date", (10,)),
@@ -31,7 +32,7 @@ COLLECTION_FIELD_REQUIREMENTS: Tuple[CreatorFieldRequirement, ...] = (
     CreatorFieldRequirement("Zoho_Books_Payment_ID", (1,)),
 )
 
-AUDIT_FIELD_REQUIREMENTS: Tuple[CreatorFieldRequirement, ...] = (
+AUDIT_FIELD_REQUIREMENTS: tuple[CreatorFieldRequirement, ...] = (
     CreatorFieldRequirement("Creator_Record_ID", (1, 5, 9)),
     CreatorFieldRequirement("Stage", (1, 12)),
     CreatorFieldRequirement("Message", (1, 2)),
@@ -39,7 +40,7 @@ AUDIT_FIELD_REQUIREMENTS: Tuple[CreatorFieldRequirement, ...] = (
     CreatorFieldRequirement("Occurred_At", (11,)),
 )
 
-BOOKS_CUSTOM_FIELD_REQUIREMENTS: Tuple[Dict[str, Any], ...] = (
+BOOKS_CUSTOM_FIELD_REQUIREMENTS: tuple[dict[str, Any], ...] = (
     {
         "label": "Creator Record ID",
         "data_type": "string",
@@ -63,7 +64,7 @@ def _normalized_field_name(value: Any) -> str:
     return "".join(character for character in str(value or "").casefold() if character.isalnum())
 
 
-def _field_rows(payload: Any) -> List[Dict[str, Any]]:
+def _field_rows(payload: Any) -> list[dict[str, Any]]:
     if not isinstance(payload, dict):
         return []
     for key in ("fields", "data", "result"):
@@ -97,9 +98,9 @@ def _creator_field_type(field: Mapping[str, Any]) -> Any:
         return value
 
 
-def _creator_choices(field: Mapping[str, Any]) -> List[str]:
+def _creator_choices(field: Mapping[str, Any]) -> list[str]:
     rows = field.get("choices") or field.get("values") or field.get("allowed_values") or []
-    choices: List[str] = []
+    choices: list[str] = []
     if isinstance(rows, list):
         for row in rows:
             if isinstance(row, dict):
@@ -114,14 +115,14 @@ def _creator_choices(field: Mapping[str, Any]) -> List[str]:
 def validate_creator_form_fields(
     payload: Any,
     requirements: Sequence[CreatorFieldRequirement],
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     fields = {_creator_field_name(row): row for row in _field_rows(payload)}
-    missing: List[str] = []
-    wrong_types: List[Dict[str, Any]] = []
-    wrong_choices: List[Dict[str, Any]] = []
-    wrong_defaults: List[Dict[str, Any]] = []
-    wrong_lookup_fields: List[str] = []
-    unverified_defaults: List[str] = []
+    missing: list[str] = []
+    wrong_types: list[dict[str, Any]] = []
+    wrong_choices: list[dict[str, Any]] = []
+    wrong_defaults: list[dict[str, Any]] = []
+    wrong_lookup_fields: list[str] = []
+    unverified_defaults: list[str] = []
     for requirement in requirements:
         field = fields.get(requirement.api_name)
         if field is None:
@@ -185,7 +186,7 @@ def validate_creator_form_fields(
 def ensure_books_customer_payment_fields(
     books_client: Any,
     create_missing: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     return ensure_books_custom_fields(
         books_client,
         entity="customer_payment",

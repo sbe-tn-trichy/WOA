@@ -7,9 +7,9 @@ import mimetypes
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
-from zoho.downloads import write_response_to_file
+from utils.http import write_response_to_file
 from zoho.security import resolve_output_path
 
 logger = logging.getLogger("zoho.helpers.files")
@@ -35,8 +35,8 @@ def workdrive_upload_file(
     wd_client: Any,
     folder_id: str,
     file_path: str,
-    file_name: Optional[str] = None,
-) -> Dict[str, Any]:
+    file_name: str | None = None,
+) -> dict[str, Any]:
     """Upload a local file to a Zoho WorkDrive folder."""
     path = Path(file_path)
     if not path.exists():
@@ -52,8 +52,8 @@ def attach_file_to_books_resource(
     resource_name: str,
     resource_id: str,
     file_path: str,
-    file_name: Optional[str] = None,
-) -> Dict[str, Any]:
+    file_name: str | None = None,
+) -> dict[str, Any]:
     """Attach a local file to a Zoho Books transaction (e.g., invoices, salesorders, bills)."""
     path = Path(file_path)
     if not path.exists():
@@ -79,8 +79,8 @@ def workdrive_upload_and_attach(
     file_path: str,
     resource_name: str,
     resource_id: str,
-    file_name: Optional[str] = None,
-) -> Dict[str, Any]:
+    file_name: str | None = None,
+) -> dict[str, Any]:
     """Upload a file to WorkDrive and attach it to a Books resource in a single composite call."""
     wd_res = workdrive_upload_file(wd_client, folder_id, file_path, file_name=file_name)
     books_res = attach_file_to_books_resource(

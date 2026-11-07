@@ -6,7 +6,8 @@ import calendar
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any
 
 from zoho.helpers.sequences import parse_doc_number
 from .hsn import check_credit_note_hsn, load_hsn_evidence
@@ -40,11 +41,11 @@ class GSTR1VerificationConfig:
             raise ValueError("financial_credit_note_ids must contain non-empty string IDs.")
 
 
-def _month_range(month: str) -> Tuple[date, date]:
+def _month_range(month: str) -> tuple[date, date]:
     return get_month_range(month)
 
 
-def _previous_month_range(as_of: Optional[date] = None) -> Tuple[date, date]:
+def _previous_month_range(as_of: date | None = None) -> tuple[date, date]:
     return get_previous_month_range(as_of)
 
 
@@ -56,11 +57,11 @@ def _first(record: Mapping[str, Any], keys: Iterable[str]) -> Any:
     return None
 
 
-def _parse_date(value: Any) -> Optional[date]:
+def _parse_date(value: Any) -> date | None:
     return parse_date(value)
 
 
-def _document_info(record: Mapping[str, Any], document_type: str) -> Dict[str, Any]:
+def _document_info(record: Mapping[str, Any], document_type: str) -> dict[str, Any]:
     if document_type == "invoice":
         doc_id = _first(record, ("invoice_id", "id"))
         number = _first(record, ("invoice_number", "number"))
@@ -84,7 +85,7 @@ def _document_info(record: Mapping[str, Any], document_type: str) -> Dict[str, A
 class GSTR1Verifier:
     """Build an evidence-based, non-mutating GSTR-1 readiness report."""
 
-    def __init__(self, books_client: Any = None, config: Optional[GSTR1VerificationConfig] = None,
+    def __init__(self, books_client: Any = None, config: GSTR1VerificationConfig | None = None,
                  *, analytics_client: Any = None,
                  analytics_workspace_id: str = "264324000000002043"):
         self.books = books_client
@@ -92,11 +93,11 @@ class GSTR1Verifier:
         self.analytics_workspace_id = analytics_workspace_id
         self.config = config or GSTR1VerificationConfig()
 
-    def run(self, month: Optional[str] = None, as_of: Optional[date] = None,
-            *, force_refresh: bool = False) -> Dict[str, Any]:
+    def run(self, month: str | None = None, as_of: date | None = None,
+            *, force_refresh: bool = False) -> dict[str, Any]:
         start, end = _month_range(month) if month is not None else _previous_month_range(as_of)
         fy_start, fy_end = self._financial_year_range(start)
-        fetch_errors: List[Dict[str, str]] = []
+        fetch_errors: list[dict[str, str]] = []
 
         if force_refresh:
             if self.books is None:
@@ -156,7 +157,7 @@ class GSTR1Verifier:
             | set(grouped_target_credit_notes)
         )
 
-        registration_reports: Dict[str, Dict[str, Any]] = {}
+        registration_reports: dict[str, dict[str, Any]] = {}
         for registration_key in registration_keys:
             raw_invoices = grouped_target_invoices.get(registration_key, [])
             raw_credit_notes = grouped_target_credit_notes.get(registration_key, [])
@@ -318,8 +319,8 @@ class GSTR1Verifier:
 
     @staticmethod
     def _load_amounts(
-        documents: Sequence[Dict[str, Any]], resource: Any, response_key: str,
-        errors: List[Dict[str, str]],
+        documents: Sequence[dict[str, Any]], resource: Any, response_key: str,
+        errors: list[dict[str, str]],
     ) -> None:
         for document in documents:
             if str(document.get("status", "")).strip().lower() in ("void", "draft"):
@@ -336,7 +337,7 @@ class GSTR1Verifier:
             except Exception as exc:
                 errors.append({"source": f"{response_key}_amounts", "document_id": str(doc_id or ""), "error": str(exc)})
 
-    def _financial_year_range(self, target_start: date) -> Tuple[date, date]:
+    def _financial_year_range(self, target_start: date) -> tuple[date, date]:
         return get_financial_year_range(
             as_of=target_start,
             start_month=self.config.fiscal_year_start_month,
@@ -349,8 +350,8 @@ class GSTR1Verifier:
         source: str,
         start: date,
         end: date,
-        errors: List[Dict[str, str]],
-    ) -> List[Dict[str, Any]]:
+        errors: list[dict[str, str]],
+    ) -> list[dict[str, Any]]:
         try:
             return resource.list_all(
                 params={"date_start": start.isoformat(), "date_end": end.isoformat()}
@@ -359,7 +360,7 @@ class GSTR1Verifier:
             errors.append({"source": source, "error": str(exc)})
             return []
 
-    def _safe_list_locations(self, errors: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+    def _safe_list_locations(self, errors: list[dict[str, str]]) -> list[dict[str, Any]]:
         try:
             return self.books.locations.list_all(resource_key="locations")
         except Exception as exc:
@@ -369,9 +370,9 @@ class GSTR1Verifier:
     @staticmethod
     def _registration_metadata(
         locations: Sequence[Mapping[str, Any]],
-    ) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, str]]:
-        metadata: Dict[str, Dict[str, Any]] = {}
-        location_to_registration: Dict[str, str] = {}
+    ) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:
+        metadata: dict[str, dict[str, Any]] = {}
+        location_to_registration: dict[str, str] = {}
         for location in locations:
             location_id = str(location.get("location_id") or "")
             if not location_id:
@@ -411,7 +412,7 @@ class GSTR1Verifier:
         credit_notes: Sequence[Mapping[str, Any]],
         sequence_invoices: Sequence[Mapping[str, Any]],
         sequence_credit_notes: Sequence[Mapping[str, Any]],
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """Build a distinct verification view for every fetched Books location."""
         location_meta = {
             str(item.get("location_id") or ""): item
@@ -422,7 +423,7 @@ class GSTR1Verifier:
         location_ids.update(str(item.get("location_id") or "") for item in invoices)
         location_ids.update(str(item.get("location_id") or "") for item in credit_notes)
 
-        reports: Dict[str, Dict[str, Any]] = {}
+        reports: dict[str, dict[str, Any]] = {}
         for location_id in sorted(location_ids):
             raw_invoices = [
                 item for item in invoices
@@ -472,8 +473,8 @@ class GSTR1Verifier:
     def _group_by_registration(
         documents: Sequence[Mapping[str, Any]],
         location_to_registration: Mapping[str, str],
-    ) -> Dict[str, List[Mapping[str, Any]]]:
-        grouped: Dict[str, List[Mapping[str, Any]]] = {}
+    ) -> dict[str, list[Mapping[str, Any]]]:
+        grouped: dict[str, list[Mapping[str, Any]]] = {}
         for document in documents:
             location_id = str(document.get("location_id") or "")
             registration_key = location_to_registration.get(location_id)
@@ -486,7 +487,7 @@ class GSTR1Verifier:
     def _fallback_registration_metadata(
         registration_key: str,
         documents: Sequence[Mapping[str, Any]],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         locations = {}
         for document in documents:
             location_id = document.get("location_id")
@@ -506,7 +507,7 @@ class GSTR1Verifier:
     def _sequence_check(
         target_docs: Sequence[Mapping[str, Any]],
         universe_docs: Sequence[Mapping[str, Any]],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         active_target_docs = [
             doc
             for doc in target_docs
@@ -522,8 +523,8 @@ class GSTR1Verifier:
         }
         unparseable = []
         invalid_dates = []
-        groups: Dict[str, List[Dict[str, Any]]] = {}
-        occupied_sequences: Dict[str, Set[int]] = {}
+        groups: dict[str, list[dict[str, Any]]] = {}
+        occupied_sequences: dict[str, set[int]] = {}
 
         for doc in universe_docs:
             prefix, sequence, width = parse_doc_number(doc.get("number"))
@@ -545,15 +546,15 @@ class GSTR1Verifier:
                  "parsed_date": parsed_date, "in_target": in_target}
             )
 
-        missing: List[Dict[str, Any]] = []
-        duplicates: List[Dict[str, Any]] = []
-        out_of_chronology: List[Dict[str, Any]] = []
-        inconsistent_width: List[Dict[str, Any]] = []
+        missing: list[dict[str, Any]] = []
+        duplicates: list[dict[str, Any]] = []
+        out_of_chronology: list[dict[str, Any]] = []
+        inconsistent_width: list[dict[str, Any]] = []
         for prefix, items in groups.items():
             target_items = [item for item in items if item["in_target"]]
             if not target_items:
                 continue
-            by_sequence: Dict[int, List[Dict[str, Any]]] = {}
+            by_sequence: dict[int, list[dict[str, Any]]] = {}
             for item in items:
                 by_sequence.setdefault(item["sequence"], []).append(item)
             lower = min(item["sequence"] for item in target_items)
@@ -615,11 +616,11 @@ class GSTR1Verifier:
         }
 
     @staticmethod
-    def _public_sequence_doc(item: Mapping[str, Any]) -> Dict[str, Any]:
+    def _public_sequence_doc(item: Mapping[str, Any]) -> dict[str, Any]:
         return {key: item.get(key) for key in ("document_type", "id", "number", "date", "status")}
 
     @staticmethod
-    def _merge_sequence_results(*results: Mapping[str, Any]) -> Dict[str, Any]:
+    def _merge_sequence_results(*results: Mapping[str, Any]) -> dict[str, Any]:
         keys = (
             "missing", "duplicates", "out_of_chronology", "unparseable_numbers",
             "invalid_dates", "inconsistent_width",
@@ -629,7 +630,7 @@ class GSTR1Verifier:
         return merged
 
     @staticmethod
-    def _merge_einvoice_results(*results: Mapping[str, Any]) -> Dict[str, Any]:
+    def _merge_einvoice_results(*results: Mapping[str, Any]) -> dict[str, Any]:
         if not results:
             return {
                 "applicable": True,
@@ -658,7 +659,7 @@ class GSTR1Verifier:
         self,
         invoices: Sequence[Mapping[str, Any]],
         credit_notes: Sequence[Mapping[str, Any]],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         if not self.config.e_invoice_applicable:
             return {
                 "applicable": False,
@@ -671,9 +672,9 @@ class GSTR1Verifier:
                 "not_applicable_or_not_returned": [],
             }
 
-        pushed: List[Dict[str, Any]] = []
-        exceptions: List[Dict[str, Any]] = []
-        not_applicable: List[Dict[str, Any]] = []
+        pushed: list[dict[str, Any]] = []
+        exceptions: list[dict[str, Any]] = []
+        not_applicable: list[dict[str, Any]] = []
         applicable_count = 0
         for document_type, docs in (
             ("invoice", invoices),
@@ -709,7 +710,7 @@ class GSTR1Verifier:
         }
 
     @staticmethod
-    def _classify_einvoice(record: Mapping[str, Any]) -> Dict[str, Any]:
+    def _classify_einvoice(record: Mapping[str, Any]) -> dict[str, Any]:
         raw_status = _first(
             record,
             ("einvoice_status", "e_invoice_status", "e-invoice_status", "status"),
@@ -741,14 +742,14 @@ class GSTR1Verifier:
 
 def verify_gstr1(
     books_client: Any = None,
-    month: Optional[str] = None,
-    as_of: Optional[date] = None,
-    config: Optional[GSTR1VerificationConfig] = None,
+    month: str | None = None,
+    as_of: date | None = None,
+    config: GSTR1VerificationConfig | None = None,
     *,
     analytics_client: Any = None,
     analytics_workspace_id: str = "264324000000002043",
     force_refresh: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Convenience wrapper for :class:`GSTR1Verifier`."""
     return GSTR1Verifier(books_client, config=config, analytics_client=analytics_client,
                          analytics_workspace_id=analytics_workspace_id).run(

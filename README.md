@@ -15,8 +15,12 @@ installed, run from the repository root (Windows, Linux or macOS):
 
 ```bash
 uv venv --python 3.14.10
-uv pip install --python .venv -e ".[workflows,test]"
+uv pip install --python .venv -c constraints.txt -e ".[workflows,test]"
 ```
+
+On Windows, replace `.venv/bin/python` in execution commands with
+`.\.venv\Scripts\python.exe`. uv handles environment provisioning and package
+management; routine commands use the existing workspace interpreter.
 
 Configure the machine's local profile and token broker using the
 [development runbook](okf/development-runbook.md) before live workflows.
@@ -24,7 +28,7 @@ Configure the machine's local profile and token broker using the
 Open the local operations dashboard:
 
 ```bash
-uv run python apps/dashboard.py
+.venv/bin/python apps/dashboard.py
 ```
 
 Visit `http://127.0.0.1:8750` to browse common workflows and see their run output.
@@ -88,7 +92,7 @@ Workflow extras are optional when using only the low-level SDK.
 ## Validate changes
 
 ```bash
-uv run python -m pytest -q
+.venv/bin/python -m pytest -q
 ```
 
 Tests include `tests/` and workflow-local suites under `src/workflows/`.

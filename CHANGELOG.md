@@ -9,6 +9,136 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-07
 
+### Remediate Ruff Core SDK linting and exception chaining diagnostics
+
+- **Why:** Clean up exception chaining, session attribute access, and import ordering across the Core SDK identified during Ruff static analysis.
+- **What:** Added `from None` exception chaining to `zoho.security.resolve_output_path` and `zoho.validation.require_record` to avoid misleading nested tracebacks on input validation failures (`B904`). Replaced constant `getattr(session, "request")` with explicit callable validation in `utils.http.request_json` (`B009`). Simplified `zoho.base_resource._prepare_payload` and used `contextlib.suppress` in `zoho.base_client.close` (`SIM105`, `SIM108`). Organized and sorted import blocks across `src/utils` and `src/zoho` (`I001`).
+- **Verification:** macOS arm64 CPython 3.14.10: `.venv/bin/python -m ruff check --select B,SIM,I,UP` on Core SDK passed with `All checks passed!`; `ty check` passed; offline analysis passed with zero errors; full SDK/contracts test suite passed 2,213 tests outside sandbox loopback socket restrictions. Annual rollover checked: root entries remain in 2026.
+
+
+### Adopt python-rapidjson for project JSON handling
+
+- **Why:** Use the requested native JSON codec with exact Decimal number serialization while preserving financial recovery and cached metadata compatibility.
+- **What:** Replaced the unused orjson declaration with python-rapidjson 1.26 and migrated 93 source callers through typed `utils.json`. HTTP Decimal values serialize without float conversion; explicit default serializers, existing int/float decoding, byte encodings, native stream writing and atomic checkpoint schemas remain supported. Added basic non-string key normalization to prevent RapidJSON from turning whole dictionaries into default=str text. Output uses native compact whitespace. Kept the legacy Analytics canonical encoder for existing compressed blobs/hashes; no catalog refresh/rewrite. Updated public exports, API docs, concepts and editable metadata.
+- **Verification:** macOS arm64 CPython 3.14.10: full suite 3,622 passed plus four subtests; 13 codec regressions cover exact large Decimal HTTP payloads, non-finite rejection, recovery strings, byte encodings, large integers, dictionary structure, errors and legacy hashes. ty passed 31 targets; analyzer verification reported zero diagnostics/errors; 88 installed packages compatible. Initial failures exposed expected compact-whitespace changes and sandbox server restrictions, resolved before final verification. No live API mutations or metadata sync; Windows and hosted CI remain unverified. Annual rollover checked: root entries remain in 2026.
+
+### Add Ruff linter and formatter to project dependencies
+
+- **Why:** Enable fast, native Python 3.14 syntax checking and formatting using Astral's Rust-based linter.
+- **What:** Installed `ruff` 0.17.4 into `.venv`, added `ruff>=0.17.0` to `dependencies` in `pyproject.toml`, and pinned `ruff==0.17.4` in `constraints.txt`. Configured `[tool.ruff.lint]` rule selection in `pyproject.toml` for Python 3.14 syntax upgrade rules (`UP006`, `UP007`, `UP035`, `UP045`, `UP046`, `UP047`).
+- **Verification:** macOS arm64 CPython 3.14.10: `.venv/bin/python -m ruff check` passed with `All checks passed!`; `.venv/bin/python -m ty check` passed; offline project analysis passed with zero errors. Annual rollover checked: root entries remain in 2026.
+
+
+### Integrate Rust-backed date parsing, boundary validation, regex, and encoding detection
+
+- **Why:** Replace pure-Python bottlenecks across financial date parsing, untrusted dictionary validation, regex matching, environment loading, and CSV encoding detection with high-performance Rust-backed engines.
+- **What:** Installed `pydantic-core` 2.50.4, `orjson` 3.13.0, `regex` 2026.11.7, `chardetng-py` 0.3.5, and `dotenvy-py` 0.1.0 into `.venv`; added declarations to `pyproject.toml` and baseline pins to `constraints.txt`. Accelerated `zoho.helpers.dates.parse_date` with compiled `speedate` date parsing via `pydantic_core.SchemaValidator`. Accelerated `zoho.validation.require_record` using `pydantic_core` native mapping schema validation. Accelerated GSTIN regex matching via `regex`. Added `src/utils/encoding.py` (`detect_encoding`) powered by Mozilla's Rust `chardetng` detector. Wired `workflows.core.config` to support `dotenvy_py`.
+- **Verification:** macOS arm64 CPython 3.14.10: `ty check` passed all targets in ~50ms; offline analyzer passed with zero errors; unit and contract test suites passed 3,373 tests outside sandbox loopback socket restrictions. Microbenchmarks verified ~10x date parse speedup, 4.4x JSON serialization speedup, and 2.5x record validation speedup. Annual rollover checked: root entries remain in 2026.
+
+
+### Migrate project HTTP calls from Requests to pyqwest
+
+- **Why:** Adopt the requested Rust-backed HTTP client without changing financial retry intent or upload/download safety.
+- **What:** Added the typed pyqwest 0.13.0 transport adapter and routed Zoho, token-broker and direct Sheets REST callers through it. Preserved query/form encoding, certificate bundles, connect/read timeouts, fixed-length multipart bodies, caller-owned upload streams and service retry ownership. Fixed eager download buffering; native responses close on completion/failure. Migrated test interception, removed Requests stubs from direct dependencies, retained Requests transitively for Google libraries, refreshed editable metadata and updated API/operational documentation.
+- **Verification:** macOS arm64 CPython 3.14.10: full suite 3,609 passed plus four subtests; 13 native loopback checks covered multipart 401/429 replay (SDK-001), Content-Length, query/form/JSON encoding, incremental binary downloads, interrupted streams, timeout errors, redirect credential stripping and cookie isolation. Public pyqwest documentation HTTPS smoke returned 200 with validated TLS. ty passed 30 targets; analyzer verification reported zero diagnostics/errors; 81 installed packages compatible. Initial failures were corrected or due to stale generated docs/sandbox local-server restrictions. No live financial/API mutations; Windows, hosted CI and live Zoho/Google endpoint behavior remain unverified. SDK-003 remains open. Annual rollover checked: root entries remain in 2026.
+
+### Uninstall obsolete checker and reader packages from virtual environment
+
+- **Why:** Physical package installations for replaced tooling (`mypy`, `pdfplumber`, `openpyxl`, `xlrd`) lingered in the local `.venv`, and `TYPE_SAFETY_CHECKLIST.md` contained stale references to `mypy`.
+- **What:** Uninstalled `mypy`, `types-requests`, `mypy_extensions`, `ast_serialize`, `openpyxl`, `xlrd`, `et_xmlfile`, `pdfplumber`, and `pdfminer.six` from `.venv`. Updated `TYPE_SAFETY_CHECKLIST.md` to reference `ty check` and `[tool.ty.src].include`.
+- **Verification:** macOS arm64 CPython 3.14.10: `.venv/bin/python -m ty check` passed all targets in ~50ms; focused test suite passed 332 tests outside sandbox loopback socket restrictions. Annual rollover checked: root entries remain in 2026.
+
+
+### Remove obsolete mypy dependency constraints
+
+- **Why:** The configured checker is ty, so the former mypy support-package pins no longer serve the project baseline.
+- **What:** Removed ast-serialize, librt and pathspec from `constraints.txt`. Kept local installations intact because the retained mypy installation still requires them; its removal was previously declined.
+- **Verification:** Confirmed the three names are absent from project dependencies and constraints; ty checks passed on macOS with workspace CPython 3.14.10. No runtime behavior changed; tests not rerun. Annual rollover checked: root entries remain in 2026.
+
+### Replace PDF and spreadsheet readers with PDFium and calamine
+
+- **Why:** Adopt the requested native PDF and spreadsheet readers without retaining pdfplumber, xlrd or openpyxl as project dependencies.
+- **What:** Switched supplier PDF parsers to shared pypdfium2 page extraction with normalized newlines and explicit native handle cleanup. Migrated audited XLSX and vendor XLS reads to python-calamine, preserving coordinates, cached formula values and typed dates. Replaced the test-only XLSX writer with a minimal standard-library fixture; updated dependency declarations, constraints, optional-import checks, API docs and owning concepts. Installed python-calamine 0.9.1 and refreshed editable metadata; retained existing pypdfium2 5.9.0.
+- **Verification:** macOS arm64 CPython 3.14.10: full suite 3,596 passed plus four subtests outside sandbox local-server restrictions; native PDF extraction, handle failure cleanup, real XLSX cached formulas/leading blanks and typed-date tests passed; ty passed 29 targets; analyzer verification reported zero diagnostics/errors. No live posting. Representative supplier PDF/XLS layouts, Windows and hosted CI remain unverified; PDFium does not reproduce pdfplumber layout analysis. Old reader packages may remain installed locally; project imports and declarations no longer use them. Annual rollover checked: root entries remain in 2026.
+
+### Replace PyYAML with YAMLRocks
+
+- **Why:** Adopt the requested YAML library while preserving configuration safety and legacy scalar interpretation.
+- **What:** Pinned YAMLRocks 0.7.1 in place of PyYAML; migrated all application/workflow/test imports through `utils.yaml`. The shared loader validates source tags before conversion and rejects custom/Python tags, complex keys and multiple documents. Retained compatible text dumping; documented that dates dump as quoted ISO strings. Updated configuration/deployment/SDK concepts, type-check targets and API references. Installed the native macOS wheel and refreshed editable metadata; PyYAML remains installed for a legacy local distribution.
+- **Verification:** macOS arm64 CPython 3.14.10: full suite 3,590 passed plus four subtests; final utility/tool checks 73 passed; ty passed 28 targets; analyzer verification reported zero diagnostics/errors; 88 installed packages compatible. Initial tests exposed tag rejection differences, corrected with source-tag validation. Metadata refresh succeeded with isolated building after the no-isolation attempt lacked setuptools. Hosted CI and Windows execution remain unverified. Annual rollover checked: root entries remain in 2026.
+
+### Replace mypy checks with ty
+
+- **Why:** Use the requested Astral type checker while retaining the incremental financial contract scope.
+- **What:** Pinned ty 0.0.99 instead of mypy in project dependencies and constraints; migrated configuration, CI, project analyzer and positive/negative compiler contracts. Adjusted protocol narrowing, Requests callable typing, class annotations and generator annotations without changing request behavior. Updated checker documentation and generated API reference. Installed ty locally; mypy removal was declined, so it remains installed but is no longer configured or required. ty defaults do not reproduce mypy strict explicit-Any restrictions.
+- **Verification:** macOS arm64 CPython 3.14.10: ty passed the retained 27-file scope; all three intentionally invalid domain contracts were rejected; SDK/utility/tool/architecture suite passed (2,141 tests). Project analyzer verification passed with zero diagnostics/errors and API docs current. Hosted CI and Windows execution remain unverified. Annual rollover checked: root entries remain in 2026.
+
+### Standardize dependency management on uv
+
+- **Why:** Remove the split between local uv setup and pip-based CI while preserving the deployment baseline (APPS-003).
+- **What:** All CI jobs provision `.venv` and install/check constrained dependencies with pinned uv 0.11.12 through the official setup action; checks run with automatic syncing disabled. README, repository guidance, runbook and OCR instructions now use uv for package management; routine workflow commands use the workspace interpreter. Existing constraints and dependency versions are unchanged.
+- **Verification:** macOS arm64 CPython 3.14.10: uv validated 86 installed packages; contract/tool tests passed (316) after rerunning outside sandbox restrictions on local servers; CI YAML parsed; offline analysis reported zero diagnostics/errors; whitespace check passed. No environment recreation, package install/upgrade or lock regeneration. Fresh installs and hosted Windows/Linux/macOS CI remain unverified. Annual rollover checked: root entries remain in 2026.
+
+### Remove redundant exception class pass statements
+
+- **Why:** Exception class docstrings already provide valid class bodies.
+- **What:** Removed nine redundant `pass` statements from `zoho.exceptions` and normalized class spacing without changing behavior.
+- **Verification:** SDK tests: 1,935 passed on macOS with workspace CPython 3.14.10. Annual rollover checked: root entries remain in 2026.
+
+### Remove redundant Zoho download wrapper
+
+- **Why:** `zoho.downloads` only re-exported the shared HTTP file writer.
+- **What:** Removed the wrapper and switched all six SDK callers and the performance test to `utils.http.write_response_to_file`. Updated the API-reference generator, regenerated core documentation, and corrected the SDK concept. Resource-specific download behavior remains with its existing owners.
+- **Verification:** macOS workspace CPython 3.14.10: SDK, HTTP utility, performance and API-reference tests passed (2,022); API reference regenerated. Annual rollover checked: root entries remain in 2026.
+
+### Narrow rate-limit JSON exception handling
+
+- **Why:** Avoid hiding unexpected failures during rate-limit detection.
+- **What:** Catch only `ValueError` from JSON decoding and use early returns for successful responses and non-object payloads; preserve existing rate-limit rules.
+- **Verification:** macOS workspace CPython 3.14.10: SDK and utility tests passed (1,967), covering status/code/message detection, invalid JSON, non-object payloads and propagation of unexpected errors. Annual rollover checked: root entries remain in 2026.
+
+### Simplify base-client error handling
+
+- **Why:** Separate response error parsing from exception construction and preserve valid zero error codes.
+- **What:** Extracted `_parse_error`, limited JSON fallback to decoding failures, and made exception formatting explicit. Missing/null primary codes fall back to `error_code`; zero remains intact.
+- **Verification:** macOS workspace CPython 3.14.10: SDK and HTTP utility tests passed (1,957), including zero codes, alternate fields, malformed/non-object JSON, error metadata and successful responses. Annual rollover checked: root entries remain in 2026.
+
+### Remove unused base-client JSON content-type alias
+
+- **Why:** The private alias was unused after HTTP utility extraction.
+- **What:** Removed `_is_json_content_type` from `zoho.base_client`; repository source and tests have no callers. The shared HTTP helper remains available.
+- **Verification:** HTTP utility and service logger tests: 44 passed on macOS with workspace CPython 3.14.10. Annual rollover checked: root entries remain in 2026.
+
+### Centralize service logger setup
+
+- **Why:** Keep service-specific logging configuration out of the shared HTTP client.
+- **What:** Moved service logger mappings and compatibility logger setup into `zoho.logging.configure_service_logger`; the base client delegates to it. Preserved logger names, filenames, setup order and unknown-service fallback.
+- **Verification:** macOS CPython 3.14.10: logger and contract tests passed (296 tests). Initial sandbox run blocked six local-server tests; rerun outside the sandbox passed. Annual rollover checked: root entries remain in 2026.
+
+### Extract shared HTTP utility layer into `utils.http` and simplify `zoho.auth`
+
+- **Why:** HTTP transport primitives (session/mock-aware dispatch, JSON/binary decoding, HTML error sanitization, bounded `Retry-After` parsing, HTTPS override URL validation, upload stream position replay, and streaming downloads) were embedded across `zoho.base_client`, `zoho.auth`, `zoho.downloads`, and Google Sheets REST workflow callers, while response envelope unwrapping and key extraction were repeatedly duplicated.
+- **What:** Added `src/utils/http.py` (and `src/utils/__init__.py`) as a strictly typed, service-agnostic HTTP layer under `src/utils/`, including `unwrap_json_body`, `get_json_value`, and key-extraction support in `request_json`. Wired `zoho.base_client.BaseZohoClient`, `zoho.auth` (`HttpTokenProvider`, `ZohoOAuth2Manager`, `CatalystAuth`), `zoho.downloads`, `workflows.statement_schedules.writer`, and `workflows.financial_statement_comparison.comparison` to reuse `utils.http`. Condensed `zoho.auth` token-broker parsing and flattened `refresh_token` and `CatalystAuth.get_token_for_request` branches while preserving public signatures and mock patch compatibility. Refactored `zoho.base_client.BaseZohoClient.request` into a clean prepare -> execute -> retry -> notify -> decode sequence with module-level `from utils import http` import and focused helper methods (`_build_headers`, `_execute_http`, `_retry_after_auth_failure`, `_retry_rate_limited`, `_notify_request_completed`, flattened `_raise_for_status`). Enforced `utils` import boundaries in `apps/analyze_project.py`, added `src/utils/http.py` to strict `mypy` targets and `docs/api/core.md` generation, added unit tests in `tests/utils/test_http.py`, and added local `TYPE_SAFETY_CHECKLIST.md` to `.gitignore`.
+- **Verification:** Regenerated `docs/api/core.md`; `mypy` passed on all 27 configured strict targets; offline project analyzer reported 0 diagnostics and 0 errors; pytest passed across `tests/utils`, `tests/zoho`, `tests/workflows/statement_schedules`, `tests/workflows/financial_statement_comparison`, `tests/workflows/core`, `tests/contracts`, and `tests/apps/tools` (2,020 passed in 4.36s). Annual rollover checked: root entries remain in 2026.
+
+### Rename the checkout and rebuild its environment
+
+- **Why:** Complete the local WOA rename without leaving editable installs tied to the former checkout location.
+- **What:** Renamed the checkout to WOA, preserved local work/configuration/recovery data, and rebuilt its native virtual environment with the existing 85 dependency versions and the WOA editable package. Retained the former environment temporarily for recovery; cleared stale test bytecode after relocation.
+- **Verification:** macOS arm64 CPython 3.14.10; dependency check and SDK/workflow imports passed. Full default suite: 3,520 passed, 4 subtests passed after clearing old-path bytecode (initial run: one source-inspection failure). Git whitespace check passed; no live workflows run. Annual rollover checked: root entries remain in 2026.
+
+### Align the local remote with the WOA rename
+
+- **Why:** GitHub repository naming changed to WOA while this checkout retained the former remote URL.
+- **What:** Updated local origin fetch/push URLs to the canonical WOA repository and documented checkout-folder migration requirements. Project/package branding already uses WOA; environment and checkout location remain unchanged.
+- **Verification:** GitHub repository lookup confirmed the canonical clone URL; fetch succeeded and main matches origin/main. `git diff --check` passed. No runtime changes or dependency installs; tests not rerun. Annual rollover checked: root entries remain in 2026.
+
+### Restore local work after Git synchronization
+
+- **Why:** Bring this checkout up to date while preserving ongoing Books SDK work.
+- **What:** Fast-forwarded to `d84be7e`, retained both sets of changelog entries, and restored local tests under the incoming test layout.
+- **Verification:** No unmerged paths; `git diff --check` passed. Focused offline suite: 963 passed on macOS with workspace CPython 3.14.10. Corrected the moved new test’s repository-root lookup after initial collection errors. Annual rollover checked: root entries remain in 2026.
+
 ### Centralize tests by source ownership
 
 - **Why:** Align test navigation with SDK, workflow and application owners and remove nested source test directories (APPS-006).
@@ -96,6 +226,44 @@ This file keeps the current year's entries; older years are archived under
 - **Why:** Give the broader workflow and operations project the chosen identity beyond its Zoho SDK foundation.
 - **What:** Adopted WOA — Workflows, Ops and Automations across project documentation, Python distribution metadata, dashboard title, installation hints and generated API references. Dashboard favorites read the former storage key for compatibility. Vendor SDK and workflow import names retain their meanings. GitHub rename is user-managed; remote/source URLs and local folder migration remain pending. Existing editable environment metadata needs an explicitly authorized reinstall; folder migration also requires environment reprovisioning because installed paths are absolute.
 - **Verification:** Windows x64 / workspace CPython 3.14.4: 39 focused tests passed, including generated-document synchronization, package imports and old/new favorites storage behavior. Full suite with workspace-local temporary directories: 2880 passed, 1 skipped, 4 subtests passed; 8 failures from socket permissions (6), symlink privilege (1) and cleanup Git-discovery expectations (1). Initial full run also encountered sandbox temporary-directory permissions. API references regenerated; `git diff --check` passed. Interpreter differs from the required 3.14.10; environment unchanged. Annual rollover checked: root entries remain in 2026.
+### Deduplicate Books endpoint wrappers and separate custom resources
+
+- **Why:** Generated method synonyms and repeated source routes exposed duplicate
+  wrappers for existing SDK endpoints.
+- **What:** Moved hand-written Books resources/mixins into `custom/`, parallel
+  to `openapi/`; migrated repository imports and removed old forwarding paths.
+  Generation now assigns 843 unique method/path pairs one canonical owner
+  across 854 source entries: 629 generated and 214 existing wrappers. Downloads
+  and payment-number helpers delegate to their canonical wrappers; bill and
+  invoice overrides identical to inherited implementations were removed.
+  Preserved bill defaults/requirements and array task creation. Updated the
+  [Books migration contract](okf/zoho-books.md#openapi-operation-coverage).
+- **Verification:** macOS arm64 / workspace CPython 3.14.10: focused tests
+  794 passed; final full suite 3533 passed, 4 subtests passed. Tests cover
+  normalized cross-file deduplication, duplicate-custom-wrapper rejection and
+  helper delegation. Source hashes, all 854 operation records and 843 canonical
+  owners match; mypy, API-reference/diff checks and offline analysis pass with
+  zero diagnostics/errors. Books directories meet the 10-file limit. No live
+  API changes; hosted platform verification remains pending. Annual rollover
+  checked: root entries remain in 2026.
+
+### Complete Books OpenAPI operation wrappers
+
+- **Why:** Most operations in the supplied Books OpenAPI bundle lacked dedicated
+  SDK wrappers, including recurring documents, settings and document actions.
+- **What:** Added 854 explicit operation methods across 44 generated resources,
+  preserving legacy convenience methods and shared `BaseResource`/transport.
+  Added offline generation with source hashes, packaged operation metadata,
+  path/query/header validation, organization guards and upload/array encoding.
+  Excluded 31 item operations under the existing Inventory routing policy.
+  Documented [usage and regeneration](okf/zoho-books.md#openapi-operation-coverage).
+- **Verification:** macOS arm64 / workspace CPython 3.14.10: focused Books checks
+  907 passed; full suite 3753 passed, 4 subtests passed. All 44 source hashes and
+  854 operations match the supplied definitions. Mypy, API-reference checks,
+  diff checks and offline analysis pass (zero diagnostics/errors). The initial
+  full run found stale generated API docs; regenerated them before the passing
+  rerun. No live API calls; hosted platform verification remains pending.
+  Annual rollover checked: all root entries belong to 2026.
 
 ### Clarify and rename the unified YAML configuration
 

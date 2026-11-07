@@ -1,11 +1,12 @@
 """Configuration-driven, registration-specific read-only Books report helpers."""
 from __future__ import annotations
 
-import json
+from utils import json
 from pathlib import Path
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
-import yaml
+from utils import yaml
 
 from workflows.core.config import Config, get_config
 
@@ -60,7 +61,7 @@ def fetch_trial_balance_for_firm(
     Omitted firm uses default_firm from YAML. Names, abbreviations and GSTINs
     are case insensitive and tolerate surrounding/repeated whitespace.
     """
-    rule = json.dumps(_firm_rule(firm, config_path), separators=(",", ":"))
+    rule = json.dumps(_firm_rule(firm, config_path))
     return books_client.reports.trial_balance(
         from_date=from_date, to_date=to_date, rule=rule,
         cash_based=False, show_rows=show_rows,

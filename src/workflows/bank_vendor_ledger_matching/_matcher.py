@@ -4,7 +4,7 @@
 """
 import logging
 from datetime import date, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from zoho.helpers import extract_bank_withdrawals
 from ..core.matching import (
@@ -19,18 +19,18 @@ from ..vendor_ledger_reconciliation.cleaner import clean_ledger_file, get_ledger
 logger = logging.getLogger(__name__)
 
 
-def _extract_withdrawals(bank_txs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _extract_withdrawals(bank_txs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Filter a list of bank transactions down to outflows (withdrawals / debits)."""
     return extract_bank_withdrawals(bank_txs)
 
 
 
 def _run_three_pass_match(
-    parsed_left: List[Dict[str, Any]],
-    parsed_right: List[Dict[str, Any]],
+    parsed_left: list[dict[str, Any]],
+    parsed_right: list[dict[str, Any]],
     date_tolerance_days: int,
     amount_tolerance: float,
-) -> Tuple[Any, ...]:
+) -> tuple[Any, ...]:
     """
     Generic 3-pass match between two pre-parsed lists.
     Each item must have date, amount, ref, and raw values. Matching identity is
@@ -66,14 +66,14 @@ def match_ledger_entries(
     vendor_id: str,
     date_tolerance_days: int = 7,
     amount_tolerance: float = 0.0,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
-) -> Dict[str, Any]:
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> dict[str, Any]:
     """
     Matches Bank Account withdrawals with Vendor Payments in Zoho Books.
     Both sides are fetched live from the API.
     """
-    params: Dict[str, Any] = {"account_id": bank_account_id}
+    params: dict[str, Any] = {"account_id": bank_account_id}
     if start_date and end_date and start_date > end_date:
         raise ValueError("start_date cannot be after end_date")
     if start_date:
@@ -85,7 +85,7 @@ def match_ledger_entries(
     bank_txs = books_client.bank_transactions.list_all(params=params)
     withdrawals = _extract_withdrawals(bank_txs)
 
-    payment_params: Dict[str, Any] = {"vendor_id": vendor_id}
+    payment_params: dict[str, Any] = {"vendor_id": vendor_id}
     if start_date:
         payment_params["from_date"] = start_date.strftime("%Y-%m-%d")
     if end_date:
@@ -134,12 +134,12 @@ def match_bank_with_vendor_ledger(
     books_client: Any,
     bank_account_id: str,
     vendor_ledger_path: str,
-    vendor_id: Optional[str] = None,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
+    vendor_id: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     date_tolerance_days: int = 4,
     amount_tolerance: float = 0.01,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Matches Bank Account withdrawals (Zoho Books) with receipt entries in a local vendor ledger file.
     The date range is auto-inferred from ledger metadata unless explicitly
@@ -150,7 +150,7 @@ def match_bank_with_vendor_ledger(
     start_date = start_date or parse_date(metadata.get("start_date"))
     end_date = end_date or parse_date(metadata.get("end_date"))
 
-    params: Dict[str, Any] = {"account_id": bank_account_id}
+    params: dict[str, Any] = {"account_id": bank_account_id}
     if start_date and end_date and start_date > end_date:
         raise ValueError("start_date cannot be after end_date")
     if start_date:

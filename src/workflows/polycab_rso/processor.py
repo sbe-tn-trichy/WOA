@@ -6,9 +6,9 @@ import os
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-import pdfplumber
+from utils.pdf import read_pdf_pages
 
 from zoho.inventory import ZohoInventoryAPI
 from zoho.helpers import find_item_by_exact_sku, find_transaction_by_number, unwrap_record
@@ -48,15 +48,12 @@ def _parse_pdf_date(raw_date: str, field: str) -> str:
     raise ValueError(f"Invalid {field}: {raw_date!r}")
 
 
-def parse_polycab_rso_pdf(pdf_path: str) -> Dict[str, Any]:
+def parse_polycab_rso_pdf(pdf_path: str) -> dict[str, Any]:
     """Extract one Polycab RSO, stopping the item scan at the first Total row."""
     if not os.path.isfile(pdf_path):
         raise FileNotFoundError(f"File not found: {pdf_path}")
 
-    with pdfplumber.open(pdf_path) as pdf:
-        text = "\n".join(
-            (page.extract_text(layout=True) or "") for page in pdf.pages
-        )
+    text = "\n".join(read_pdf_pages(pdf_path))
     if not text.strip():
         raise ValueError(f"No extractable text found in PDF: {pdf_path}")
 
@@ -95,7 +92,7 @@ def parse_polycab_rso_pdf(pdf_path: str) -> Dict[str, Any]:
     # The PDF repeats every item under LINE DETAILS. Confining extraction to this
     # prefix is the workflow's hard stop and prevents duplicate line creation.
     primary_item_table = item_section[:total_match.start()]
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for match in _ITEM_ROW.finditer(primary_item_table):
         quantity = Decimal(match.group("quantity"))
         rate = Decimal(match.group("rate").replace(",", ""))
@@ -147,7 +144,7 @@ def parse_polycab_rso_pdf(pdf_path: str) -> Dict[str, Any]:
     }
 
 
-def _find_existing_sales_order(books_client: Any, rso_number: str) -> Optional[Dict[str, Any]]:
+def _find_existing_sales_order(books_client: Any, rso_number: str) -> dict[str, Any] | None:
     return find_transaction_by_number(
         books_client.sales_orders,
         rso_number,
@@ -158,14 +155,14 @@ def _find_existing_sales_order(books_client: Any, rso_number: str) -> Optional[D
 
 def _resolve_line_items(
     inventory_client: ZohoInventoryAPI,
-    items: List[Dict[str, Any]],
+    items: list[dict[str, Any]],
     purchase_account_id: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     purchase_account_id = purchase_account_id.strip()
     if not purchase_account_id:
         raise ValueError("purchase_account_id is required for RSO item lookup.")
-    resolved_by_sku: Dict[str, Dict[str, Any]] = {}
-    missing: List[str] = []
+    resolved_by_sku: dict[str, dict[str, Any]] = {}
+    missing: list[str] = []
     for sku in dict.fromkeys(item["sku"] for item in items):
         # Polycab prints compact codes such as FPENSST008P while the Inventory
         # catalog uses its canonical six-character-prefix form FPENSS-T008P.
@@ -173,7 +170,7 @@ def _resolve_line_items(
         if sku not in _SKU_OVERRIDES and len(sku) > 6 and "-" not in sku:
             candidate_skus.append(f"{sku[:6]}-{sku[6:]}")
 
-        match: Optional[Dict[str, Any]] = None
+        match: dict[str, Any] | None = None
         for candidate in candidate_skus:
             match = find_item_by_exact_sku(inventory_client, candidate, purchase_account_id)
             if match:
@@ -205,7 +202,7 @@ def import_polycab_rso_pdf(
     *,
     inventory_client: ZohoInventoryAPI,
     purchase_account_id: str = Config.FAN_PURCHASE_ACCOUNT_ID,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create an idempotent Books sales order from an RSO PDF and attach it."""
     details = parse_polycab_rso_pdf(pdf_path)
     rso_number = details["sales_order_number"]

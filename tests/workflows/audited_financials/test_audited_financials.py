@@ -3,7 +3,8 @@ from decimal import Decimal
 from datetime import datetime
 import json
 
-import openpyxl
+from zipfile import ZipFile
+from xml.sax.saxutils import escape
 import pytest
 
 from workflows.audited_financials import (
@@ -270,15 +271,8 @@ def test_fetch_reads_all_reports_with_scope(inputs):
 
 
 def test_saved_cli_never_authenticates(inputs, tmp_path, monkeypatch):
-    workbook = openpyxl.Workbook()
-    workbook.remove(workbook.active)
-    for name, rows in inputs[0].items():
-        sheet = workbook.create_sheet(name)
-        for row in rows:
-            sheet.append(row)
     source = tmp_path / "audit.xlsx"
-    workbook.save(source)
-    workbook.close()
+    write_xlsx(source, inputs[0])
     assert read_audited_workbook(source) == inputs[0]
     mapping = tmp_path / "mapping.yaml"
     mapping.write_text(json.dumps(inputs[2]), encoding="utf-8")
@@ -291,6 +285,51 @@ def test_saved_cli_never_authenticates(inputs, tmp_path, monkeypatch):
     assert app.main(["--source", str(source), "--mapping", str(mapping), "--saved", "--snapshots", str(tmp_path)]) == 0
     assert source.read_bytes() == original
     assert (tmp_path / "audited-financials-vs-books-fy24-25.md").exists()
+
+
+def write_xlsx(path, sheets):
+    """Build a real, minimal reader fixture without a spreadsheet writer dependency."""
+    spreadsheet_ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+    relationship_ns = "http://schemas.openxmlformats.org/package/2006/relationships"
+    office_ns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    sheet_nodes, relationships = [], []
+    with ZipFile(path, "w") as archive:
+        archive.writestr("[Content_Types].xml", '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>')
+        archive.writestr("_rels/.rels", f'<Relationships xmlns="{relationship_ns}"><Relationship Id="rId1" Type="{office_ns}/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+        for index, (name, rows) in enumerate(sheets.items(), 1):
+            sheet_nodes.append(f'<sheet name="{escape(name)}" sheetId="{index}" r:id="rId{index}"/>')
+            relationships.append(f'<Relationship Id="rId{index}" Type="{office_ns}/worksheet" Target="worksheets/sheet{index}.xml"/>')
+            xml_rows = []
+            for row_index, row in enumerate(rows, 1):
+                cells = []
+                for column, value in enumerate(row):
+                    ref = f"{chr(65 + column)}{row_index}"
+                    if isinstance(value, dict):
+                        cells.append(f'<c r="{ref}"><f>{value["formula"]}</f><v>{value["cached"]}</v></c>')
+                    elif isinstance(value, (int, float)):
+                        cells.append(f'<c r="{ref}"><v>{value}</v></c>')
+                    elif value is not None:
+                        cells.append(f'<c r="{ref}" t="inlineStr"><is><t>{escape(str(value))}</t></is></c>')
+                xml_rows.append(f'<row r="{row_index}">{"".join(cells)}</row>')
+            archive.writestr(f"xl/worksheets/sheet{index}.xml", f'<worksheet xmlns="{spreadsheet_ns}"><sheetData>{"".join(xml_rows)}</sheetData></worksheet>')
+        archive.writestr("xl/workbook.xml", f'<workbook xmlns="{spreadsheet_ns}" xmlns:r="{office_ns}"><sheets>{"".join(sheet_nodes)}</sheets></workbook>')
+        archive.writestr("xl/_rels/workbook.xml.rels", f'<Relationships xmlns="{relationship_ns}">{"".join(relationships)}</Relationships>')
+
+
+def test_calamine_preserves_cell_positions_and_cached_formula(tmp_path):
+    sheets = {
+        "Trading & P&L": [(None, None)] * 38 + [("Total", {"formula": "20+22", "cached": 42})],
+        "Balance Sheet": [(None, None)] * 29 + [("Total", 0)],
+    }
+    path = tmp_path / "cached.xlsx"
+    write_xlsx(path, sheets)
+    before = path.read_bytes()
+    loaded = read_audited_workbook(path)
+    assert len(loaded["Trading & P&L"]) == 39
+    assert loaded["Trading & P&L"][0] == (None, None)
+    assert loaded["Trading & P&L"][38] == ("Total", 42)
+    assert loaded["Balance Sheet"][29] == ("Total", 0)
+    assert path.read_bytes() == before
 
 
 def test_bad_period_mapping_and_api(tmp_path):

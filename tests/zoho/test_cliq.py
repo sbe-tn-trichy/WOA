@@ -28,7 +28,7 @@ class TestZohoCliqAPI(unittest.TestCase):
         self.assertIsNone(res)
         mock_logger.warning.assert_called_with("Cliq Access Token not provided. Skipping notification.")
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_send_notification_to_bot(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -49,7 +49,7 @@ class TestZohoCliqAPI(unittest.TestCase):
             timeout=10
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_send_notification_to_channel(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -70,13 +70,13 @@ class TestZohoCliqAPI(unittest.TestCase):
             timeout=10
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_send_notification_failure(self, mock_request):
         mock_request.side_effect = Exception("Connection error")
         res = self.client.send_notification("Hello Fail")
         self.assertIsNone(res)
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_send_notification_raise_on_error(self, mock_request):
         mock_request.side_effect = Exception("Network error")
         with self.assertRaises(Exception):

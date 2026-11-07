@@ -1,12 +1,12 @@
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import Any
 
 _UNSAFE_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 # Known sensitive parameter keys (case-insensitive)
-SENSITIVE_PARAM_KEYS: Set[str] = {
+SENSITIVE_PARAM_KEYS: set[str] = {
     # Auth & Tokens
     "authtoken",
     "auth_token",
@@ -74,7 +74,7 @@ def mask_sensitive_value(val: Any) -> str:
     return f"***{s[-4:]}"
 
 
-def sanitize_log_params(params: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def sanitize_log_params(params: dict[str, Any] | None) -> dict[str, Any] | None:
     """
     Recursively sanitize query parameters or payload dictionaries for logging.
     Sensitive keys are masked showing only their last 4 characters.
@@ -99,7 +99,7 @@ def sanitize_log_params(params: Optional[Dict[str, Any]]) -> Optional[Dict[str, 
     return sanitized
 
 
-def sanitize_filename(name: Optional[str], fallback: str = "unnamed") -> str:
+def sanitize_filename(name: str | None, fallback: str = "unnamed") -> str:
     """
     Sanitize an untrusted filename to prevent path traversal and invalid filesystem characters.
     Extracts the basename and strips dangerous characters.
@@ -152,7 +152,7 @@ def resolve_output_path(
         except ValueError:
             raise ValueError(
                 f"Strict containment violation: target path '{save_path}' is outside allowed directory '{base_dir}'."
-            )
+            ) from None
 
     # If the path was relative, verify it has not escaped base_dir
     if not target_path.is_absolute():

@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from .custom_fields import get_custom_field_value
 
 logger = logging.getLogger("zoho.helpers.contacts")
 
 
-def _get_contacts_iterable(contacts_resource: Any, params: Dict[str, Any]) -> Any:
+def _get_contacts_iterable(contacts_resource: Any, params: dict[str, Any]) -> Any:
     """Safely obtain iterable over contacts supporting list_all, list_iter, or list."""
     if hasattr(contacts_resource, "list_all") and callable(contacts_resource.list_all):
         res = contacts_resource.list_all(params=params, resource_key="contacts")
@@ -32,8 +33,8 @@ def _get_contacts_iterable(contacts_resource: Any, params: Dict[str, Any]) -> An
 def find_contact_by_gstin(
     books_client: Any,
     gstin: str,
-    contact_type: Optional[str] = None,
-) -> Optional[Dict[str, Any]]:
+    contact_type: str | None = None,
+) -> dict[str, Any] | None:
     """Look up a contact by their GSTIN (tax identifier).
 
     Performs case-insensitive matching against `gst_no` and custom fields.
@@ -42,7 +43,7 @@ def find_contact_by_gstin(
     if not cleaned_gstin:
         return None
 
-    params: Dict[str, Any] = {}
+    params: dict[str, Any] = {}
     if contact_type:
         params["contact_type"] = contact_type
 
@@ -66,16 +67,16 @@ def find_contact_by_gstin(
 def find_contact_by_name(
     books_client: Any,
     contact_name: str,
-    contact_type: Optional[str] = None,
+    contact_type: str | None = None,
     exact: bool = True,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Look up a contact by contact_name or company_name."""
     name_cleaned = str(contact_name or "").strip()
     if not name_cleaned:
         return None
 
     target = name_cleaned.lower()
-    params: Dict[str, Any] = {"contact_name": name_cleaned}
+    params: dict[str, Any] = {"contact_name": name_cleaned}
     if contact_type:
         params["contact_type"] = contact_type
 
@@ -101,7 +102,7 @@ def fetch_active_customers_map(
     books_client: Any,
     key_field: str = "contact_id",
     status: str = "active",
-) -> Dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """Fetch all customers from Zoho Books and return an indexed dictionary.
 
     Keys are extracted from either direct attributes or custom fields using `key_field`.
@@ -110,7 +111,7 @@ def fetch_active_customers_map(
         "contact_type": "customer",
         "status": status,
     }
-    customer_map: Dict[str, Dict[str, Any]] = {}
+    customer_map: dict[str, dict[str, Any]] = {}
 
     try:
         contacts = _get_contacts_iterable(books_client.contacts, params)

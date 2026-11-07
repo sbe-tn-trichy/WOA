@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 
 def _normalized_field_name(value: Any) -> str:
@@ -13,7 +14,7 @@ def _normalized_field_name(value: Any) -> str:
 def get_custom_field_value(
     record: Mapping[str, Any],
     field_name: str,
-    default: Optional[Any] = None,
+    default: Any | None = None,
 ) -> Any:
     """Extract a custom field value from a Zoho record across various response shapes.
 
@@ -54,12 +55,12 @@ def get_custom_field_value(
     return default
 
 
-def extract_custom_fields_dict(record: Mapping[str, Any]) -> Dict[str, Any]:
+def extract_custom_fields_dict(record: Mapping[str, Any]) -> dict[str, Any]:
     """Extract all custom fields in a record into a flat dictionary keyed by api_name or label."""
     if not record:
         return {}
 
-    result: Dict[str, Any] = {}
+    result: dict[str, Any] = {}
 
     cf_hash = record.get("custom_field_hash")
     if isinstance(cf_hash, dict):
@@ -82,10 +83,10 @@ def ensure_books_custom_fields(
     entity: str,
     requirements: Sequence[Mapping[str, Any]],
     create_missing: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Verify and optionally provision custom fields on a Zoho Books entity."""
     existing = books_client.custom_fields.list_for_entity(entity)
-    existing_by_name: Dict[str, Dict[str, Any]] = {}
+    existing_by_name: dict[str, dict[str, Any]] = {}
     for field in existing:
         if not isinstance(field, dict):
             continue
@@ -98,15 +99,15 @@ def ensure_books_custom_fields(
             if normalized:
                 existing_by_name[normalized] = field
 
-    missing: List[Dict[str, Any]] = []
-    misconfigured: List[Dict[str, Any]] = []
+    missing: list[dict[str, Any]] = []
+    misconfigured: list[dict[str, Any]] = []
     for requirement in requirements:
         normalized = _normalized_field_name(requirement.get("label"))
         field = existing_by_name.get(normalized)
         if field is None:
             missing.append(dict(requirement))
             continue
-        problems: List[str] = []
+        problems: list[str] = []
         if requirement.get("data_type") and str(field.get("data_type") or "") != requirement["data_type"]:
             problems.append(f"data_type must be {requirement['data_type']!r}")
         if requirement.get("is_unique") and field.get("is_unique") is not True:
@@ -127,7 +128,7 @@ def ensure_books_custom_fields(
         if problems:
             misconfigured.append({"field": requirement.get("label", ""), "problems": problems})
 
-    created: List[Dict[str, Any]] = []
+    created: list[dict[str, Any]] = []
     if create_missing:
         for requirement in missing:
             created.append(books_client.custom_fields.create(requirement))

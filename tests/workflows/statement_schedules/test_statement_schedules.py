@@ -4,10 +4,10 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
-import yaml
+from utils import yaml
 
 from workflows.statement_schedules import build_schedule_plan, fetch_schedule_sources, validate_sources, verify_asset
-from zoho.books.resources.fixed_assets import FixedAssets
+from zoho.books.custom.ledger import FixedAssets
 from apps.update_statement_schedules import main
 from workflows.statement_schedules import (
     apply_plan, changed_update_requests, grid_address, note_bold_requests, update_requests,

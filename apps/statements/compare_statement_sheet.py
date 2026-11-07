@@ -5,7 +5,7 @@ import argparse
 from dataclasses import asdict
 from datetime import datetime, timezone
 from decimal import Decimal
-import json
+from utils import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -67,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
         reports = {name: json.loads((args.output / f"schedule{name}.json").read_text(encoding="utf-8"))
                    for name in names}
         # Use SDK validation against saved responses, including period and scope.
-        from zoho.books.resources.reports import Reports
+        from zoho.books.custom.reports import Reports
         class SavedClient:
             def request(self, method, endpoint, *, params):
                 name = endpoint.removeprefix("reports/schedule")

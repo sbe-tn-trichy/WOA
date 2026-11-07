@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 logger = logging.getLogger("zoho.helpers.transactions")
 
@@ -18,7 +19,7 @@ CLOSED_DOCUMENT_STATUSES = {
 }
 
 
-def _to_decimal(value: Any) -> Optional[Decimal]:
+def _to_decimal(value: Any) -> Decimal | None:
     if value is None or value == "":
         return None
     if isinstance(value, Decimal):
@@ -44,7 +45,7 @@ def normalize_cheque_number(value: Any) -> str:
 def fetch_open_invoices(
     books_client: Any,
     customer_id: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Fetch open, non-zero balance invoices for a customer from Zoho Books."""
     customer_id_str = _to_text(customer_id)
     if not customer_id_str:
@@ -63,7 +64,7 @@ def fetch_open_invoices(
 def fetch_open_bills(
     books_client: Any,
     vendor_id: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Fetch open, non-zero balance bills for a vendor from Zoho Books."""
     vendor_id_str = _to_text(vendor_id)
     if not vendor_id_str:
@@ -83,7 +84,7 @@ def find_bill_by_number(
     books_client: Any,
     vendor_id: str,
     bill_number: str,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Find a bill under a specific vendor by bill number."""
     vendor_id_str = _to_text(vendor_id)
     bill_no_str = _to_text(bill_number)
@@ -109,7 +110,7 @@ def allocate_documents_fifo(
     documents: Sequence[Mapping[str, Any]],
     id_key: str = "invoice_id",
     include_metadata: bool = False,
-) -> Tuple[List[Dict[str, Any]], Decimal]:
+) -> tuple[list[dict[str, Any]], Decimal]:
     """Allocate a payment/credit amount across open documents sorted by due date and date.
 
     Returns a tuple of (allocations, unallocated_remaining_amount).
@@ -128,14 +129,14 @@ def allocate_documents_fifo(
         )
     )
 
-    allocations: List[Dict[str, Any]] = []
+    allocations: list[dict[str, Any]] = []
     for doc in sorted_docs:
         balance = _to_decimal(doc.get("balance")) or Decimal("0")
         doc_id = _to_text(doc.get(id_key) or doc.get("invoice_id") or doc.get("bill_id"))
         if not doc_id or balance <= 0 or remaining <= 0:
             continue
         applied = min(balance, remaining)
-        allocation: Dict[str, Any] = {
+        allocation: dict[str, Any] = {
             id_key: doc_id,
             "amount_applied": float(applied),
         }
@@ -162,7 +163,7 @@ def allocate_documents_fifo(
 def unwrap_record(
     response: Mapping[str, Any],
     candidate_keys: Sequence[str] = (),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Extract the primary record dictionary from a Zoho API response payload.
 
     Handles single-entity keys (e.g. 'salesorder', 'sales_order', 'payment', 'customerpayment',
@@ -218,8 +219,8 @@ def find_transaction_by_number(
         "creditnote_number",
         "bill_number",
     ),
-    resource_key: Optional[str] = None,
-) -> Optional[Dict[str, Any]]:
+    resource_key: str | None = None,
+) -> dict[str, Any] | None:
     """Look up a transaction in a Books resource (sales_orders, invoices, customer_payments, etc.) by reference or number."""
     target = str(number or "").strip()
     if not target:

@@ -3,12 +3,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
+from utils import json
 import keyword
 from pathlib import Path
 import re
 
-import yaml
+from utils import yaml
 
 METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
 ROOT = Path(__file__).resolve().parents[1]

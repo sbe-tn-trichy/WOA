@@ -6,7 +6,8 @@ import re
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from zoho.sheet import ZohoSheetAPI
 

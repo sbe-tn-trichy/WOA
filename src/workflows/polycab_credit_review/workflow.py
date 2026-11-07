@@ -4,7 +4,8 @@ from __future__ import annotations
 from datetime import date
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from zoho.helpers.files import download_books_document
 from zoho.security import resolve_output_path

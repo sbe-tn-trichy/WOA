@@ -31,7 +31,7 @@ def __init__(self, access_token: str, bot_name: str = 'messengerbot', domain: st
 ##### `ZohoCliqAPI.send_notification`
 
 ```python
-def send_notification(self, message: str, channel: Optional[str] = None, raise_on_error: bool = False) -> Optional[Dict[str, Any]]
+def send_notification(self, message: str, channel: str | None = None, raise_on_error: bool = False) -> dict[str, Any] | None
 ```
 
 Sends a summary message via direct Zoho Cliq API (v2).

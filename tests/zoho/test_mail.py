@@ -14,7 +14,7 @@ class TestZohoMailAPI(unittest.TestCase):
         self.assertEqual(self.client.access_token, self.access_token)
         self.assertEqual(self.client.base_url, "https://mail.zoho.com/api")
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_success(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -38,7 +38,7 @@ class TestZohoMailAPI(unittest.TestCase):
             stream=False
         )
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_empty_or_204(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 204
@@ -48,7 +48,7 @@ class TestZohoMailAPI(unittest.TestCase):
         res = self.client.request("DELETE", "test_endpoint")
         self.assertEqual(res, {})
 
-    @patch("requests.request")
+    @patch("utils.http_transport.Session.request")
     def test_request_failure(self, mock_request):
         import requests
         mock_response = MagicMock()
@@ -260,8 +260,8 @@ class TestMessages(unittest.TestCase):
             )
 
 class TestMailCatalystAuth(unittest.TestCase):
-    @patch("requests.request")
-    @patch("requests.post")
+    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_transport.post")
     def test_catalyst_auth_mutations(self, mock_post, mock_request):
         mock_response_catalyst = MagicMock()
         mock_response_catalyst.status_code = 200

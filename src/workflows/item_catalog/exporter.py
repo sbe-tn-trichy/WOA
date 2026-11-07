@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Mapping, Sequence, TypedDict
+from collections.abc import Mapping, Sequence
+from typing import TypedDict
 
 from zoho.inventory import ZohoInventoryAPI
 

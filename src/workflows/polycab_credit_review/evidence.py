@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import re
 from datetime import date
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from workflows.core.matching import parse_date, references_intersect
 from zoho.helpers.references import parse_reference_lines

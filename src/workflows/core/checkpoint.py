@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import json
+from utils import json
 import os
 import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, IO, Iterator, Optional
+from collections.abc import Generator, Callable, Iterator
+from typing import IO
 
 
 def write_atomic_json(
@@ -16,7 +17,7 @@ def write_atomic_json(
     payload: object,
     *,
     indent: int | None = 2,
-    default: Optional[Callable[[object], object]] = str,
+    default: Callable[[object], object] | None = str,
     max_retries: int = 5,
     retry_delay: float = 0.1,
     sort_keys: bool = False,
@@ -37,7 +38,7 @@ def write_atomic_json(
 def atomic_text_writer(
     path: Path | str, *, encoding: str = "utf-8", newline: str | None = None,
     max_retries: int = 5, retry_delay: float = 0.1,
-) -> Iterator[IO[str]]:
+) -> Generator[IO[str]]:
     """Stage a text/CSV file uniquely, replacing the target only on success."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)

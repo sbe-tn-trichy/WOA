@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-import json
+from utils import json
 import re
 import threading
 from bisect import bisect_left, bisect_right
@@ -13,7 +13,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from ..core.exceptions import ReconciliationError
 from ..core.matching import (
@@ -64,7 +65,7 @@ class _BankCandidateIndex:
     """Normalize bank dates and amounts once; preserve original candidate order."""
 
     def __init__(self, rows: Sequence[Mapping[str, Any]]) -> None:
-        self.by_date: Dict[Any, Dict[Decimal, List[Tuple[int, Mapping[str, Any]]]]] = {}
+        self.by_date: dict[Any, dict[Decimal, list[tuple[int, Mapping[str, Any]]]]] = {}
         for position, row in enumerate(rows):
             day = parse_date(row.get("date") or row.get("transaction_date"))
             amount = _decimal(row.get("amount"))
@@ -72,7 +73,7 @@ class _BankCandidateIndex:
                 self.by_date.setdefault(day, {}).setdefault(abs(amount), []).append((position, row))
         self.amounts = {day: sorted(values) for day, values in self.by_date.items()}
 
-    def candidates(self, day: Any, amount: Decimal, days: int, tolerance: Decimal) -> List[Mapping[str, Any]]:
+    def candidates(self, day: Any, amount: Decimal, days: int, tolerance: Decimal) -> list[Mapping[str, Any]]:
         matches = []
         for offset in range(-days, days + 1):
             candidate_day = day + timedelta(days=offset)
@@ -88,9 +89,9 @@ class _BankCandidateIndex:
 class OnlinePaymentReviewConfig:
     creator_app_link_name: str
     bank_account_id: str = ""
-    bank_accounts: Tuple[Tuple[str, str], ...] = ()
+    bank_accounts: tuple[tuple[str, str], ...] = ()
     payment_report_link_name: str = "Online_Payments"
-    payment_reports: Tuple[Tuple[str, str], ...] = ()
+    payment_reports: tuple[tuple[str, str], ...] = ()
     cheque_detail_report_link_name: str = "All_Cheque_Details"
     cheque_detail_form_link_name: str = "Cheque_Details"
     customer_report_link_name: str = "All_Customers1"
@@ -124,7 +125,7 @@ class OnlinePaymentReviewConfig:
         if self.analytics_batch_tokens < 1 or self.analytics_max_sql_bytes < 256:
             raise ValueError("Analytics batch limits must be positive and SQL budget at least 256 bytes.")
 
-    def configured_banks(self) -> Tuple[Tuple[str, str], ...]:
+    def configured_banks(self) -> tuple[tuple[str, str], ...]:
         if self.bank_accounts:
             return tuple(
                 (str(name).strip(), str(account_id).strip())
@@ -135,7 +136,7 @@ class OnlinePaymentReviewConfig:
             return (("Bank", str(self.bank_account_id)),)
         raise ValueError("At least one bank account is required.")
 
-    def configured_reports(self) -> Tuple[Tuple[str, str], ...]:
+    def configured_reports(self) -> tuple[tuple[str, str], ...]:
         if self.payment_reports:
             return tuple(
                 (str(payment_type).strip(), str(report_name).strip())
@@ -154,20 +155,20 @@ class OnlinePaymentReviewService:
         self.analytics = analytics_client
         self.config = config
         self._lock = threading.RLock()
-        self._history_cache: PreviewCache[List[Mapping[str, Any]]] = PreviewCache()
-        self._full_history_cache: PreviewCache[List[Mapping[str, Any]]] = PreviewCache()
+        self._history_cache: PreviewCache[list[Mapping[str, Any]]] = PreviewCache()
+        self._full_history_cache: PreviewCache[list[Mapping[str, Any]]] = PreviewCache()
         self._history_was_full_export = False
-        self._customer_cache: PreviewCache[List[Mapping[str, Any]]] = PreviewCache()
+        self._customer_cache: PreviewCache[list[Mapping[str, Any]]] = PreviewCache()
         self._expense_cache: PreviewCache[str] = PreviewCache()
-        self._cache_hits: Dict[str, int] = {"analytics_tokens": 0, "customer_mapping": 0}
+        self._cache_hits: dict[str, int] = {"analytics_tokens": 0, "customer_mapping": 0}
 
-    def load(self) -> Dict[str, Any]:
+    def load(self) -> dict[str, Any]:
         with self._lock:
             if not self.config.state_path.exists():
                 return self._empty_batch()
             return json.loads(self.config.state_path.read_text(encoding="utf-8"))
 
-    def refresh(self, *, force_refresh: bool = False) -> Dict[str, Any]:
+    def refresh(self, *, force_refresh: bool = False) -> dict[str, Any]:
         """Read live Creator/Books data and rebuild proposals without writing to Zoho."""
         with self._lock:
             self._cache_hits = {"analytics_tokens": 0, "customer_mapping": 0}
@@ -222,7 +223,7 @@ class OnlinePaymentReviewService:
             for pair_id, pair in old_transfers.items():
                 if pair_id not in current_pair_ids and pair.get("status") != "pending":
                     bank_transfers.append(pair)
-            transfer_lines: Dict[Tuple[str, str], List[BankTransferProposal]] = {}
+            transfer_lines: dict[tuple[str, str], list[BankTransferProposal]] = {}
             for pair in bank_transfers:
                 for side in ("source", "destination"):
                     transfer_lines.setdefault(bank_line_identity(pair[side]), []).append(pair)
@@ -257,7 +258,7 @@ class OnlinePaymentReviewService:
             customer_finder_rows = self._preview_customer_finder(sorted(all_tokens))
             customer_finder = CustomerFinderIndex(customer_finder_rows)
 
-            invoice_cache: Dict[str, List[Mapping[str, Any]]] = {}
+            invoice_cache: dict[str, list[Mapping[str, Any]]] = {}
             entries = []
             for entry in raw_entries:
                 for candidate in entry["ambiguous_candidates"]:
@@ -321,7 +322,7 @@ class OnlinePaymentReviewService:
                 _text(row.get("transaction_id")): row
                 for row in previous.get("bank_suggestions", [])
             }
-            creator_claims: Dict[Tuple[str, str], List[str]] = {}
+            creator_claims: dict[tuple[str, str], list[str]] = {}
             for comparison in bank_comparisons:
                 candidates = ([{**comparison["bank"], "bank_account_id": comparison["bank_account_id"]}]
                               if comparison.get("bank") else [])
@@ -331,7 +332,7 @@ class OnlinePaymentReviewService:
                 for key in keys:
                     creator_claims.setdefault(key, []).append(comparison["id"])
             bank_suggestions = []
-            bank_records: List[BankStatementRecord] = []
+            bank_records: list[BankStatementRecord] = []
             for transaction in bank_transactions:
                 transaction_id = _text(transaction.get("transaction_id") or transaction.get("id"))
                 if not transaction_id:
@@ -417,7 +418,7 @@ class OnlinePaymentReviewService:
                 raise
             return proposal
 
-    def preview_invoices(self, entry_id: str) -> Dict[str, Any]:
+    def preview_invoices(self, entry_id: str) -> dict[str, Any]:
         """Load an invoice preview without authorizing a payment mutation."""
         with self._lock:
             batch, entry = self._entry(entry_id)
@@ -426,14 +427,14 @@ class OnlinePaymentReviewService:
                 self._save(batch)
             return entry
 
-    def categorize_many(self, transaction_ids: Sequence[str]) -> Dict[str, Any]:
+    def categorize_many(self, transaction_ids: Sequence[str]) -> dict[str, Any]:
         """Validate a fresh batch snapshot, then checkpoint sequential writes."""
         if isinstance(transaction_ids, (str, bytes)) or any(not isinstance(x, str) or not x for x in transaction_ids):
             raise ReconciliationError("transaction_ids must contain non-empty strings.")
         with self._lock:
             rows = self._all_uncategorized_bank_transactions()
             current = {(row["_review_bank_account_id"], _text(row.get("transaction_id") or row.get("id"))): row for row in rows}
-            metadata: Dict[str, Any] = {}
+            metadata: dict[str, Any] = {}
             succeeded, failed = [], []
             for transaction_id in dict.fromkeys(transaction_ids):
                 try:
@@ -444,13 +445,13 @@ class OnlinePaymentReviewService:
                     failed.append({"transaction_id": transaction_id, "error": str(exc)})
             return {"succeeded": succeeded, "failed": failed}
 
-    def categorize_travel_expense(self, transaction_id: str) -> Dict[str, Any]:
+    def categorize_travel_expense(self, transaction_id: str) -> dict[str, Any]:
         """Categorize one reviewed TA withdrawal after validating live Books state."""
         return self.categorize_bank_line(transaction_id, expected_kind="travel_allowance")
 
     def categorize_bank_line(self, transaction_id: str, *, expected_kind: str = "",
-                             _current_rows: Optional[Mapping[Tuple[str, str], Mapping[str, Any]]] = None,
-                             _vendor_metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                             _current_rows: Mapping[tuple[str, str], Mapping[str, Any]] | None = None,
+                             _vendor_metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         """Apply a reviewed expense, cash transfer, or vendor advance classification."""
         with self._lock:
             batch = self.load()
@@ -539,10 +540,10 @@ class OnlinePaymentReviewService:
             return proposal
 
     def _categorize_polycab_advance(
-        self, batch: Dict[str, Any], proposal: Dict[str, Any],
+        self, batch: dict[str, Any], proposal: dict[str, Any],
         current: Mapping[str, Any], bank_account_id: str,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         metadata = metadata if metadata is not None else {}
         if not metadata:
             vendors = self.books.contacts.list_all(params={"contact_type": "vendor", "search_text": "Polycab"})
@@ -583,7 +584,7 @@ class OnlinePaymentReviewService:
         self._save(batch)
         return proposal
 
-    def reject(self, entry_id: str) -> Dict[str, Any]:
+    def reject(self, entry_id: str) -> dict[str, Any]:
         with self._lock:
             batch, entry = self._entry(entry_id)
             if entry.get("push_status") == "pushed" or entry.get("books_payment_id"):
@@ -603,12 +604,12 @@ class OnlinePaymentReviewService:
     def accept_and_push(
         self,
         entry_id: str,
-        current_bank_by_id: Optional[Mapping[str, Mapping[str, Any]]] = None,
+        current_bank_by_id: Mapping[str, Mapping[str, Any]] | None = None,
         *,
         selected_bank_transaction_id: str = "",
         allow_reference_override: bool = False,
         allow_customer_name_override: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Push one approved proposal to Books, then checkpoint it in Creator."""
         with self._lock:
             batch, entry = self._entry(entry_id)
@@ -702,10 +703,10 @@ class OnlinePaymentReviewService:
     def accept_many(
         self,
         entry_ids: Sequence[str],
-        selected_bank_transaction_ids: Optional[Mapping[str, str]] = None,
+        selected_bank_transaction_ids: Mapping[str, str] | None = None,
         *,
         allow_reference_override: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Push selected entries sequentially using one current bank snapshot."""
         selected = list(dict.fromkeys(_text(entry_id) for entry_id in entry_ids if _text(entry_id)))
         if not selected:
@@ -719,8 +720,8 @@ class OnlinePaymentReviewService:
             for row in current_rows
             if _text(row.get("transaction_id") or row.get("id"))
         }
-        pushed: List[Dict[str, Any]] = []
-        failed: List[Dict[str, Any]] = []
+        pushed: list[dict[str, Any]] = []
+        failed: list[dict[str, Any]] = []
         selected_bank_transaction_ids = selected_bank_transaction_ids or {}
         for entry_id in selected:
             try:
@@ -749,9 +750,9 @@ class OnlinePaymentReviewService:
 
     def _push_entry(
         self,
-        batch: Dict[str, Any],
-        entry: Dict[str, Any],
-        current_bank_by_id: Optional[Mapping[str, Mapping[str, Any]]] = None,
+        batch: dict[str, Any],
+        entry: dict[str, Any],
+        current_bank_by_id: Mapping[str, Mapping[str, Any]] | None = None,
     ) -> None:
         stage = _text(
             entry.get("retry_stage")
@@ -967,7 +968,7 @@ class OnlinePaymentReviewService:
         if not bank_date:
             raise ReconciliationError("The cheque bank line has no valid clearing date.")
 
-        def matching_details() -> List[Mapping[str, Any]]:
+        def matching_details() -> list[Mapping[str, Any]]:
             rows = self.creator.get_all_records(self.config.creator_app_link_name, self.config.cheque_detail_report_link_name, field_config="all")
             return [row for row in rows if isinstance(row, Mapping) and isinstance(row.get("Payment_ID"), Mapping) and _text(row["Payment_ID"].get("ID")) == record_id]
 
@@ -993,7 +994,7 @@ class OnlinePaymentReviewService:
     def _require_creator_update_success(response: Any) -> None:
         if not isinstance(response, Mapping):
             raise ReconciliationError("Creator returned an invalid update response.")
-        payloads: List[Mapping[str, Any]] = [response]
+        payloads: list[Mapping[str, Any]] = [response]
         data = response.get("data")
         if isinstance(data, Mapping):
             payloads.append(data)
@@ -1008,7 +1009,7 @@ class OnlinePaymentReviewService:
                     + (f": {message}" if message else ".")
                 )
 
-    def _preview_customer_finder(self, tokens: Sequence[str]) -> List[Mapping[str, Any]]:
+    def _preview_customer_finder(self, tokens: Sequence[str]) -> list[Mapping[str, Any]]:
         scope = (id(self.analytics), self.config.analytics_workspace_id,
                  self.config.customer_finder_view_id)
         unique_tokens = sorted({t.strip() for t in tokens if t and len(t.strip()) >= 3})
@@ -1018,7 +1019,7 @@ class OnlinePaymentReviewService:
         if full_rows is not None:
             self._cache_hits["analytics_tokens"] += len(unique_tokens)
             return full_rows
-        rows: List[Mapping[str, Any]] = []
+        rows: list[Mapping[str, Any]] = []
         missing = []
         for token in unique_tokens:
             cached = self._history_cache.get((*scope, token))
@@ -1046,11 +1047,11 @@ class OnlinePaymentReviewService:
             unique_rows[key] = row
         return list(unique_rows.values())
 
-    def _historical_queries(self, tokens: Sequence[str]) -> List[str]:
+    def _historical_queries(self, tokens: Sequence[str]) -> list[str]:
         prefix = ('SELECT "Customer Name", "Description" FROM "Payment Customer Finder" '
                   'WHERE "Customer Name" IS NOT NULL AND "Customer Name" != \'\' AND (')
-        queries: List[str] = []
-        clauses: List[str] = []
+        queries: list[str] = []
+        clauses: list[str] = []
         for token in tokens:
             safe = token.replace("'", "''")
             clause = f'"Description" LIKE \'%{safe}%\''
@@ -1068,7 +1069,7 @@ class OnlinePaymentReviewService:
 
     def _query_historical_customer_finder(
         self, tokens: Sequence[str]
-    ) -> List[Mapping[str, Any]]:
+    ) -> list[Mapping[str, Any]]:
         self._history_was_full_export = False
         if not self.config.customer_finder_view_id or not tokens:
             return []
@@ -1083,7 +1084,7 @@ class OnlinePaymentReviewService:
         if hasattr(self.analytics, "queries") and callable(getattr(self.analytics.queries, "execute", None)):
             queries = self._historical_queries(unique_tokens)
             try:
-                all_rows: List[Mapping[str, Any]] = []
+                all_rows: list[Mapping[str, Any]] = []
                 for sql in queries:
                     rows = self.analytics.queries.execute(
                         self.config.analytics_workspace_id,
@@ -1111,14 +1112,14 @@ class OnlinePaymentReviewService:
 
         raise ReconciliationError("Analytics has no supported historical lookup API.")
 
-    def _customer_finder_rows(self) -> List[Mapping[str, Any]]:
+    def _customer_finder_rows(self) -> list[Mapping[str, Any]]:
         """Fallback for callers requesting all rows."""
         return self._query_historical_customer_finder(["UPI", "NEFT", "IMPS", "CHQ"])
 
     @staticmethod
     def _suggest_names_for_tokens(
         tokens: Sequence[str], historical_rows: Sequence[Mapping[str, Any]]
-    ) -> List[str]:
+    ) -> list[str]:
         if not tokens or not historical_rows:
             return []
         tokens_lower = [t.casefold() for t in tokens if t]
@@ -1131,7 +1132,7 @@ class OnlinePaymentReviewService:
         return sorted((n for n in names if n), key=str.casefold)
 
     def _check_customer_name(
-        self, entry: Dict[str, Any], historical_rows: Sequence[Mapping[str, Any]]
+        self, entry: dict[str, Any], historical_rows: Sequence[Mapping[str, Any]]
     ) -> None:
         """Verify Creator customer name against historical Analytics remitter records."""
         if not self.config.customer_finder_view_id or not entry.get("bank"):
@@ -1206,7 +1207,7 @@ class OnlinePaymentReviewService:
         customer_ids: Mapping[str, str],
         bank_transactions: Sequence[Mapping[str, Any]],
         used_transaction_ids: set,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         creator_id = _text(payment.get("ID"))
         lookup = payment.get("Customer_Name") if isinstance(payment.get("Customer_Name"), dict) else {}
         creator_customer_id = _text(lookup.get("ID"))
@@ -1250,7 +1251,7 @@ class OnlinePaymentReviewService:
 
         def display_candidates(
             rows: Sequence[Mapping[str, Any]],
-        ) -> List[Dict[str, Any]]:
+        ) -> list[dict[str, Any]]:
             displayed_rows = []
             for row in rows:
                 displayed = self._display_bank(row)
@@ -1313,7 +1314,7 @@ class OnlinePaymentReviewService:
         payment: Mapping[str, Any],
         transactions: Sequence[Mapping[str, Any]],
         used_transaction_ids: set,
-    ) -> Tuple[Optional[Mapping[str, Any]], str]:
+    ) -> tuple[Mapping[str, Any] | None, str]:
         candidate, reason, _, _ = self._find_transaction_details(
             payment,
             transactions,
@@ -1326,11 +1327,11 @@ class OnlinePaymentReviewService:
         payment: Mapping[str, Any],
         transactions: Sequence[Mapping[str, Any]],
         used_transaction_ids: set,
-    ) -> Tuple[
-        Optional[Mapping[str, Any]],
+    ) -> tuple[
+        Mapping[str, Any] | None,
         str,
-        List[Mapping[str, Any]],
-        List[Mapping[str, Any]],
+        list[Mapping[str, Any]],
+        list[Mapping[str, Any]],
     ]:
         payment_date = parse_date(payment.get("date"))
         amount = _decimal(payment.get("amount"))
@@ -1477,7 +1478,7 @@ class OnlinePaymentReviewService:
         self,
         entry: Mapping[str, Any],
         allocations: Sequence[Mapping[str, Any]],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         creator = entry["creator"]
         payment_date = parse_date(entry["bank"].get("date") if _text(entry.get("payment_type")).casefold() == "cheque" else creator.get("date"))
         amount = _decimal(creator.get("amount"))
@@ -1497,22 +1498,22 @@ class OnlinePaymentReviewService:
             invoices=allocations,
         )
 
-    def _open_invoices(self, books_customer_id: str) -> List[Mapping[str, Any]]:
+    def _open_invoices(self, books_customer_id: str) -> list[Mapping[str, Any]]:
         return fetch_open_invoices(self.books, books_customer_id)
 
     def _invoice_allocations(
         self,
         books_customer_id: str,
         payment_amount: Any,
-        invoices: Optional[Sequence[Mapping[str, Any]]] = None,
-    ) -> Tuple[List[Dict[str, Any]], Decimal]:
+        invoices: Sequence[Mapping[str, Any]] | None = None,
+    ) -> tuple[list[dict[str, Any]], Decimal]:
         open_invoices = list(invoices) if invoices is not None else self._open_invoices(books_customer_id)
         return allocate_invoices_oldest_due_first(payment_amount, open_invoices)
 
     def _attach_invoice_preview(
         self,
-        entry: Dict[str, Any],
-        invoice_cache: Dict[str, List[Mapping[str, Any]]],
+        entry: dict[str, Any],
+        invoice_cache: dict[str, list[Mapping[str, Any]]],
     ) -> None:
         customer_id = _text(entry.get("creator", {}).get("books_customer_id"))
         if not entry.get("bank") or not customer_id:
@@ -1572,7 +1573,7 @@ class OnlinePaymentReviewService:
             }
         )
 
-    def _display_bank(self, transaction: Mapping[str, Any]) -> Dict[str, Any]:
+    def _display_bank(self, transaction: Mapping[str, Any]) -> dict[str, Any]:
         account_id = _text(transaction.get("_review_bank_account_id"))
         return {
             "transaction_id": _text(transaction.get("transaction_id") or transaction.get("id")),
@@ -1587,7 +1588,7 @@ class OnlinePaymentReviewService:
             ),
         }
 
-    def _entry(self, entry_id: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def _entry(self, entry_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
         batch = self.load()
         entry = next(
             (row for row in batch.get("entries", []) if _text(row.get("id")) == _text(entry_id)),
@@ -1597,7 +1598,7 @@ class OnlinePaymentReviewService:
             raise ReconciliationError(f"Review entry {entry_id} was not found.")
         return batch, entry
 
-    def _empty_batch(self) -> Dict[str, Any]:
+    def _empty_batch(self) -> dict[str, Any]:
         return {
             "version": 2,
             "reports": [
@@ -1612,8 +1613,8 @@ class OnlinePaymentReviewService:
             "entries": [],
         }
 
-    def _all_creator_payments(self) -> List[Dict[str, Any]]:
-        rows: List[Dict[str, Any]] = []
+    def _all_creator_payments(self) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
         has_cheques = False
         for payment_type, report_name in self.config.configured_reports():
             payments = self.creator.get_all_records(
@@ -1644,13 +1645,13 @@ class OnlinePaymentReviewService:
 
     def _attach_presented_dates(
         self,
-        payments: Sequence[Dict[str, Any]],
+        payments: Sequence[dict[str, Any]],
         cheque_details: Sequence[Mapping[str, Any]],
     ) -> None:
         attach_presented_dates(payments, cheque_details)
 
-    def _all_uncategorized_bank_transactions(self) -> List[Dict[str, Any]]:
-        rows: List[Dict[str, Any]] = []
+    def _all_uncategorized_bank_transactions(self) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
         for bank_name, account_id in self.config.configured_banks():
             transactions = self.books.bank_transactions.list_all(
                 params={
@@ -1666,7 +1667,7 @@ class OnlinePaymentReviewService:
         return rows
 
     def _migrate_bank_identity(
-        self, entry: Dict[str, Any], previous_batch: Mapping[str, Any]
+        self, entry: dict[str, Any], previous_batch: Mapping[str, Any]
     ) -> None:
         entry.setdefault("payment_type", "Online")
         entry.setdefault("source_report", self.config.payment_report_link_name)

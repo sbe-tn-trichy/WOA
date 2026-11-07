@@ -19,17 +19,18 @@ Applies:
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 
-KNOWN_SKU_OVERRIDES: Dict[str, str] = {
+KNOWN_SKU_OVERRIDES: dict[str, str] = {
     # 5M PTFE tape is physically white
     "5M-YELLOW-12MM": "5M-WHITE-12MM",
     # 701 Silicone clear 3-letter color code
     "701-260-C": "701-260-CLR",
 }
 
-KNOWN_DUPLICATE_MAP: Dict[str, Dict[str, str]] = {
+KNOWN_DUPLICATE_MAP: dict[str, dict[str, str]] = {
     "701-260-B": {
         "master_sku": "701-260-BLK",
         "master_id": "1094368000059488298",
@@ -100,7 +101,7 @@ def standardize_item_name(name: str) -> str:
     return res
 
 
-def compute_item_update(item: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+def compute_item_update(item: Mapping[str, Any]) -> dict[str, Any] | None:
     """Inspect an item and compute standardized name, SKU, and duplicate status."""
     item_id = str(item.get("item_id") or "").strip()
     curr_name = str(item.get("name") or "").strip()
@@ -117,7 +118,7 @@ def compute_item_update(item: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
     is_duplicate = curr_sku in KNOWN_DUPLICATE_MAP
     dup_meta = KNOWN_DUPLICATE_MAP.get(curr_sku)
 
-    reasons: List[str] = []
+    reasons: list[str] = []
     if proposed_name != curr_name:
         reasons.append(f"Name standardized: '{curr_name}' -> '{proposed_name}'")
     if proposed_sku != curr_sku:

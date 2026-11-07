@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
+from utils import json
 import time
 from dataclasses import asdict
 from datetime import date

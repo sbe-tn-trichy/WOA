@@ -1,7 +1,7 @@
 """Verify GSTR-1 readiness using Analytics, or live Books on force refresh."""
 
 import argparse
-import json
+from utils import json
 from pathlib import Path
 
 from workflows.core.auth import get_analytics_client, get_books_client

@@ -4,12 +4,12 @@
 from __future__ import annotations
 
 import argparse
-import json
+from utils import json
 import os
 from decimal import Decimal
 from pathlib import Path
 
-import requests
+from utils import http_transport
 
 try:
     from . import _bootstrap  # noqa: F401
@@ -37,7 +37,7 @@ def _load_filed_cells(config: dict, snapshot_path: Path, live_sheet: bool) -> di
     cells = [item["filed_cell"] for item in config["lines"]]
     sheet = config["sheet_name"].replace("'", "''")
     ranges = [f"'{sheet}'!{cell}" for cell in cells]
-    response = requests.get(
+    response = http_transport.get(
         f"https://sheets.googleapis.com/v4/spreadsheets/{config['spreadsheet_id']}/values:batchGet",
         headers={"Authorization": f"Bearer {token}"},
         params={"ranges": ranges, "valueRenderOption": "UNFORMATTED_VALUE"},
@@ -73,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
     report = get_books_client().request("GET", "reports/balancesheet", params={
         "filter_by": "TransactionDate.CustomDate", "from_date": f"{int(as_of_date[:4])-1}-04-01",
         "to_date": as_of_date, "cash_based": "false", "show_rows": "all",
-        "is_expand": "true", "rule": json.dumps(rule, separators=(",", ":")),
+        "is_expand": "true", "rule": json.dumps(rule),
     })
     applied = report.get("page_context", {}).get("rule", {})
     if (applied.get("criteria_string") != "1"

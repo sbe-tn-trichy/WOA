@@ -3,7 +3,8 @@
 import calendar
 import re
 from datetime import date
-from typing import Any, Mapping, Sequence, TypedDict
+from collections.abc import Mapping, Sequence
+from typing import Any, TypedDict
 
 from zoho.helpers import parse_date
 

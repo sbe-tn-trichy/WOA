@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Optional
+from typing import Any
 
 from ..core.matching import get_abs_amount, get_bank_reference, parse_date, ref_match
 from ..core.models import DotDict
@@ -14,8 +14,8 @@ def match_ledger_entries(
     books_client: Any,
     bank_account_id: str,
     vendor_id: str,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     date_tolerance_days: int = 4,
     amount_tolerance: float = 0.01,
 ) -> DotDict:
@@ -35,9 +35,9 @@ def match_bank_with_vendor_ledger(
     books_client: Any,
     bank_account_id: str,
     vendor_ledger_path: str,
-    vendor_id: Optional[str] = None,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
+    vendor_id: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     date_tolerance_days: int = 4,
     amount_tolerance: float = 0.01,
 ) -> DotDict:

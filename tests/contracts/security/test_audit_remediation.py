@@ -17,7 +17,7 @@ from zoho.exceptions import (
     ZohoSheetError,
 )
 from zoho.base_client import BaseZohoClient
-from zoho.books.resources.purchases import Bills
+from zoho.books.custom.purchases import Bills
 from zoho.books.base import BaseResource
 from zoho.cliq import ZohoCliqAPI
 from zoho.sheet import ZohoSheetAPI
@@ -109,7 +109,7 @@ class TestStructuredErrors(unittest.TestCase):
         self.assertNotIn("<h1>", str(err))
         self.assertIn("HTTP 502 (Bad Gateway)", str(err))
 
-    @patch("requests.Session.request")
+    @patch("utils.http_transport.Session.request")
     def test_empty_refresh_token_preserves_existing_token(self, request):
         response = MagicMock(status_code=401)
         request.return_value = response

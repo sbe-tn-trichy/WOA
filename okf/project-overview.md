@@ -21,6 +21,9 @@ package, with operational applications in `apps/` and Google Sheets integration.
 The Python distribution is named `WOA` (normalized to `woa` by packaging tools).
 Vendor SDK imports remain `zoho` and `google_sheets`; business workflows remain
 under `workflows`. These names describe their responsibilities within WOA.
+The canonical Git remote is `https://github.com/sbe-tn-trichy/WOA.git`.
+A checkout folder may retain its previous name; moving it requires local
+environment reprovisioning because editable installs and executables embed paths.
 Existing environments need an explicitly requested editable reinstall to refresh
 installed distribution metadata after the rename.
 
@@ -49,7 +52,7 @@ The unified source tree contains three distinct layers:
 
 # Package Layout
 
-`zoho` and `workflows` are independent top-level packages under `src/`. Applications reside in `apps/`.
+`utils`, `zoho`, `google_sheets`, and `workflows` are independent top-level packages under `src/`. Applications reside in `apps/`.
 
 # Related Knowledge
 

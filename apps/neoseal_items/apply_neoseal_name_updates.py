@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
+from utils import json
 import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 try:
     from . import _bootstrap  # noqa: F401
@@ -32,7 +33,7 @@ logger = logging.getLogger("apply_neoseal_name_updates")
 DEFAULT_PURCHASE_ACCOUNT_ID = "1094368000034919918"
 
 
-def load_items_from_csv(csv_path: Path) -> List[Dict[str, Any]]:
+def load_items_from_csv(csv_path: Path) -> list[dict[str, Any]]:
     """Load items from an exported inventory CSV."""
     with csv_path.open("r", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
@@ -87,10 +88,10 @@ def run_plan_or_apply(
     items: Sequence[Mapping[str, Any]],
     apply: bool = False,
     deactivate_duplicates: bool = False,
-    target_item_id: Optional[str] = None,
-    client: Optional[ZohoInventoryAPI] = None,
-    output_dir: Optional[Path] = None,
-) -> Dict[str, Any]:
+    target_item_id: str | None = None,
+    client: ZohoInventoryAPI | None = None,
+    output_dir: Path | None = None,
+) -> dict[str, Any]:
     """Evaluate items, generate planned updates, and optionally mutate Zoho Inventory."""
     output_dir = output_dir or Path("output")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -102,7 +103,7 @@ def run_plan_or_apply(
         json.dump([dict(it) for it in items], f, indent=2)
 
     # 2. Compute updates
-    planned_updates: List[Dict[str, Any]] = []
+    planned_updates: list[dict[str, Any]] = []
     for it in items:
         item_id = str(it.get("item_id") or "").strip()
         if target_item_id and item_id != target_item_id:
@@ -111,7 +112,7 @@ def run_plan_or_apply(
         if update:
             planned_updates.append(update)
 
-    audit_records: List[Dict[str, Any]] = []
+    audit_records: list[dict[str, Any]] = []
     success_count = 0
     failure_count = 0
 
@@ -134,7 +135,7 @@ def run_plan_or_apply(
             raise ValueError("Live client required when apply=True")
 
         for p in planned_updates:
-            record: Dict[str, Any] = {
+            record: dict[str, Any] = {
                 "item_id": p["item_id"],
                 "current_name": p["current_name"],
                 "proposed_name": p["proposed_name"],
@@ -143,7 +144,7 @@ def run_plan_or_apply(
                 "reasons": p["reasons"],
             }
             try:
-                payload: Dict[str, Any] = {}
+                payload: dict[str, Any] = {}
                 if p["name_changed"]:
                     payload["name"] = p["proposed_name"]
                 if p["sku_changed"]:
@@ -189,7 +190,7 @@ def run_plan_or_apply(
     return summary
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     parser = build_parser()
     args = parser.parse_args(argv)

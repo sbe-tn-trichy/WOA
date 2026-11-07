@@ -6,8 +6,9 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from typing import Protocol, Sequence
-import json
+from collections.abc import Sequence
+from typing import Protocol
+from utils import json
 import re
 import time
 

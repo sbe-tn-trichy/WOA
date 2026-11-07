@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
+from utils import json
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 from zoneinfo import ZoneInfo
 
 try:
@@ -207,7 +208,7 @@ def _legacy_rows(path: Path) -> list[dict[str, str]]:
 
 def build_monthly_report_filename(
     target_month: str,
-    run_timestamp: Optional[datetime] = None,
+    run_timestamp: datetime | None = None,
 ) -> str:
     """Format monthly report filename as <Mon>-<YYYY>_<DDMM>_<HHMM>.md."""
     try:
@@ -232,8 +233,8 @@ def write_reconciliation_outputs(
     result: Mapping[str, Any],
     report_md: str,
     output_root: Path,
-    monthly_override: Optional[Path] = None,
-    run_timestamp: Optional[datetime] = None,
+    monthly_override: Path | None = None,
+    run_timestamp: datetime | None = None,
 ) -> tuple[Path, tuple[Path, ...]]:
     """Upsert one monthly report and month-keyed cumulative category files."""
     target_month = str(result["metadata"]["target_month"])
@@ -311,7 +312,7 @@ class RunMetrics(HttpAttemptMetrics):
                 f"Requests by resource: {breakdown}")
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.year and args.month:
         print("Error: choose --month or --year.", file=sys.stderr)

@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, TypedDict
 from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger("zoho_books")
@@ -37,7 +37,7 @@ class CustomerValidator:
     def __init__(self, client: Any = None):
         self.client = client
 
-    def check_proper_casing(self, text: str) -> List[str]:
+    def check_proper_casing(self, text: str) -> list[str]:
         """
         Checks if the words in the text are in proper/title case.
         Allows numbers, acronyms, and standard prepositions/conjunctions.
@@ -72,7 +72,7 @@ class CustomerValidator:
                 violations.append(w)
         return violations
 
-    def check_punctuation_anomalies(self, text: str) -> List[str]:
+    def check_punctuation_anomalies(self, text: str) -> list[str]:
         """
         Checks for double spaces, duplicate commas, missing spaces after commas,
         spaces before commas/periods, and trailing punctuation.
@@ -95,7 +95,7 @@ class CustomerValidator:
             
         return anomalies
 
-    def check_phone_isd(self, number: str) -> Optional[str]:
+    def check_phone_isd(self, number: str) -> str | None:
         """
         Validates phone/mobile number to ensure it starts with '+' and country code.
         """
@@ -110,7 +110,7 @@ class CustomerValidator:
             return f"Invalid international format (found: '{number}')"
         return None
 
-    def check_geographic_name(self, contact: Dict[str, Any]) -> Optional[str]:
+    def check_geographic_name(self, contact: dict[str, Any]) -> str | None:
         """
         Checks that contact_name or company_name contains their billing/shipping city
         or district/jurisdiction custom fields (case-insensitive).
@@ -166,7 +166,7 @@ class CustomerValidator:
             
         return None
 
-    def check_custom_fields(self, contact: Dict[str, Any]) -> List[str]:
+    def check_custom_fields(self, contact: dict[str, Any]) -> list[str]:
         """
         Checks that Branch, District, Jurisdiction, and Transport custom fields are set.
         """
@@ -182,7 +182,7 @@ class CustomerValidator:
         missing = required - found
         return [f"Missing custom field: {lbl.capitalize()}" for lbl in sorted(list(missing))]
 
-    def validate_customer_data(self, limit: Optional[int] = None) -> CustomerValidationReport:
+    def validate_customer_data(self, limit: int | None = None) -> CustomerValidationReport:
         """
         Lists all customer contacts and performs details analysis concurrently.
         """
@@ -202,7 +202,7 @@ class CustomerValidator:
         logger.info(f"Processing details for {len(contacts_list)} / {total_found} contacts...")
         
         # Concurrently fetch detailed contact records with rate pacing and backoff
-        def fetch_details(c: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        def fetch_details(c: dict[str, Any]) -> dict[str, Any] | None:
             c_id = c.get('contact_id')
             if not c_id:
                 return None
@@ -234,7 +234,7 @@ class CustomerValidator:
         result.update(total_contacts_in_books=total_found, selected_count=len(contacts_list), failed_contact_ids=failed_ids, failed_count=len(failed_ids))
         return result
 
-    def validate_records(self, detailed_contacts: List[Dict[str, Any]]) -> CustomerValidationReport:
+    def validate_records(self, detailed_contacts: list[dict[str, Any]]) -> CustomerValidationReport:
         """Validate supplied records without performing network calls."""
         total_found = len(detailed_contacts)
 

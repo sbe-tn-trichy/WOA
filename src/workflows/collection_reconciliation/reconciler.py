@@ -1,9 +1,10 @@
-import json
+from utils import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from ..core.exceptions import ReconciliationError
 from ..core.matching import get_bank_reference, parse_date, to_decimal as _decimal
@@ -47,7 +48,7 @@ class CollectionReconciliationConfig:
     collection_form_link_name: str = "Collection_Records"
     collection_report_link_name: str = "Collection_Records"
     audit_form_link_name: str = "Reconciliation_Audit_Log"
-    analytics_workspace_id: Optional[str] = None
+    analytics_workspace_id: str | None = None
     analytics_sql_template: str = DEFAULT_ANALYTICS_SQL
     date_tolerance_days: int = 0
     amount_tolerance: Decimal = Decimal("0")
@@ -65,11 +66,11 @@ class CollectionReconciliationConfig:
             raise ValueError("amount_tolerance must be finite and nonnegative.")
 
 
-def _record_id(record: Mapping[str, Any]) -> Optional[str]:
+def _record_id(record: Mapping[str, Any]) -> str | None:
     return _identifier(record, ("Record_ID", "ID", "id"))
 
 
-def _customer_id(record: Mapping[str, Any]) -> Optional[str]:
+def _customer_id(record: Mapping[str, Any]) -> str | None:
     direct = record.get("Customer_ID") or record.get("customer_id")
     if direct:
         return str(direct)
@@ -110,7 +111,7 @@ class CollectionReconciler:
         creator_client: Any,
         books_client: Any,
         config: CollectionReconciliationConfig,
-        analytics_client: Optional[Any] = None,
+        analytics_client: Any | None = None,
     ):
         self.creator = creator_client
         self.books = books_client
@@ -121,7 +122,7 @@ class CollectionReconciler:
         self,
         create_missing_books_fields: bool = False,
         raise_on_error: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         collection = validate_creator_form_fields(
             self.creator.get_fields(
                 self.config.creator_app_link_name,
@@ -148,11 +149,11 @@ class CollectionReconciler:
     def run(
         self,
         create_missing_books_fields: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         self.validate_schema(create_missing_books_fields=create_missing_books_fields)
         return self.reconcile_pending()
 
-    def reconcile_pending(self) -> Dict[str, Any]:
+    def reconcile_pending(self) -> dict[str, Any]:
         pending = self.creator.get_all_records(
             self.config.creator_app_link_name,
             self.config.collection_report_link_name,
@@ -165,9 +166,9 @@ class CollectionReconciler:
             }
         )
         transaction_index = TransactionIndex(transactions, self.config.bank_account_id)
-        confirmed: List[Dict[str, Any]] = []
-        unmatched: List[Dict[str, Any]] = []
-        failed: List[Dict[str, Any]] = []
+        confirmed: list[dict[str, Any]] = []
+        unmatched: list[dict[str, Any]] = []
+        failed: list[dict[str, Any]] = []
         used_transaction_ids = set()
 
         for record in pending:
@@ -213,7 +214,7 @@ class CollectionReconciler:
         record: Mapping[str, Any],
         transactions: Sequence[Mapping[str, Any]] | TransactionIndex,
         used_transaction_ids: set,
-    ) -> Tuple[Optional[Mapping[str, Any]], str]:
+    ) -> tuple[Mapping[str, Any] | None, str]:
         payment_date = parse_date(record.get("Payment_Date"))
         amount = _decimal(record.get("Amount"))
         reference = _normalized_reference(record.get("Reference_Number"))
@@ -222,7 +223,7 @@ class CollectionReconciler:
         if not reference:
             return None, "Collection record has no reference number; manual review is required."
 
-        candidates: List[Mapping[str, Any]] = []
+        candidates: list[Mapping[str, Any]] = []
         index = transactions if isinstance(transactions, TransactionIndex) else TransactionIndex(
             transactions, self.config.bank_account_id)
         for candidate in index.candidates(payment_date, amount, self.config.date_tolerance_days,
@@ -243,7 +244,7 @@ class CollectionReconciler:
         record: Mapping[str, Any],
         transaction: Mapping[str, Any],
         source: str = "Creator_Auto",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         creator_id = _record_id(record)
         transaction_id = _identifier(transaction, ("transaction_id", "id"))
         customer_id = _customer_id(record)
@@ -354,7 +355,7 @@ class CollectionReconciler:
         customer_id: str,
         creator_id: str,
         source: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         payment_date = parse_date(record.get("Payment_Date")) or parse_date(transaction.get("date"))
         amount = _decimal(record.get("Amount")) or _decimal(transaction.get("amount"))
         return customer_payment_payload(
@@ -369,7 +370,7 @@ class CollectionReconciler:
             creator_payment_id=record.get("Payment_ID"),
         )
 
-    def _analytics_suggestions(self, record: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    def _analytics_suggestions(self, record: Mapping[str, Any]) -> list[dict[str, Any]]:
         if not self.analytics or not self.config.analytics_workspace_id:
             return []
         payment_date = parse_date(record.get("Payment_Date"))
@@ -392,7 +393,7 @@ class CollectionReconciler:
         bank_transaction: Mapping[str, Any],
         analytics_selection: Mapping[str, Any],
         payment_mode: str = "Online",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         customer_id = _identifier(
             analytics_selection,
             ("Customer ID", "Customer_ID", "customer_id", "id"),
@@ -452,7 +453,7 @@ class CollectionReconciler:
 
     def _audit(
         self,
-        creator_record_id: Optional[str],
+        creator_record_id: str | None,
         stage: str,
         message: str,
         payload: Any,
@@ -469,7 +470,7 @@ class CollectionReconciler:
             "Creator_Record_ID": creator_record_id or "",
             "Stage": stage,
             "Message": message,
-            "Payload": json.dumps(payload, default=str, separators=(",", ":")),
+            "Payload": json.dumps(payload, default=str),
             "Occurred_At": datetime.now(timezone.utc).isoformat(),
         }
         try:
@@ -486,10 +487,10 @@ def reconcile_collections(
     creator_client: Any,
     books_client: Any,
     config: CollectionReconciliationConfig,
-    analytics_client: Optional[Any] = None,
+    analytics_client: Any | None = None,
     validate_schema: bool = True,
     create_missing_books_fields: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     reconciler = CollectionReconciler(
         creator_client=creator_client,
         books_client=books_client,

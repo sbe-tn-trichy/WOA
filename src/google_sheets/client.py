@@ -1,10 +1,11 @@
 """Google Sheets API client."""
 from __future__ import annotations
 
-import json
+from utils import json
 from pathlib import Path
 import re
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from google.auth.credentials import Credentials as BaseCredentials
 from googleapiclient.discovery import Resource, build

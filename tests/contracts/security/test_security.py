@@ -7,7 +7,7 @@ from pathlib import Path
 
 from zoho.security import sanitize_filename, resolve_output_path
 from zoho.mail import ZohoMailAPI
-from zoho.books.resources.sales import SalesOrders
+from zoho.books.custom.sales import SalesOrders
 
 
 class TestSecurityUtilities(unittest.TestCase):
