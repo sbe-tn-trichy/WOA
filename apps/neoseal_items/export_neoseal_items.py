@@ -12,7 +12,7 @@ try:
 except ImportError:  # Direct script execution.
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_inventory_client
+from workflows.runtime.auth import get_inventory_client
 from workflows.neoseal_audit.exporter import (
     FIELDS,
     export_inventory_items,

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from workflows.collection_reconciliation import OnlinePaymentReviewConfig, OnlinePaymentReviewService
-from workflows.core.exceptions import ReconciliationError
+from workflows.runtime.exceptions import ReconciliationError
 
 
 @pytest.fixture

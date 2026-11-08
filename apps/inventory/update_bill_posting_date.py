@@ -10,8 +10,8 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.bill_updates import update_bill_transaction_posting_date
-from workflows.core.auth import get_books_client
+from workflows.purchasing.bill_updates import update_bill_transaction_posting_date
+from workflows.runtime.auth import get_books_client
 
 
 def main() -> int:

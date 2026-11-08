@@ -6,7 +6,7 @@ from decimal import Decimal
 from collections.abc import Mapping
 from typing import Any
 
-from zoho.helpers import fetch_profit_and_loss_schedule_format
+from helpers import fetch_profit_and_loss_schedule_format
 
 
 NOTE_SHEET = "Notes to P & L 19 to 25"

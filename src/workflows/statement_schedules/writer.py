@@ -1,14 +1,14 @@
 """Google Sheets schedule cell formatting, batching and verified writes."""
 from __future__ import annotations
 
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 import re
 from typing import Any
 
-from utils import http_transport
+from utils.http_utils import http_transport
 
-from utils.http import request_json
+from utils.http_utils.http import request_json
 from .checkbox import checkbox_formula_updates
 
 

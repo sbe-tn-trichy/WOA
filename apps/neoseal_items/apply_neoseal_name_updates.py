@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
-from utils import json
+from utils.file_utils import json
 import logging
 import sys
 from datetime import datetime, timezone
@@ -22,7 +22,7 @@ except ImportError:  # Direct script execution.
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
 from zoho.inventory import ZohoInventoryAPI
-from workflows.core.auth import get_inventory_client
+from workflows.runtime.auth import get_inventory_client
 from workflows.neoseal_audit import (
     KNOWN_DUPLICATE_MAP,
     compute_item_update,

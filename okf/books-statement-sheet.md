@@ -40,7 +40,7 @@ balance, interest, withdrawals, other net movement, and closing formula cells
 in Note 3. It supplies `excluded_location_id` for the equity ledger's branch
 rule, `interest_account_id` for interest classification, and
 `withdrawal_transaction_types` for owner withdrawals. The updater calls
-`zoho.helpers.fetch_equity_general_ledger`, which uses one bulk-filtered Books
+`helpers.fetch_equity_general_ledger`, which uses one bulk-filtered Books
 register query for all equity accounts. For each configured owner, it sums
 credits minus debits, gets the opening and closing amounts from the
 location-scoped Books balance sheets, and refuses updates unless opening plus

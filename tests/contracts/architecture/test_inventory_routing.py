@@ -7,10 +7,10 @@ import pytest
 
 from apps import apply_neoseal_name_updates
 from workflows.polycab_rso.processor import _resolve_line_items
-from zoho.auth import fetch_token_from_catalyst
+from zoho.core_sdk.auth import fetch_token_from_catalyst
 from zoho.books import ZohoBooksAPI
-from zoho.exceptions import ZohoAuthError
-from zoho.helpers.items import fetch_items_by_purchase_account
+from zoho.core_sdk.exceptions import ZohoAuthError
+from helpers.catalog.items import fetch_items_by_purchase_account
 from zoho.inventory import ZohoInventoryAPI
 
 
@@ -22,7 +22,7 @@ def http(monkeypatch):
     response.text = '{"code": 0}'
     response.json.return_value = {"code": 0}
     request = MagicMock(return_value=response)
-    monkeypatch.setattr("utils.http_transport.Session.request", request)
+    monkeypatch.setattr("utils.http_utils.http_transport.Session.request", request)
     return request
 
 
@@ -74,7 +74,7 @@ def test_rso_refuses_empty_scope_before_lookup():
 def test_catalyst_inventory_does_not_fall_back_to_books(monkeypatch):
     response = MagicMock()
     response.json.return_value = {"tokens": {"books": "books-token"}}
-    monkeypatch.setattr("utils.http_transport.post", MagicMock(return_value=response))
+    monkeypatch.setattr("utils.http_utils.http_transport.post", MagicMock(return_value=response))
     with pytest.raises(ZohoAuthError):
         fetch_token_from_catalyst("https://broker.example/tokens", "inventory")
 

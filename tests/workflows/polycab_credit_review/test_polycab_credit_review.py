@@ -15,8 +15,8 @@ from workflows.polycab_credit_review import (
 )
 from workflows.polycab_credit_review.pdf import distinct_memos
 from workflows.polycab_credit_review.rules import evaluate
-from zoho.helpers import format_reference_lines, parse_reference_lines, update_reference_lines
-from zoho.helpers.files import download_books_document
+from helpers import format_reference_lines, parse_reference_lines, update_reference_lines
+from helpers.operations.files import download_books_document
 
 
 class Resource:

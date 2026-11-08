@@ -8,12 +8,12 @@ from workflows.core.dates import get_fy_date_range
 from workflows.core.matching import parse_date
 from workflows.core.sequences import analyze_number_series
 from workflows.customer_validation import CustomerValidator
-from workflows.payment_inspection import extract_series_info, fetch_customer_payments
+from workflows.customer_payments.inspection import extract_series_info, fetch_customer_payments
 from workflows.payment_renumbering import build_renumber_plan, execute_renumbering, RenumberingError
 from workflows.sales_order_import import create_sales_order_from_yaml, parse_invoice_yaml, SalesOrderImportError
 from zoho.books import ZohoBooksAPI
-from zoho.exceptions import ZohoBooksError
-from zoho.helpers.sequences import parse_doc_number
+from zoho.core_sdk.exceptions import ZohoBooksError
+from helpers.formatting.sequences import parse_doc_number
 
 
 @pytest.mark.parametrize("value", ["25-26", "2025-26", "2025-2026", "25/26", "2025/2026", "2526", "2025"])

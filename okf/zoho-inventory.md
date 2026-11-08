@@ -8,7 +8,7 @@ description: Inventory API routing and migration from Books item operations.
 Item catalog reads, creation, updates, activation/deactivation, item groups,
 stock details, bins, and inventory adjustments use `ZohoInventoryAPI` and its
 `/inventory/v1` resources. Applications construct it through
-`workflows.core.auth.get_inventory_client`, which obtains and refreshes the
+`workflows.runtime.auth.get_inventory_client`, which obtains and refreshes the
 Inventory service token. Catalyst mutation authentication requires the requested
 service token and no longer implicitly falls back from Inventory to Books.
 
@@ -16,7 +16,7 @@ service token and no longer implicitly falls back from Inventory to Books.
 non-empty purchase account and paginates the scoped results. Status filters use
 `filter_by=Status.All`, `Status.Active`, or `Status.Inactive`. Vendor catalog
 helpers accept `inventory_client` and preserve purchase-account scoping.
-`zoho.helpers.find_item_by_exact_sku` requires a purchase account, rejects
+`helpers.find_item_by_exact_sku` requires a purchase account, rejects
 non-exact SKU results, and prefers an active item among exact matches. Vendor
 workflows may supply their own SKU alias candidates before calling it.
 
@@ -28,7 +28,7 @@ The naming updater retains dry-run, backup snapshots, and per-item audit results
 ## Public API migration
 
 - Replace `books.items` and imports from `zoho.books.custom.inventory` with
-  `inventory.items` and `zoho.inventory.resources.items`. The Books item resource
+  `inventory.items` and `zoho.inventory.resources.catalog.items`. The Books item resource
   has been removed; it is not a proxy that reuses Books credentials.
 - Replace `books.sales_orders.create_from_yaml(...)` with
   `workflows.sales_order_import.create_sales_order_from_yaml(books_client, ...)`.

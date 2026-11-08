@@ -7,7 +7,7 @@ from decimal import Decimal
 from collections.abc import Mapping
 from typing import Any
 
-from zoho.helpers import parse_date
+from helpers import parse_date
 
 
 def parse_any_date(val: Any) -> date | None:

@@ -20,14 +20,7 @@ from .bank_statement import (
 )
 from .review import OnlinePaymentReviewConfig, OnlinePaymentReviewService
 from .repair import repair_payment_allocations
-from .types import (
-    BankMatchCandidate,
-    BankStatementRecord,
-    BankTransferProposal,
-    ChequeDetail,
-    InvoiceAllocation,
-    PaymentProposal,
-)
+from workflows.collection_payments.types import BankMatchCandidate, BankStatementRecord, BankTransferProposal, ChequeDetail, InvoiceAllocation, PaymentProposal
 
 __all__ = [
     "CollectionReconciler",

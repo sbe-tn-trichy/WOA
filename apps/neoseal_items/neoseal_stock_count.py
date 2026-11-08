@@ -12,8 +12,8 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_inventory_client, get_sheet_client
-from workflows.core.config import Config
+from workflows.runtime.auth import get_inventory_client, get_sheet_client
+from workflows.runtime.config import Config
 from workflows.neoseal_stock_count import (
     delete_approved_missing_flat_items,
     fetch_neoseal_flat_stock,

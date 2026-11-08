@@ -1,11 +1,11 @@
 """Analyze cached Analytics metadata; use --sync to refresh it manually."""
 
 import argparse
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 
 from workflows.analytics_catalog import AnalyticsCatalog
-from workflows.core.auth import get_analytics_client
+from workflows.runtime.auth import get_analytics_client
 from workflows.core.checkpoint import write_atomic_json
 
 

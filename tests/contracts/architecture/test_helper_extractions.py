@@ -6,10 +6,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from zoho.helpers import find_item_by_exact_sku
-from workflows.collection_reconciliation.identifiers import identifier, identifiers
-from workflows.collection_reconciliation.payments import customer_payment_payload
-from workflows.core.exceptions import ReconciliationError
+from helpers import find_item_by_exact_sku
+from workflows.collection_payments.identifiers import identifier, identifiers
+from workflows.collection_payments.payments import customer_payment_payload
+from workflows.runtime.exceptions import ReconciliationError
 from workflows.core.matching import to_finite_decimal
 
 

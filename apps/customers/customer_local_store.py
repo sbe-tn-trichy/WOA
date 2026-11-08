@@ -3,7 +3,7 @@
 from __future__ import annotations
 import argparse
 import csv
-from utils import json
+from utils.file_utils import json
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,10 +11,10 @@ try:
     from . import _bootstrap  # noqa: F401
 except ImportError:
     import _bootstrap  # noqa: F401
-from workflows.core.auth import get_books_client
-from workflows.core.config import Config
-from workflows.customer_table import customer_json, compact_customer_columns
-from workflows.customer_local_store import open_store, sync_customers, stage_mobile_plan, export_pending
+from workflows.runtime.auth import get_books_client
+from workflows.runtime.config import Config
+from workflows.customer_management.table import customer_json, compact_customer_columns
+from workflows.customer_management.local_store import open_store, sync_customers, stage_mobile_plan, export_pending
 
 
 def main() -> None:
@@ -30,8 +30,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.action == 'normalize':
         from workflows.analytics_catalog import AnalyticsCatalog
-        from workflows.core.auth import get_analytics_client
-        from workflows.customer_normalization import build_normalized_customers, download_customer_normalization_sources
+        from workflows.runtime.auth import get_analytics_client
+        from workflows.customer_management.normalization import build_normalized_customers, download_customer_normalization_sources
         destination = args.db or Path('output/customer_cleanup/normalized_customers.sqlite3')
         if destination.exists():
             parser.error(f'Database exists: {destination}; choose a new --db to preserve local edits')

@@ -16,7 +16,7 @@ status: active
 
 Vendor XLS ledgers use python-calamine, retaining worksheet coordinates and
 converting native date/datetime cells to ISO dates. Zeiss PDF statement text uses
-pypdfium2 via `utils.pdf.read_pdf_pages`; representative source-file layout
+pypdfium2 via `utils.file_utils.pdf.read_pdf_pages`; representative source-file layout
 verification remains required after the reader migration.
 
 

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Any, TypedDict
 import time
 
-from ..core.exceptions import ReconciliationError
+from workflows.runtime.exceptions import ReconciliationError
 from ..core.matching import parse_date, to_finite_decimal, to_text
 
 

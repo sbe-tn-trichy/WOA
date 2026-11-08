@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -12,8 +12,8 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.apply_inter_location_updates import apply_verified_move, verify_proposed_pair
-from workflows.core.auth import get_books_client
+from workflows.inter_location.apply_updates import apply_verified_move, verify_proposed_pair
+from workflows.runtime.auth import get_books_client
 
 
 def main() -> int:

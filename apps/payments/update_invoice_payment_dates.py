@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 import sys
 from pathlib import Path
 from collections.abc import Sequence
@@ -14,7 +14,7 @@ try:
 except ImportError:  # Direct script execution.
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client
+from workflows.runtime.auth import get_books_client
 from workflows.customer_payment_date_check import (
     CustomerPaymentDateUpdater,
     build_update_plan,

@@ -5,14 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from workflows.inter_location_contra import (
-    AccountEntry,
-    add_analytics_location_evidence,
-    fetch_account_entries,
-    review_bank_payment_locations,
-    review_contras,
-    review_source_documents,
-)
+from workflows.inter_location.contra import AccountEntry, add_analytics_location_evidence, fetch_account_entries, review_bank_payment_locations, review_contras, review_source_documents
 
 
 def row(transaction_id, direction, location, reference="CONTRA-1"):

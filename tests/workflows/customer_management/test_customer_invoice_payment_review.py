@@ -3,8 +3,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from workflows.customer_invoice_payment_review import invoice_discount_percentage, review_customer_invoices_payments
-from workflows.core.exceptions import ReconciliationError
+from workflows.customer_management.invoice_payment_review import invoice_discount_percentage, review_customer_invoices_payments
+from workflows.runtime.exceptions import ReconciliationError
 
 
 @pytest.mark.parametrize("invoice,expected", [

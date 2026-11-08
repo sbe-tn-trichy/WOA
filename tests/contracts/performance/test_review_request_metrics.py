@@ -69,7 +69,7 @@ def test_force_refresh_route_keeps_confirmation_and_passes_cache_bypass():
 
 
 def test_preview_cache_avoids_real_sdk_export_requests(tmp_path):
-    from zoho.base_client import BaseZohoClient
+    from zoho.core_sdk.base_client import BaseZohoClient
     from zoho.analytics.resources import Queries
     from workflows.collection_reconciliation import OnlinePaymentReviewConfig, OnlinePaymentReviewService
 

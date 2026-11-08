@@ -91,7 +91,7 @@ class VendorPayments(BaseResource):
 
     def update_with_number_series(self, payment_id: str, data: dict[str, Any]) -> dict[str, Any]:
         """Update location and chosen payment number without auto numbering."""
-        from utils import json
+        from utils.file_utils import json
 
         if not payment_id or not data.get("location_id"):
             raise ValueError("Payment ID and destination location are required")

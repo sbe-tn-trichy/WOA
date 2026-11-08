@@ -94,7 +94,7 @@ policy, concurrency, and organization selection remain deployment-controlled.
 
 # Existing Payment Link Backfill
 
-`workflows.creator_books_payment_link` powers
+`workflows.creator_payments.books_link` powers
 `apps/backfill_creator_matched_payments.py`, which traverses Creator's `matched`
 payment report and resolves an existing Books customer payment by native Books
 payment ID/number or by an exact unique date, amount, reference, and customer

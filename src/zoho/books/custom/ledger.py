@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from collections.abc import Iterator, Mapping, Sequence
 from typing import Any
-from zoho.base_resource import BaseResource
+from zoho.core_sdk.base_resource import BaseResource
 
 
 class Registers:

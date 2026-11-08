@@ -10,10 +10,10 @@ try:
 except ImportError:
     import _bootstrap  # noqa: F401
 
-from workflows.core.auth import get_analytics_client
+from workflows.runtime.auth import get_analytics_client
 from workflows.analytics_catalog import AnalyticsCatalog
 from workflows.core.checkpoint import write_atomic_json
-from workflows.unearned_revenue import DEFAULT_UNEARNED_ACCOUNT_ID, review_unearned_revenue_analytics
+from workflows.customer_payments.unearned_revenue import DEFAULT_UNEARNED_ACCOUNT_ID, review_unearned_revenue_analytics
 
 
 def main() -> int:

@@ -4,19 +4,9 @@ import os
 import tempfile
 from pathlib import Path
 
-from zoho.security import (
-    mask_sensitive_value,
-    sanitize_log_params,
-    resolve_output_path,
-)
-from zoho.exceptions import (
-    ZohoError,
-    ZohoAuthError,
-    ZohoBooksError,
-    ZohoCliqError,
-    ZohoSheetError,
-)
-from zoho.base_client import BaseZohoClient
+from zoho.core_sdk.security import mask_sensitive_value, sanitize_log_params, resolve_output_path
+from zoho.core_sdk.exceptions import ZohoError, ZohoAuthError, ZohoBooksError, ZohoCliqError, ZohoSheetError
+from zoho.core_sdk.base_client import BaseZohoClient
 from zoho.books.custom.purchases import Bills
 from zoho.books.base import BaseResource
 from zoho.cliq import ZohoCliqAPI
@@ -109,7 +99,7 @@ class TestStructuredErrors(unittest.TestCase):
         self.assertNotIn("<h1>", str(err))
         self.assertIn("HTTP 502 (Bad Gateway)", str(err))
 
-    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_utils.http_transport.Session.request")
     def test_empty_refresh_token_preserves_existing_token(self, request):
         response = MagicMock(status_code=401)
         request.return_value = response

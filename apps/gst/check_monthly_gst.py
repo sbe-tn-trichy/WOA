@@ -7,10 +7,10 @@ try:
     from . import _bootstrap
 except ImportError:
     import _bootstrap
-from workflows.core.auth import get_books_client
+from workflows.runtime.auth import get_books_client
 from workflows.core.checkpoint import write_atomic_json, atomic_text_writer
 from workflows.audited_financials.reports import fetch_trial_balance_for_firm
-from workflows.gst_monthly import month_bounds, check_monthly_gst
+from workflows.gst.monthly import month_bounds, check_monthly_gst
 
 
 def main():

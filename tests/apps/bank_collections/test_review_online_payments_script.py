@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from apps.payment_review import HTML, _clients, main
-from workflows.core.config import Config
+from workflows.runtime.config import Config
 
 
 class TestReviewOnlinePaymentsScript(unittest.TestCase):

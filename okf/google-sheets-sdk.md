@@ -16,7 +16,7 @@ The `google_sheets` package provides a high-level client and authentication help
 - `google_sheets.DEFAULT_SCOPES`: Full spreadsheet scope (`https://www.googleapis.com/auth/spreadsheets`).
 - `google_sheets.READONLY_SCOPES`: Read-only spreadsheet scope (`https://www.googleapis.com/auth/spreadsheets.readonly`).
 - `google_sheets.exceptions`: `GoogleSheetsError`, `GoogleSheetsAuthError`, `SpreadsheetNotFoundError`, `WorksheetNotFoundError`.
-- `workflows.core.auth.get_google_sheets_client`: Application factory constructing `GoogleSheetsClient` using runtime `Config` or environment variables.
+- `workflows.runtime.auth.get_google_sheets_client`: Application factory constructing `GoogleSheetsClient` using runtime `Config` or environment variables.
 
 ## Authentication
 

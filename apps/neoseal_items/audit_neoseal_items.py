@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
-from utils import json
+from utils.file_utils import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,8 +17,8 @@ try:
 except ImportError:  # Direct script execution.
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_inventory_client
-from workflows.core.config import Config
+from workflows.runtime.auth import get_inventory_client
+from workflows.runtime.config import Config
 from workflows.neoseal_audit import audit_neoseal_items, render_markdown_report
 
 

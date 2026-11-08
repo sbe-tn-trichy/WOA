@@ -1,7 +1,7 @@
 """Editable columns with exact JSON names and lossless JSON reconstruction."""
 from __future__ import annotations
 
-from utils import json
+from utils.file_utils import json
 import sqlite3
 from typing import Any
 

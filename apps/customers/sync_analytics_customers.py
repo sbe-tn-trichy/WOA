@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 
 try:
@@ -13,9 +13,9 @@ except ImportError:
     import _bootstrap  # noqa: F401
 
 from workflows.analytics_catalog import AnalyticsCatalog
-from workflows.core.auth import get_analytics_client
-from workflows.core.config import Config
-from workflows.customer_analytics_sync import sync_analytics_customers
+from workflows.runtime.auth import get_analytics_client
+from workflows.runtime.config import Config
+from workflows.customer_management.analytics_sync import sync_analytics_customers
 
 
 def main() -> None:

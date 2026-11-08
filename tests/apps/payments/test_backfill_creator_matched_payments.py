@@ -116,7 +116,7 @@ class TestBackfillHelpers(unittest.TestCase):
         self.assertEqual(source, "payment_number_missing")
 
     def test_creator_customer_lookup_uses_display_name_for_fallback(self):
-        from workflows.creator_books_payment_link import _creator_values
+        from workflows.creator_payments.books_link import _creator_values
 
         values = _creator_values(_creator_record(
             Customer_Name={"ID": "123", "Name": "Acme", "zc_display_value": "Acme"},
@@ -129,7 +129,7 @@ class TestBackfillHelpers(unittest.TestCase):
         self.assertEqual(source, "date_amount_reference_customer")
 
     def test_canonical_creator_payment_number_prevents_false_fallback(self):
-        from workflows.creator_books_payment_link import _crosschecked_values
+        from workflows.creator_payments.books_link import _crosschecked_values
 
         matched = _creator_record(PaymentNo="")
         canonical = _creator_record(PaymentNo="PAY-0002")
@@ -382,7 +382,7 @@ class TestCreatorBooksPaymentLinkBackfill(unittest.TestCase):
                 {"api_name": "cf_creator_payment_id", "value": "101"},
             ])},
         ]
-        with patch("workflows.creator_books_payment_link.time.sleep") as sleep:
+        with patch("workflows.creator_payments.books_link.time.sleep") as sleep:
             result = CreatorBooksPaymentLinkBackfill(
                 self.creator, self.books,
                 BackfillConfig(location_id="loc-1", books_request_interval_seconds=0.0, execute=True,

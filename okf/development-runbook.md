@@ -187,7 +187,7 @@ not require changing the virtual environment or machine configuration.
 
 ```text
 uv pip check --python .venv
-.venv/bin/python -c "import zoho; import workflows.core.auth"
+.venv/bin/python -c "import zoho; import workflows.runtime.auth"
 .venv/bin/python -m pytest -q
 ```
 
@@ -220,7 +220,7 @@ Run the blocking scope from the repository root:
 
 ```powershell
 .\.venv\Scripts\python.exe -m ty check
-.\.venv\Scripts\python.exe -m pytest -q tests/contracts/architecture/test_type_safety.py tests/zoho/test_resource_validation.py
+.\.venv\Scripts\python.exe -m pytest -q tests/contracts/architecture/test_type_safety.py tests/zoho/core_sdk/test_resource_validation.py
 ```
 
 On macOS/Linux use `.venv/bin/python` for both commands. `tool.ty.src.include` in
@@ -249,9 +249,9 @@ results and primary-machine smoke results remain required. See the
   it is explicit, documented, and covered by tests.
 - All files placed in `scripts/` are strictly temporary with a 24-hour retention lifespan. Permanent user-facing tools, web servers, and CLI runners belong in `apps/`.
 - Never inline HTML/CSS/JS in Python files; save web templates under `apps/static/`.
-- Subclass `zoho.base_resource.BaseResource` for all Books and Inventory resources to prevent duplicate CRUD and pagination logic.
+- Subclass `zoho.core_sdk.base_resource.BaseResource` for all Books and Inventory resources to prevent duplicate CRUD and pagination logic.
 - Declare explicit type annotations (PEP 484) on all public function signatures instead of untyped `*args, **kwargs`.
-- Use `workflows.core.auth` client factories for all SDK client instantiations.
+- Use `workflows.runtime.auth` client factories for all SDK client instantiations.
 - Save generated project artifacts under `output/` by default. A documented API
   may honor an explicit absolute caller path after safe validation.
 

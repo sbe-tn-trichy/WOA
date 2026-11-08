@@ -8,7 +8,7 @@ from zoho.analytics.resources import Queries, Views
 
 
 class TestZohoAnalyticsAPI(unittest.TestCase):
-    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_utils.http_transport.Session.request")
     def test_request_adds_org_header(self, mock_request):
         response = MagicMock(status_code=200)
         response.headers = {"Content-Type": "application/json"}
@@ -86,8 +86,8 @@ class TestZohoAnalyticsAPI(unittest.TestCase):
 
         self.assertEqual(rows, [{"Customer": "Acme", "Total": 42}])
 
-    @patch("zoho.base_client.time.sleep")
-    @patch("utils.http_transport.Session.request")
+    @patch("zoho.core_sdk.base_client.time.sleep")
+    @patch("utils.http_utils.http_transport.Session.request")
     def test_rate_limit_error_exposes_status_and_retry_after(self, mock_request, mock_sleep):
         response = MagicMock(status_code=429)
         response.headers = {"Retry-After": "12"}

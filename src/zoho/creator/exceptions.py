@@ -1,1 +1,1 @@
-from zoho.exceptions import ZohoCreatorError
+from zoho.core_sdk.exceptions import ZohoCreatorError

@@ -1,17 +1,17 @@
 import logging
 import os
 from typing import Any
-from zoho.base_client import BaseZohoClient
-from .resources.items import Items
-from .resources.move_orders import MoveOrders
-from .resources.transfer_orders import TransferOrders
-from .resources.inventory_adjustments import InventoryAdjustments
-from .resources.packages import Packages
-from .resources.shipments import Shipments
-from .resources.picklists import Picklists
-from .resources.bins import Bins
-from .resources.batches import Batches
-from .resources.item_groups import ItemGroups
+from zoho.core_sdk.base_client import BaseZohoClient
+from zoho.inventory.resources.catalog.items import Items
+from zoho.inventory.resources.movements.move_orders import MoveOrders
+from zoho.inventory.resources.movements.transfer_orders import TransferOrders
+from zoho.inventory.resources.movements.inventory_adjustments import InventoryAdjustments
+from zoho.inventory.resources.fulfillment.packages import Packages
+from zoho.inventory.resources.fulfillment.shipments import Shipments
+from zoho.inventory.resources.fulfillment.picklists import Picklists
+from zoho.inventory.resources.catalog.bins import Bins
+from zoho.inventory.resources.catalog.batches import Batches
+from zoho.inventory.resources.catalog.item_groups import ItemGroups
 
 class ZohoInventoryAPI(BaseZohoClient):
     """

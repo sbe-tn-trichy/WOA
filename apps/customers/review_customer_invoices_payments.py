@@ -3,7 +3,7 @@
 
 import argparse
 import csv
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 
 try:
@@ -11,8 +11,8 @@ try:
 except ImportError:
     import _bootstrap  # noqa: F401
 
-from workflows.core.auth import get_books_client
-from workflows.customer_invoice_payment_review import review_customer_invoices_payments
+from workflows.runtime.auth import get_books_client
+from workflows.customer_management.invoice_payment_review import review_customer_invoices_payments
 
 
 def main(argv: list[str] | None = None) -> int:

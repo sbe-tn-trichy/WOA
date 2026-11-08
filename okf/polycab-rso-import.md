@@ -17,7 +17,7 @@ status: active
 `parse_polycab_rso_pdf(pdf_path)` reads a machine-readable Polycab Sales Order
 PDF and extracts its external sales-order number, customer metadata, entered and
 booked dates, order type, subtotal, grand total, and item SKU/quantity/rate rows.
-Text extraction uses `utils.pdf.read_pdf_pages` with pypdfium2. PDFium does not
+Text extraction uses `utils.file_utils.pdf.read_pdf_pages` with pypdfium2. PDFium does not
 reproduce pdfplumber layout analysis; representative supplier PDFs still need
 read-only verification before relying on changed extraction for live posting.
 

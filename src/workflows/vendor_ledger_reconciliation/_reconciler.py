@@ -283,8 +283,8 @@ def reconcile_vendor(
     - Initialises the Zoho Books client automatically if books_client is None.
     - Auto-detects the vendor ID from the ledger path (Polycab / Zeiss) if vendor_id is None.
     """
-    from workflows.core.config import Config
-    from workflows.core.auth import get_books_client
+    from workflows.runtime.config import Config
+    from workflows.runtime.auth import get_books_client
 
     if not books_client:
         books_client = get_books_client()

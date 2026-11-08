@@ -4,22 +4,20 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 import os
 from decimal import Decimal
 from pathlib import Path
 
-from utils import http_transport
+from utils.http_utils import http_transport
 
 try:
     from . import _bootstrap  # noqa: F401
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client
-from workflows.it_balance_sheet_comparison import (
-    BalanceSheetLine, compare_balance_sheet, write_comparison_csv,
-)
+from workflows.runtime.auth import get_books_client
+from workflows.books_statements.it_balance_sheet_comparison import BalanceSheetLine, compare_balance_sheet, write_comparison_csv
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 

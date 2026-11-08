@@ -8,7 +8,7 @@ description: Navigation ownership, overlapping commands, and consolidation bound
 The README is the starting page for setup and navigation. WORKFLOWS.md owns the
 business workflow catalog; INDEX.md owns SDK surface navigation. Detailed generated
 Sphinx/Markdown API references live in [docs/api/](../docs/api/README.md) and are built by
-[apps/generate_api_reference.py](../apps/generate_api_reference.py). OKF concepts own detailed operational contracts.
+[apps/tools/generate_api_reference.py](../apps/tools/generate_api_reference.py). OKF concepts own detailed operational contracts.
 Keep detailed instructions in their owning concept and link to them from the starting
 pages instead of copying them.
 
@@ -31,11 +31,11 @@ new checkouts need to create it before running that workflow.
 | Neoseal unified CLI | `apps/neoseal.py` | Unified dispatcher for stock count, audit, export, name updates, and formatting; historical apps delegate here. |
 | GST verification unified CLI | `apps/verify_gst.py` | Unified dispatcher for GSTR-1, GSTR-2, GSTR-3B vs P&L, and cash ledger; standalone apps delegate here. |
 | Inter-location Analytics Query Table commands | `apps/manage_inter_location_contra_query_table.py` | Create/update filenames are compatibility adapters; update retains its historical saved view ID. |
-| Inter-location workflow operations | `workflows.inter_location` | Packages contra detection, location/payment proposals, and update logic; root `inter_location_*.py` modules provide compatibility redirects. |
-| Books financial statement sheet operations | `workflows.books_statements` | Packages statement sheet preparation, account catalog, custom module stores, and P&L notes; root modules provide compatibility redirects. |
-| GST workflow operations | `workflows.gst` | Packages cash-ledger check and monthly GST movements; root modules provide compatibility redirects. |
-| Customer management workflow operations | `workflows.customer_management` | Packages analytics sync, invoice/payment review, normalization, and local store; root modules provide compatibility redirects. |
-| Books and Inventory CRUD | `zoho.base_resource.BaseResource` | Service base classes select their exception and logger. |
+| Inter-location workflow operations | `workflows.inter_location` | Packages contra detection, location/payment proposals, and update logic; legacy root imports use explicit lazy aliases. |
+| Books financial statement sheet operations | `workflows.books_statements` | Packages statement sheet preparation, account catalog, custom module stores, and P&L notes; legacy root imports use explicit lazy aliases. |
+| GST workflow operations | `workflows.gst` | Packages cash-ledger check and monthly GST movements; legacy root imports use explicit lazy aliases. |
+| Customer management workflow operations | `workflows.customer_management` | Packages analytics sync, invoice/payment review, normalization, and local store; legacy root imports use explicit lazy aliases. |
+| Books and Inventory CRUD | `zoho.core_sdk.base_resource.BaseResource` | Service base classes select their exception and logger. |
 | Bank statement categorization | `workflows.collection_reconciliation` | Review, generic schema reconciliation and allocation repair have different input and mutation contracts. |
 | Payment linking/backfills | `workflows.core.payments` for common evidence | Creator-to-Books and Books-to-Creator writes have opposite directions and conflict rules. |
 | Neoseal operations | `neoseal_audit` and `neoseal_stock_count` | Catalog quality and stock-sheet synchronization are distinct operations sharing Inventory access. |
@@ -50,7 +50,55 @@ Without `--view-id`, it previews creation. With `--view-id ID`, it previews an
 update. Both require `--apply` to save. Historical create/update commands delegate
 to the same parser and execution path; output wording is now shared.
 
+## Capability packages
+
+The same layout pattern used by `utils` applies across the source tree: package
+roots expose supported APIs, while related implementations live in named capability
+packages. Small service packages whose files already share one responsibility
+remain together. The [SDK index](../INDEX.md#directory-layout) shows the directory map.
+
+| Responsibility | Canonical location |
+|---|---|
+| Shared SDK authentication, base clients/resources, errors and safety | `zoho.core_sdk` |
+| Analytics generated operations and convenience resources | `zoho.analytics.openapi` and `zoho.analytics.custom` |
+| Inventory resource families | `zoho.inventory.resources.catalog`, `.fulfillment`, `.movements` |
+| Composite API helpers | `helpers.catalog`, `.reports`, `.formatting`, `.operations` |
+| Workflow configuration, factories and runtime logging | `workflows.runtime` |
+| Pure workflow conversions, matching, metrics and persistence | `workflows.core` |
+| Collection payment records and allocation | `workflows.collection_payments` |
+| Collection review/orchestration | `workflows.collection_reconciliation` |
+| Creator payment links/backfill/OCR | `workflows.creator_payments` |
+| Customer payment inspection and unused balances | `workflows.customer_payments` |
+| Bank statement checks and bill operations | `workflows.bank_statements`, `workflows.purchasing` |
+| Developer tools | `apps.tools` |
+
+Use canonical paths in new code. Explicit module-alias maps in package roots
+preserve previous module imports without keeping one wrapper file per workflow.
+`utils.general_utils.module_aliases` supplies the shared lazy alias loader for
+utilities, SDK, helpers, workflows and apps. Old and canonical names refer to the
+same module: exception identities, cached state and monkeypatch targets remain
+shared. Aliases retain canonical module metadata and do not eagerly load optional
+PDF/OCR dependencies. Removed `zoho.helpers` imports remain unsupported.
+
+The four root developer-tool scripts remain direct-execution adapters, preserving
+existing commands such as `apps/analyze_project.py`. Their implementations and
+static-check target live under `apps/tools/`. Tests mirror the capability packages;
+architecture contracts verify import identity, optional-dependency laziness,
+command adapters and the ten-file source-directory limit. The offline analyzer
+continues to validate import layers and documentation links; it does not enforce
+all directory-depth/output policies.
+
+Workflow runtime and collection-payment code use sibling packages so their
+implementations stay within the configured depth of one beneath `src/workflows/`.
+Shared domain rules stay with the domain that owns them.
+
 ## Directory structure and file limits
+
+The [file organization and refactoring policy](../AGENTS.md#file-organization-and-refactoring)
+applies to every package, including the core SDK. It owns placement decisions,
+responsibility boundaries, focused corrections to touched directories and the
+verification required when moving modules. The examples below describe existing
+organization and configuration rather than a fixed layout for future packages.
 
 `config/config.yaml` contains the directory nesting policy at the top level, alongside
 `active_profile` and `profiles` (the policy applies to every profile):

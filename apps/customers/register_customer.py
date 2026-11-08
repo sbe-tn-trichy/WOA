@@ -2,7 +2,7 @@
 """Inspect Creator fields or register a customer in Books and Creator."""
 import argparse
 from dataclasses import asdict
-from utils import json
+from utils.file_utils import json
 from typing import Any
 
 try:
@@ -10,7 +10,7 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client, get_creator_client
+from workflows.runtime.auth import get_books_client, get_creator_client
 from workflows.customer_registration import register_customer
 
 

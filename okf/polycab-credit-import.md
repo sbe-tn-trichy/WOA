@@ -5,7 +5,7 @@ description: Supplier Scheme credits and checkpointed RSO vendor-credit, journal
 
 # Polycab credit import
 
-Supplier PDF text is extracted with pypdfium2 through `utils.pdf.read_pdf_pages`.
+Supplier PDF text is extracted with pypdfium2 through `utils.file_utils.pdf.read_pdf_pages`.
 Line ordering can differ from the former parser; representative supplier files
 require read-only verification before live posting.
 

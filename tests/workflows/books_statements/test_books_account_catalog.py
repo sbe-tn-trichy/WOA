@@ -5,10 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from workflows.books_account_catalog import (
-    refresh_mapping_account_names,
-    sync_account_catalog,
-)
+from workflows.books_statements.account_catalog import refresh_mapping_account_names, sync_account_catalog
 
 
 def test_sync_replaces_sqlite_snapshot_and_returns_names(tmp_path):
@@ -57,8 +54,8 @@ def test_refresh_mapping_names_rejects_unknown_account_id():
 
 @pytest.mark.parametrize("suffix", [".yaml", ".yml", ".json"])
 def test_mapping_refresh_preserves_other_accounting_sections(tmp_path, suffix):
-    from utils import yaml
-    from workflows.books_account_catalog import write_mapping_config
+    from utils.file_utils import yaml
+    from workflows.books_statements.account_catalog import write_mapping_config
     path = tmp_path / ("mapping" + suffix)
     config = {"calculations": {"sales": {"accounts": {"Sales": 1}}},
               "mappings": [{"account_ids": ["a"], "account_names": ["Old"]}]}

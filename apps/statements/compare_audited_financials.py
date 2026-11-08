@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 from decimal import InvalidOperation
-from utils import json
+from utils.file_utils import json
 import os
 from pathlib import Path
 
@@ -17,7 +17,7 @@ from workflows.audited_financials import (
     ComparisonPeriod, compare_audited_financials, fetch_comparison_reports,
     load_accounting_mapping, read_audited_workbook,
 )
-from workflows.core.auth import get_books_client
+from workflows.runtime.auth import get_books_client
 from workflows.core.checkpoint import atomic_text_writer, write_atomic_json
 
 ROOT = Path(__file__).resolve().parent.parent

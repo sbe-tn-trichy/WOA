@@ -11,9 +11,9 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_analytics_client
-from workflows.core.config import Config
-from workflows.inter_location_analytics_report import sync_inter_location_contra_query_table
+from workflows.runtime.auth import get_analytics_client
+from workflows.runtime.config import Config
+from workflows.inter_location.analytics_report import sync_inter_location_contra_query_table
 
 
 def build_parser(*, default_view_id: str | None = None) -> argparse.ArgumentParser:

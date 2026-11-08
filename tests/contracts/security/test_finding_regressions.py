@@ -9,8 +9,8 @@ import pytest
 import requests
 
 from apps import dashboard, payment_review
-from workflows.core.auth import get_analytics_client
-from zoho.base_client import BaseZohoClient
+from workflows.runtime.auth import get_analytics_client
+from zoho.core_sdk.base_client import BaseZohoClient
 
 
 @pytest.mark.parametrize("status", [401, 429])
@@ -34,7 +34,7 @@ def test_upload_retry_preserves_multipart_content(monkeypatch, status, wrapped):
         return response
 
     monkeypatch.setattr(client.session, "request", send)
-    monkeypatch.setattr("zoho.base_client.time.sleep", lambda _: None)
+    monkeypatch.setattr("zoho.core_sdk.base_client.time.sleep", lambda _: None)
     client.request("POST", "upload", files={"file": ("x.bin", source) if wrapped else source})
     assert bodies == [b"actual attachment bytes"] * 2
     assert not source.closed
@@ -82,14 +82,14 @@ def test_servers_reject_foreign_host_before_service_access(module, method, path)
 
 def test_analytics_org_required_before_token_request(monkeypatch):
     token = MagicMock()
-    monkeypatch.setattr("workflows.core.auth.get_token_for", token)
+    monkeypatch.setattr("workflows.runtime.auth.get_token_for", token)
     with pytest.raises(ValueError, match="ANALYTICS_ORG_ID"):
         get_analytics_client(org_id="")
     token.assert_not_called()
 
 
 def test_deployment_defaults_are_empty_and_explicit_values_migrate(monkeypatch):
-    from workflows.core import config
+    from workflows.runtime import config
     source = __import__('pathlib').Path(config.__file__).read_text()
     class_source = source[source.index('class Config:'):]
     keys = ['ANALYTICS_ORG_ID', 'PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID',

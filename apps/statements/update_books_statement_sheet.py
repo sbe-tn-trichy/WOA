@@ -9,29 +9,19 @@ account_ids (stable Zoho Books account IDs). Optional multiplier is a decimal.
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 import os
 import re
 from decimal import Decimal
 from pathlib import Path
 
-from utils import http_transport
-from utils import yaml
+from utils.http_utils import http_transport
+from utils.file_utils import yaml
 
-from workflows.books_statement_sheet import (
-    EquityMapping,
-    StatementMapping,
-    StatementPeriod,
-    prepare_equity_updates,
-    prepare_updates,
-)
-from workflows.books_account_catalog import (
-    refresh_mapping_account_names,
-    sync_account_catalog,
-    write_mapping_config,
-)
-from workflows.core.auth import get_books_client
-from workflows.books_pnl_notes import NOTE_INPUTS, NOTE_SHEET, prepare_pnl_note_updates
+from workflows.books_statements.statement_sheet import EquityMapping, StatementMapping, StatementPeriod, prepare_equity_updates, prepare_updates
+from workflows.books_statements.account_catalog import refresh_mapping_account_names, sync_account_catalog, write_mapping_config
+from workflows.runtime.auth import get_books_client
+from workflows.books_statements.pnl_notes import NOTE_INPUTS, NOTE_SHEET, prepare_pnl_note_updates
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

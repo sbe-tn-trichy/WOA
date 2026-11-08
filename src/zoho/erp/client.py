@@ -5,8 +5,8 @@ import re
 from collections.abc import Callable
 from typing import Any
 
-from zoho.base_client import BaseZohoClient
-from .generated import ERPResources, RESOURCE_TYPES
+from zoho.core_sdk.base_client import BaseZohoClient
+from .openapi import ERPResources, RESOURCE_TYPES
 
 
 class ZohoERPAPI(BaseZohoClient, ERPResources):

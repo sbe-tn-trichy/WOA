@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from workflows.apply_inter_location_updates import apply_verified_move, verify_proposed_pair
+from workflows.inter_location.apply_updates import apply_verified_move, verify_proposed_pair
 
 
 def proposal():

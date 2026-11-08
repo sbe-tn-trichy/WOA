@@ -66,7 +66,7 @@ managed labeled lines without appending duplicate reference blocks.
 - `correction.py` owns supported payloads, preflight and read-back verification.
 - `workflow.py` only coordinates reads, extraction, linkage and rule evaluation.
 - Generic streaming downloads and labeled reference formatting/parsing live in
-  `zoho.helpers.files` and `zoho.helpers.references` and are publicly exported.
+  `helpers.operations.files` and `helpers.formatting.references` and are publicly exported.
   Currency/date conversions and atomic checkpoints reuse `workflows.core`.
 
 ## CLI and execution
@@ -126,7 +126,7 @@ race the preflight checks. Later edits may invalidate saved audit evidence.
 
 Artifacts default to ignored `output/polycab_credit_review/`; explicit absolute
 output directories are supported. Do not commit reports or downloaded PDFs.
-The CLI constructs clients through `workflows.core.auth`. Public APIs and result
+The CLI constructs clients through `workflows.runtime.auth`. Public APIs and result
 types are exported from the domain package and the workflow root.
 
 Related: [Books](zoho-books.md), [architecture](architecture.md),

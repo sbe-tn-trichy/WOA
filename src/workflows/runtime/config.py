@@ -1,0 +1,255 @@
+import os
+from utils.file_utils import json
+from pathlib import Path
+from typing import Any
+
+try:
+    import dotenvy_py
+
+    def load_dotenv(dotenv_path=None, **kwargs):
+        target = dotenv_path or ".env"
+        if Path(target).exists():
+            dotenvy_py.from_filename(str(target))
+            return True
+        return False
+except ImportError:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:  # The base SDK can still use dependency-light workflows.
+        def load_dotenv(*args, **kwargs):
+            return False
+
+# 1. Project root & .env loading
+root_dir = Path(__file__).resolve().parent.parent.parent.parent
+env_path = root_dir / '.env'
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    load_dotenv()
+
+
+def _flatten_profile(data: dict[str, Any]) -> dict[str, Any]:
+    """Flatten section/workflow-grouped profile dictionaries for key lookup."""
+    non_section_mappings = {
+        "payment_creator_reports",
+        "dashboard_workflows",
+        "gstin_to_vendor_id",
+        "gstin_aliases",
+        "gstr1_financial_credit_notes",
+        "gstr1_financial_credit_notes",
+        "gstin_aliases",
+        "neoseal_stock_count_worksheets",
+    }
+    result: dict[str, Any] = {}
+    for key, val in data.items():
+        key_lower = key.lower()
+        if isinstance(val, dict) and key_lower not in non_section_mappings:
+            result[key_lower] = val
+            result[key] = val
+            for sub_key, sub_val in val.items():
+                sub_key_lower = sub_key.lower()
+                result[sub_key_lower] = sub_val
+                result[sub_key] = sub_val
+                prefix = f"{key_lower}_"
+                if not sub_key_lower.startswith(prefix):
+                    result[f"{prefix}{sub_key_lower}"] = sub_val
+        else:
+            result[key_lower] = val
+            result[key] = val
+    return result
+
+
+def _load_config_dict(
+    project_root: Path | None = None,
+    home: Path | None = None,
+) -> dict[str, Any]:
+    """Load the highest-priority YAML or legacy JSON configuration file.
+
+    Project configuration intentionally takes precedence over user-level
+    defaults. An existing but invalid file is an error: silently falling back
+    could select identifiers for a different Zoho tenant.
+    """
+    project_root = project_root or root_dir
+    home = home or Path.home()
+    candidate_paths = [
+        project_root / "config" / "config.yaml",
+        project_root / "config" / "zoho_config.yaml",
+        project_root / "config" / "zoho_config.json",
+        project_root / "config" / "config.json",
+        project_root / "zoho_config.json",
+        project_root / "config.json",
+        home / ".config" / "zoho" / "config.json",
+        home / ".zoho" / "config.json",
+    ]
+    for path in candidate_paths:
+        if path.exists() and path.is_file():
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    if path.suffix == ".yaml":
+                        try:
+                            from utils.file_utils import yaml
+                        except ImportError as exc:
+                            raise ValueError(
+                                f"Reading YAML configuration from {path} requires YAMLRocks; install the declared dependencies with uv."
+                            ) from exc
+                        try:
+                            data = yaml.safe_load(f)
+                        except yaml.YAMLError as exc:
+                            raise ValueError(f"Unable to load Zoho configuration from {path}.") from exc
+                    else:
+                        data = json.load(f)
+            except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+                raise ValueError(f"Unable to load Zoho configuration from {path}.") from exc
+            if not isinstance(data, dict):
+                raise ValueError(f"Zoho configuration in {path} must be a configuration object.")
+            active_profile = data.get("active_profile")
+            if active_profile:
+                profiles = data.get("profiles")
+                if not isinstance(profiles, dict):
+                    raise ValueError(
+                        f"Zoho configuration in {path} declares an active profile "
+                        "without a profiles object."
+                    )
+                profile = profiles.get(active_profile)
+                if not isinstance(profile, dict):
+                    raise ValueError(
+                        f"Active Zoho configuration profile {active_profile!r} "
+                        f"was not found in {path}."
+                    )
+                return _flatten_profile(profile)
+            return _flatten_profile(data)
+    return {}
+
+
+_FILE_CONFIG = _load_config_dict()
+
+
+def get_config(key: str, default: Any = "") -> Any:
+    """Resolve config key: Environment variable -> file config -> default."""
+    if key in os.environ:
+        return os.environ[key]
+    key_lower = key.lower()
+    if key_lower in _FILE_CONFIG:
+        return _FILE_CONFIG[key_lower]
+    if key in _FILE_CONFIG:
+        return _FILE_CONFIG[key]
+    return default
+
+
+def get_mapping_config(
+    key: str,
+    default: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Resolve a JSON object configuration value from files or the environment."""
+    value = get_config(key, default or {})
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{key} must be a valid JSON object.") from exc
+    if not isinstance(value, dict):
+        raise ValueError(f"{key} must be a JSON object.")
+    return value
+
+
+class Config:
+    PROJECT_ROOT = str(root_dir)
+
+    # API Access
+    TOKEN_URL = get_config("TOKEN_URL", "http://localhost:3000/server/new/tokens")
+    ORG_ID = get_config("ORG_ID", "")
+    ANALYTICS_ORG_ID = get_config("ANALYTICS_ORG_ID", "")
+    DOMAIN = get_config("DOMAIN", "in")
+    CREATOR_OWNER_NAME = get_config(
+        "CREATOR_OWNER_NAME", get_config("CREATOR_ACCOUNT_OWNER_NAME", "")
+    )
+    PAYMENT_CREATOR_APP_LINK_NAME = get_config(
+        "PAYMENT_CREATOR_APP_LINK_NAME", "order-management-new"
+    )
+    PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID = get_config(
+        "PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID", ""
+    )
+    PAYMENT_SALARY_EXPENSE_ACCOUNT_ID = get_config("PAYMENT_SALARY_EXPENSE_ACCOUNT_ID", "")
+    PAYMENT_CASH_ACCOUNT_ID = get_config("PAYMENT_CASH_ACCOUNT_ID", "")
+    PAYMENT_CREATOR_REPORTS = {
+        "online": "Online_Payments",
+        "cheque": "Cheques",
+        "cheque_detail": "All_Cheque_Details",
+        "customer": "All_Customers1",
+        "checkpoint": "All_Payments",
+        **get_mapping_config("PAYMENT_CREATOR_REPORTS"),
+    }
+    DASHBOARD_WORKFLOWS = get_mapping_config(
+        "DASHBOARD_WORKFLOWS",
+        {"include": [], "exclude": []},
+    )
+    GSTR2_LOCATION_GSTIN_MAP = get_mapping_config("GSTR2_LOCATION_GSTIN_MAP")
+    GSTIN_ALIASES = get_mapping_config("GSTIN_ALIASES")
+    GSTR1_FINANCIAL_CREDIT_NOTES = get_mapping_config("GSTR1_FINANCIAL_CREDIT_NOTES")
+    GSTR1_FINANCIAL_CREDIT_NOTES = get_mapping_config("GSTR1_FINANCIAL_CREDIT_NOTES")
+    GSTIN_ALIASES = get_mapping_config("GSTIN_ALIASES")
+
+    # Zoho WorkDrive Configurations
+    POLYCAB_FOLDER_ID = get_config("POLYCAB_FOLDER_ID", "")
+
+    # Local Directory Paths
+    FILES_DIR = get_config("FILES_DIR", str(root_dir / "input_files" / "polycab" / "cn"))
+    POLYCAB_LEDGER_PATH = get_config(
+        "POLYCAB_LEDGER_PATH", 
+        str(root_dir / "input_files" / "polycab" / "ledger" / "277498_ReconciliationLedger_1-Jan-26_to_31-Mar-26.xls")
+    )
+
+    # Zoho Books Entity IDs
+    POLYCAB_VENDOR_ID = get_config("POLYCAB_VENDOR_ID", "")
+    NEOSEAL_PURCHASE_ACCOUNT_ID = get_config("NEOSEAL_PURCHASE_ACCOUNT_ID", "")
+    NEOSEAL_PRICE_LIST_GOOGLE_SHEET_ID = get_config(
+        "NEOSEAL_PRICE_LIST_GOOGLE_SHEET_ID", ""
+    )
+    GOOGLE_SHEETS_ACCESS_TOKEN = get_config("GOOGLE_SHEETS_ACCESS_TOKEN", "")
+    GOOGLE_APPLICATION_CREDENTIALS = get_config("GOOGLE_APPLICATION_CREDENTIALS", "")
+    NEOSEAL_STOCK_COUNT_SHEET_ID = get_config(
+        "NEOSEAL_STOCK_COUNT_SHEET_ID", ""
+    )
+    _neoseal_worksheets = get_mapping_config("NEOSEAL_STOCK_COUNT_WORKSHEETS", {})
+    NEOSEAL_STOCK_COUNT_WORKSHEET = get_config(
+        "NEOSEAL_STOCK_COUNT_WORKSHEET",
+        _neoseal_worksheets.get("count", _neoseal_worksheets.get("worksheet", "StockCount")),
+    )
+    NEOSEAL_STOCK_COUNT_FLAT_WORKSHEET = get_config(
+        "NEOSEAL_STOCK_COUNT_FLAT_WORKSHEET",
+        _neoseal_worksheets.get("flat", "Flat"),
+    )
+    NEOSEAL_STOCK_COUNT_MAPPING_WORKSHEET = get_config(
+        "NEOSEAL_STOCK_COUNT_MAPPING_WORKSHEET",
+        _neoseal_worksheets.get("mapping", "Mapping"),
+    )
+    FAN_PURCHASE_ACCOUNT_ID = get_config("FAN_PURCHASE_ACCOUNT_ID", "")
+    ZOHO_RSO_CN_ITEM_ID = get_config("ZOHO_RSO_CN_ITEM_ID", "")
+    ZOHO_SCHEME_CN_ITEM_ID = get_config("ZOHO_SCHEME_CN_ITEM_ID", "")
+    ZOHO_GST0_TAX_ID = get_config("ZOHO_GST0_TAX_ID", "")
+    ZOHO_TAX_SETTINGS_ID = get_config("ZOHO_TAX_SETTINGS_ID", "")
+    RSO_CUSTOMER_ID = get_config("RSO_CUSTOMER_ID", "")
+
+    # Zeiss
+    ZEISS_VENDOR_ID = get_config("ZEISS_VENDOR_ID", "")
+    ZEISS_LEDGER_PATH = get_config(
+        "ZEISS_LEDGER_PATH",
+        str(root_dir / "input_files" / "zeiss" / "ZeissOct2025_Statement - ZeissOct2025_Statement.csv")
+    )
+
+    # Location / Branch Config
+    EXPECTED_LOCATION_ID = get_config("EXPECTED_LOCATION_ID", "")
+    EXPECTED_LOCATION_NAME = get_config("EXPECTED_LOCATION_NAME", "")
+
+    # Bank Account IDs
+    BANK_ACCOUNT_IDFC = get_config("BANK_ACCOUNT_IDFC", "")
+    BANK_ACCOUNT_HDFC = get_config("BANK_ACCOUNT_HDFC", "")
+    BANK_ACCOUNT_HDFC_AGENCIES = get_config("BANK_ACCOUNT_HDFC_AGENCIES", "")
+    BANK_ACCOUNT_ICICI = get_config("BANK_ACCOUNT_ICICI", "")
+
+    # GSTIN Map
+    try:
+        raw_gstin_map = get_config("GSTIN_TO_VENDOR_ID", "{}")
+        GSTIN_TO_VENDOR_ID = json.loads(raw_gstin_map) if isinstance(raw_gstin_map, str) else raw_gstin_map
+    except Exception:
+        GSTIN_TO_VENDOR_ID = {}

@@ -3,13 +3,13 @@ import os
 import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
-from zoho.base_client import BaseZohoClient
-from utils.http import write_response_to_file
+from zoho.core_sdk.base_client import BaseZohoClient
+from utils.http_utils.http import write_response_to_file
 from zoho.books import ZohoBooksAPI
 from zoho.books.custom.sales import SalesOrders
 from zoho.books.custom.gst import GST
 from workflows.duplicate_payment_check import DuplicatePaymentChecker
-from zoho.exceptions import ZohoBooksError
+from zoho.core_sdk.exceptions import ZohoBooksError
 
 
 class TestBaseClientPerformance(unittest.TestCase):
@@ -159,7 +159,7 @@ items:
 
 
 class TestGSTRatePacing(unittest.TestCase):
-    @patch("zoho.base_client.time.sleep")
+    @patch("zoho.core_sdk.base_client.time.sleep")
     def test_gst_fetch_details_retries_only_in_transport(self, mock_sleep):
         client = ZohoBooksAPI("token", "org")
         limited = MagicMock(status_code=429, text="limited", headers={"Retry-After": "0"})

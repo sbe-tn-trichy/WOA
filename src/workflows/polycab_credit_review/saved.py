@@ -3,14 +3,14 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import date
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 import re
 from collections.abc import Sequence
 from typing import Any
 
 from workflows.core.matching import parse_date
-from zoho.validation import require_record
+from zoho.core_sdk.validation import require_record
 from .evidence import linked_candidates
 from .models import CreditAudit, CreditFinding, RmaCreditPolicy
 from .pdf import distinct_memos, parse_credit_memo_text

@@ -2,9 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from workflows.inter_location_vendor_payment_updates import (
-    preflight_vendor_moves, submit_vendor_move, verify_vendor_batch,
-)
+from workflows.inter_location.vendor_payment_updates import preflight_vendor_moves, submit_vendor_move, verify_vendor_batch
 
 
 def move():

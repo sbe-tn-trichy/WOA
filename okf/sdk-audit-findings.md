@@ -5,7 +5,7 @@ description: Security, performance, and usability review and hardening across co
 tags: [security, performance, usability, audit, quality]
 sources:
   - id: base-client
-    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/zoho/base_client.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/zoho/core_sdk/base_client.py
     title: Base Zoho Client
     author: team:sbe-tn-trichy
     last_modified: 2026-09-01
@@ -44,7 +44,7 @@ A comprehensive code audit across all `WOA` service clients identified key areas
 
 ### 2. Performance
 * **Native HTTP Transport**: Project-owned calls use pyqwest through the shared [transport adapter](http-transport.md); service retry ownership and upload replay remain in the Zoho base client.
-* **Socket Cleanup on Streaming**: The shared `utils.http.write_response_to_file()` helper streams binary responses, rejects unsupported response shapes, and closes HTTP responses even when writing fails. The base transport also closes failed streamed responses before raising.
+* **Socket Cleanup on Streaming**: The shared `utils.http_utils.http.write_response_to_file()` helper streams binary responses, rejects unsupported response shapes, and closes HTTP responses even when writing fails. The base transport also closes failed streamed responses before raising.
 * **Streaming Generator-Based Pagination**: Added `list_iter()` across Books and Inventory `BaseResource` classes to yield records page-by-page without buffering entire datasets in RAM.
 * **Direct File Streaming**: File download operations stream response chunks directly to disk.
 * **Callback Memory Safety**: Completion callbacks receive `None` for streamed response bodies so binary downloads are not materialized through `response.text`.

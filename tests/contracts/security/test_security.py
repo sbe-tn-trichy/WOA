@@ -5,7 +5,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from zoho.security import sanitize_filename, resolve_output_path
+from zoho.core_sdk.security import sanitize_filename, resolve_output_path
 from zoho.mail import ZohoMailAPI
 from zoho.books.custom.sales import SalesOrders
 
@@ -77,7 +77,7 @@ class TestSecurityUtilities(unittest.TestCase):
             self.assertIn("Strict containment violation", str(ctx.exception))
 
     def test_sanitize_log_params(self):
-        from zoho.security import sanitize_log_params
+        from zoho.core_sdk.security import sanitize_log_params
 
         params = {
             "authtoken": "1000.abcd1234efgh5678",
@@ -157,7 +157,7 @@ class TestSalesOrdersSecurity(unittest.TestCase):
 
 class TestMultiTierConfig(unittest.TestCase):
     def test_config_loader_hierarchy(self):
-        from workflows.core.config import get_config
+        from workflows.runtime.config import get_config
 
         # 1. Default when unset
         self.assertEqual(get_config("NON_EXISTENT_KEY_12345", default="fallback"), "fallback")

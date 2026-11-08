@@ -2,7 +2,7 @@
 """Import one Polycab RSO PDF into Zoho Books as a sales order."""
 
 import argparse
-from utils import json
+from utils.file_utils import json
 import sys
 from pathlib import Path
 
@@ -12,8 +12,8 @@ except ImportError:  # Direct script execution.
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
 from workflows import get_books_client, import_polycab_rso_pdf
-from workflows.core.config import Config
-from workflows.core.auth import get_inventory_client
+from workflows.runtime.config import Config
+from workflows.runtime.auth import get_inventory_client
 
 
 def main() -> int:

@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from zoho.helpers import ensure_books_custom_fields
-from ..core.exceptions import SchemaValidationError
+from helpers import ensure_books_custom_fields
+from workflows.runtime.exceptions import SchemaValidationError
 
 
 @dataclass(frozen=True)

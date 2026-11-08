@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -15,10 +15,10 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client, get_creator_client
-from workflows.core.config import Config
-from workflows.core.exceptions import ReconciliationError
-from workflows.creator_beat_allocation import CreatorBeatAllocationService
+from workflows.runtime.auth import get_books_client, get_creator_client
+from workflows.runtime.config import Config
+from workflows.runtime.exceptions import ReconciliationError
+from workflows.customer_management.creator_beat_allocation import CreatorBeatAllocationService
 
 
 HTML_PATH = Path(__file__).parent / "static" / "customer_beat_allocation.html"

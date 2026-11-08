@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from utils import json
+from utils.file_utils import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path

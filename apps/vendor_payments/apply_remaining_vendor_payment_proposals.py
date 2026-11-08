@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 from collections import defaultdict
 from pathlib import Path
 
@@ -12,10 +12,8 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client
-from workflows.inter_location_vendor_payment_updates import (
-    preflight_vendor_moves, submit_vendor_move, verify_vendor_batch,
-)
+from workflows.runtime.auth import get_books_client
+from workflows.inter_location.vendor_payment_updates import preflight_vendor_moves, submit_vendor_move, verify_vendor_batch
 
 
 SOURCE = Path("output/inter_location_payment_proposals.json")

@@ -9,9 +9,9 @@ from datetime import date, datetime, timedelta
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
-from zoho.helpers.sequences import parse_doc_number
+from helpers.formatting.sequences import parse_doc_number
 from .hsn import check_credit_note_hsn, load_hsn_evidence
-from zoho.helpers import (
+from helpers import (
     get_financial_year_range,
     get_month_range,
     get_previous_month_range,

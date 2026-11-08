@@ -7,7 +7,7 @@ from decimal import Decimal, InvalidOperation
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from zoho.helpers import fetch_equity_general_ledger
+from helpers import fetch_equity_general_ledger
 
 from workflows.core.matching import to_finite_decimal
 

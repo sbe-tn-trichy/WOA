@@ -6,7 +6,7 @@ from datetime import date
 from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
 
-from zoho.helpers import parse_date
+from helpers import parse_date
 
 
 class HSNLine(TypedDict):

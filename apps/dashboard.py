@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 import os
 import secrets
 import subprocess
@@ -19,7 +19,7 @@ from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urlparse
 
-from workflows.core.config import Config
+from workflows.runtime.config import Config
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

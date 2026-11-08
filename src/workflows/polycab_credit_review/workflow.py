@@ -7,10 +7,10 @@ from pathlib import Path
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from zoho.helpers.files import download_books_document
-from zoho.security import resolve_output_path
+from helpers.operations.files import download_books_document
+from zoho.core_sdk.security import resolve_output_path
 from .evidence import credit_list, linked_candidates
-from zoho.helpers.records import get_verified_record
+from helpers.operations.records import get_verified_record
 from .models import CreditAudit, CreditFinding, CreditMemoEvidence, RmaCreditPolicy
 from .pdf import distinct_memos, read_credit_memo_pdf
 from .rules import evaluate, flag_shared_links

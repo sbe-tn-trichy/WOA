@@ -1,6 +1,6 @@
 """Cached SQLite analysis with explicit manual metadata synchronization."""
 
-from utils import json
+from utils.file_utils import json
 from contextlib import contextmanager
 from pathlib import Path
 from collections.abc import Iterator, Sequence

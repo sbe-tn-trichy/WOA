@@ -1,1 +1,1 @@
-from zoho.exceptions import ZohoMailError
+from zoho.core_sdk.exceptions import ZohoMailError

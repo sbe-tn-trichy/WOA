@@ -166,3 +166,33 @@ def test_cli_invalid_baseline_does_not_write(repo, monkeypatch):
     monkeypatch.setattr("sys.argv", ["analyze_project", "--since", "not-a-commit"])
     assert audit.main() == 2
     assert not (root / "output").exists()
+
+
+@pytest.mark.parametrize("path, dependency", [
+    ("src/zoho/sample.py", "helpers"),
+    ("src/utils/sample.py", "helpers"),
+    ("src/helpers/sample.py", "workflows"),
+    ("src/helpers/sample.py", "apps"),
+    ("src/helpers/sample.py", "scripts"),
+])
+def test_composite_helper_import_boundaries(repo, path, dependency):
+    root, _ = repo
+    source = root / path
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(f"import {dependency}\n", encoding="utf-8")
+    report = audit.inspect(root)
+    assert not report["errors"]
+    assert report["diagnostics"] == [{
+        "file": path, "line": 1, "rule": "import-layer",
+        "message": f"Forbidden import: {dependency}",
+    }]
+
+
+def test_helpers_may_depend_on_sdk_and_utilities(repo):
+    root, _ = repo
+    source = root / "src/helpers/sample.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("import zoho\nimport utils\n", encoding="utf-8")
+    report = audit.inspect(root)
+    assert not report["errors"]
+    assert not report["diagnostics"]

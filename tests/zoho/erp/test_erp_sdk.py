@@ -1,18 +1,27 @@
 """ERP definition coverage, routing, validation and shared transport contracts."""
-import importlib.util
 import json
-from pathlib import Path
+from importlib.resources import files
 from unittest.mock import Mock, patch
 
 import pytest
 import requests
 
+from apps.tools.generate_erp_sdk import generate
 from zoho import ZohoERPAPI, ZohoERPError
-from zoho.erp.generated import RESOURCE_TYPES
+from zoho.erp.openapi import ERPResource, RESOURCE_TYPES
 
-MANIFEST = json.loads((Path(__file__).parents[3] / "src/zoho/erp/manifest.json").read_text(encoding="utf-8"))
+MANIFEST = json.loads(files("zoho.erp.openapi").joinpath("manifest.json").read_text(encoding="utf-8"))
 OPERATIONS = [(resource, operation) for resource, definition in MANIFEST.items()
               for operation in definition["operations"]]
+
+
+def test_legacy_erp_modules_export_the_canonical_types():
+    from zoho.erp.generated import Departments, RESOURCE_TYPES as legacy_resource_types
+    from zoho.erp.resource import ERPResource as LegacyERPResource
+
+    assert legacy_resource_types is RESOURCE_TYPES
+    assert Departments is RESOURCE_TYPES["departments"]
+    assert LegacyERPResource is ERPResource
 
 
 @pytest.fixture
@@ -28,7 +37,7 @@ def test_every_generated_operation_routes_to_documented_endpoint(api, resource, 
     params = {name: "value" for name in operation["required_query"]}
     headers = {name: "value" for name in operation["required_headers"]}
     body = {} if operation["body_required"] else None
-    with patch("zoho.base_client.BaseZohoClient.request", return_value={"code": 0}) as request:
+    with patch("zoho.core_sdk.base_client.BaseZohoClient.request", return_value={"code": 0}) as request:
         assert getattr(getattr(api, resource), operation["name"])(
             *args, params=params, headers=headers, body=body) == {"code": 0}
     expected_path = operation["path"]
@@ -86,7 +95,7 @@ def test_invalid_path_does_not_send_request(api, identifier):
 
 
 def test_organization_override_and_inputs(api):
-    with patch("zoho.base_client.BaseZohoClient.request") as request:
+    with patch("zoho.core_sdk.base_client.BaseZohoClient.request") as request:
         with pytest.raises(ValueError, match="organization"):
             api.departments.list_departments(params={"organization_id": "other"})
         request.assert_not_called()
@@ -103,7 +112,7 @@ def test_required_query_and_multipart(api):
         getattr(getattr(api, r), o["name"])(*["id"] * len(o["path_parameters"]))
     r, o = next((r, o) for r, o in OPERATIONS if "multipart/form-data" in o["media"])
     upload = {"attachment": ("sample.txt", b"sample")}
-    with patch("zoho.base_client.BaseZohoClient.request") as request:
+    with patch("zoho.core_sdk.base_client.BaseZohoClient.request") as request:
         getattr(getattr(api, r), o["name"])(*["id"] * len(o["path_parameters"]),
             params={n: "value" for n in o["required_query"]},
             headers={n: "value" for n in o["required_headers"]}, body={"description": "sample"}, files=upload)
@@ -126,8 +135,8 @@ def test_resource_and_operation_coverage():
 
 
 def test_factory_uses_erp_token():
-    from workflows.core.auth import get_erp_client
-    with patch("workflows.core.auth.get_token_for", return_value="erp-token") as token:
+    from workflows.runtime.auth import get_erp_client
+    with patch("workflows.runtime.auth.get_token_for", return_value="erp-token") as token:
         with get_erp_client(org_id="org", domain="in") as api:
             assert api.access_token == "erp-token"
             assert api.token_refresh_callback() == "erp-token"
@@ -135,13 +144,9 @@ def test_factory_uses_erp_token():
 
 
 def test_generation_is_deterministic_and_rejects_invalid_specs(tmp_path):
-    location = Path(__file__).parents[3] / "apps/generate_erp_sdk.py"
-    spec = importlib.util.spec_from_file_location("generate_erp_sdk", location)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
     source = tmp_path / "specs"
     source.mkdir()
-    definition = source / "example.yml"
+    definition = source / "departments.yml"
     definition.write_text('''openapi: 3.0.0
 servers:
   - url: https://www.zohoapis.in/erp/v3
@@ -151,11 +156,11 @@ paths:
       operationId: get_example
 ''', encoding="utf-8")
     target = tmp_path / "generated"
-    module.generate(source, target)
+    generate(source, target)
     first = (target / "generated.py").read_bytes()
-    module.generate(source, target)
+    generate(source, target)
     assert (target / "generated.py").read_bytes() == first
     definition.write_text(definition.read_text().replace("https://www.zohoapis.in", "https://example.com"))
     with pytest.raises(ValueError, match="server"):
-        module.generate(source, target)
+        generate(source, target)
     assert (target / "generated.py").read_bytes() == first

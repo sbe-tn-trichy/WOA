@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from zoho.books import ZohoBooksAPI
 from zoho.creator import ZohoCreatorAPI
-from ..core.exceptions import ReconciliationError
+from workflows.runtime.exceptions import ReconciliationError
 
 
 @dataclass(frozen=True)

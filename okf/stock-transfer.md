@@ -46,7 +46,7 @@ more documents than dates, and always exclude Sundays.
 `ZohoInventoryAPI.items.get_details(item_ids, batch_size=50)` uses the documented
 [`GET /itemdetails`](https://www.zoho.com/inventory/api/v1/items/#bulk-fetch-item-details)
 endpoint, deduplicates requests and rejects incomplete/unexpected responses.
-`workflows.core.auth.get_inventory_client` constructs the Inventory client with
+`workflows.runtime.auth.get_inventory_client` constructs the Inventory client with
 its own token and refresh callback.
 
 The application writes its plan and execution journal under

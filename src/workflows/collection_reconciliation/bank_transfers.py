@@ -7,11 +7,11 @@ from datetime import datetime, timezone
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from ..core.exceptions import ReconciliationError
+from workflows.runtime.exceptions import ReconciliationError
 from ..core.matching import get_bank_reference, parse_date, to_decimal, to_text
 from .bank_statement import bank_line_kind
-from .identifiers import identifier
-from .types import BankTransferProposal
+from workflows.collection_payments.identifiers import identifier
+from workflows.collection_payments.types import BankTransferProposal
 
 
 def bank_line_identity(row: Mapping[str, Any]) -> tuple[str, str]:

@@ -5,7 +5,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 import re
 import sqlite3

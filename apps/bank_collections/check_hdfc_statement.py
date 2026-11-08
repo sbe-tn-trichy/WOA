@@ -4,18 +4,15 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 import csv
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 
 from workflows.analytics_catalog import AnalyticsCatalog
 from workflows.analytics_catalog.registry import WorkflowViewReference
-from workflows.bank_statement_check import (
-    DEFAULT_VIEW_ID, DEFAULT_WORKSPACE_ID, comparison_dict, compare_statement_lines,
-    fetch_statement_snapshot, parse_analytics_lines, read_hdfc_csv,
-)
-from workflows.core.auth import get_analytics_client
+from workflows.bank_statements.checker import DEFAULT_VIEW_ID, DEFAULT_WORKSPACE_ID, comparison_dict, compare_statement_lines, fetch_statement_snapshot, parse_analytics_lines, read_hdfc_csv
+from workflows.runtime.auth import get_analytics_client
 from workflows.core.checkpoint import atomic_text_writer, write_atomic_json
-from workflows.core.config import Config
+from workflows.runtime.config import Config
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError("Saved snapshot does not match the requested account, table, workspace or CSV period")
     else:
         catalog_dir = args.catalog_dir or ROOT / "workspace_metadata" / args.workspace_id
-        reference = WorkflowViewReference("bank_statement_check", "", "src/workflows/bank_statement_check.py", view_id=args.view_id)
+        reference = WorkflowViewReference("bank_statement_check", "", "src/workflows/bank_statements/checker.py", view_id=args.view_id)
         catalog = AnalyticsCatalog(None, args.workspace_id, catalog_dir, references=(reference,))
         # Check cached design before retrieving credentials or making remote reads.
         catalog.analyze(args.view_id)

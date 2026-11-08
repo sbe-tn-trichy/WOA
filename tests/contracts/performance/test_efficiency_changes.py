@@ -9,14 +9,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from workflows.collection_reconciliation import CollectionReconciler, CollectionReconciliationConfig
-from workflows.collection_reconciliation.transaction_index import TransactionIndex
+from workflows.collection_payments.transaction_index import TransactionIndex
 from workflows.core import HttpAttemptMetrics, OperationCounts, RequestMetrics
-from workflows.core.exceptions import ReconciliationError
+from workflows.runtime.exceptions import ReconciliationError
 from workflows.creator_customer_sync import CreatorCustomerSyncConfig, sync_creator_customers
 from workflows.gstr2_verification import GSTR2Verifier
 from zoho.books import ZohoBooksAPI
 from zoho.creator import ZohoCreatorAPI
-from zoho.exceptions import ZohoBooksError
+from zoho.core_sdk.exceptions import ZohoBooksError
 
 
 def response(status, payload):
@@ -37,7 +37,7 @@ def test_metrics_distinguish_retries_from_completed_calls_and_keep_callbacks(cap
     metrics = RequestMetrics()
     metrics.attach(client, "books")
     with caplog.at_level("INFO"), metrics.operation("refresh") as counts:
-        with patch("zoho.base_client.time.sleep"):
+        with patch("zoho.core_sdk.base_client.time.sleep"):
             client.request("GET", "invoices/private-id")
         metrics.cache_hit("customer_mapping", 2)
         with pytest.raises(OSError):
@@ -63,7 +63,7 @@ def test_gst_worker_metrics_include_transport_retry_and_all_details():
     ])
     metrics = RequestMetrics()
     metrics.attach(client, "books")
-    with metrics.operation("gst") as counts, patch("zoho.base_client.time.sleep"):
+    with metrics.operation("gst") as counts, patch("zoho.core_sdk.base_client.time.sleep"):
         details = client.gst._fetch_details_concurrently(
             client.invoices, [{"invoice_id": "one"}], "invoice_id", "invoice")
     assert len(details) == 1
@@ -260,7 +260,7 @@ def test_bank_index_matches_full_scan_at_tolerance_boundaries_and_used_ids():
 
 
 def test_bank_normalization_work_is_per_transaction_not_per_payment():
-    from workflows.collection_reconciliation import transaction_index
+    from workflows.collection_payments import transaction_index
     rows = [{"transaction_id": str(i), "date": "2026-01-01", "amount": str(i),
              "reference_number": str(i)} for i in range(1000)]
     books, creator = MagicMock(), MagicMock()

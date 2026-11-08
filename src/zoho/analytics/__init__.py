@@ -1,7 +1,6 @@
 from .client import ZohoAnalyticsAPI
 from .exceptions import ZohoAnalyticsError
-from .metadata import Metadata
-from .snapshot import WorkspaceMetadataStore, WorkflowViewUsage
+from .custom import Metadata, WorkflowViewUsage, WorkspaceMetadataStore
 
 __all__ = [
     "ZohoAnalyticsAPI",

@@ -7,10 +7,7 @@ from pathlib import Path
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from workflows.collection_reconciliation.allocator import (
-    allocate_invoices_oldest_due_first,
-    fetch_open_invoices,
-)
+from workflows.collection_payments.allocator import allocate_invoices_oldest_due_first, fetch_open_invoices
 from workflows.core.checkpoint import write_atomic_json
 from workflows.core.matching import to_decimal, to_text
 

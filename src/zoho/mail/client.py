@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import Any
-from zoho.base_client import BaseZohoClient
+from zoho.core_sdk.base_client import BaseZohoClient
 from .resources.accounts import Accounts
 from .resources.folders import Folders
 from .resources.messages import Messages

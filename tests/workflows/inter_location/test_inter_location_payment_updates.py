@@ -2,9 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from workflows.inter_location_payment_updates import (
-    apply_customer_payment_move, plan_customer_payment_moves, verify_customer_payment_batch,
-)
+from workflows.inter_location.payment_updates import apply_customer_payment_move, plan_customer_payment_moves, verify_customer_payment_batch
 
 
 def proposal():

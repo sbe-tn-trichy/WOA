@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from utils import json
+from utils.file_utils import json
 from collections import Counter
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -13,7 +13,7 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client
+from workflows.runtime.auth import get_books_client
 
 
 SOURCE = Path("output/inter_location_payment_proposals.json")

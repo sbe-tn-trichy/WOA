@@ -5,7 +5,7 @@ title: JSON codec
 
 # JSON codec
 
-Project-owned JSON parsing and serialization use `utils.json`, backed by pinned
+Project-owned JSON parsing and serialization use `utils.file_utils.json`, backed by pinned
 `python-rapidjson==1.26`. The module exports `dump`, `dumps`, `load`, `loads` and
 `JSONDecodeError`. Applications, workflows, HTTP payloads and SQLite JSON fields
 share this owner. It replaces the unused orjson dependency declaration.

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from datetime import date
-from workflows.core.config import Config
+from workflows.runtime.config import Config
 from workflows.bank_vendor_ledger_matching.matcher import (
     get_bank_reference,
     parse_date,

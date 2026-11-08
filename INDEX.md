@@ -12,7 +12,7 @@
 See the separate [Workflow Catalog](WORKFLOWS.md) for business workflow names and module locations, including Bank Statement Categorization.
 
 Python project providing typed Zoho API clients, reusable domain workflows, and
-application entry points. Install the packages with `pip install -e .`.
+application entry points. See the [runbook](okf/development-runbook.md) for setup.
 
 Supported services:
 1. **Zoho Books** — Accounting: invoices, bills, contacts, banking, GST, projects
@@ -29,83 +29,44 @@ Supported services:
 
 ## Directory Layout
 
-```
+```text
 WOA/
-├── src/zoho/                        # Installable package (pip install -e .)
-│   ├── __init__.py                  # Public API — re-exports all client classes
-│   ├── base_client.py               # BaseZohoClient — shared HTTP engine for all services
-│   ├── auth.py                      # ZohoOAuth2Manager, CatalystAuth, fetch_token_from_catalyst
-│   ├── exceptions.py                # Exception hierarchy (ZohoError and subclasses)
-│   ├── logging.py                   # configure_logger() — shared log file setup
-│   ├── books/                       # Zoho Books service
-│   │   ├── client.py                # ZohoBooksAPI — main client + module wiring
-│   │   ├── base.py                  # BaseResource — CRUD base for all resource modules
-│   │   ├── mixins.py                # StatusMixin, ApprovalMixin, EmailMixin, CreditsMixin, ActiveInactiveMixin
-│   │   └── resources/
-│   │       ├── contacts.py          # Contacts, Organizations, ChartOfAccounts, Vendors
-│   │       ├── sales.py             # Invoices, Estimates, SalesOrders, CreditNotes, SalesReturns, CustomerPayments
-│   │       ├── purchases.py         # Bills, PurchaseOrders, VendorPayments
-│   │       ├── banking.py           # BankAccounts, BankTransactions, Journals
-│   │       ├── projects.py          # Projects, Tasks, TimeEntries
-│   │       ├── gst.py               # GST — validate_gst_data, GSTR reports
-│   │       └── settings.py          # Books custom-field settings
-│   ├── wd/                          # Zoho WorkDrive service
-│   │   ├── client.py                # ZohoWorkdriveAPI — main client
-│   │   ├── base.py                  # BaseResource (WD version)
-│   │   └── resources/
-│   │       └── files.py             # Files — upload, download, move, folder ops, cleanup
-│   ├── mail/                        # Zoho Mail service
-│   │   ├── client.py                # ZohoMailAPI — main client
-│   │   ├── base.py                  # BaseResource (Mail version)
-│   │   └── resources/
-│   │       ├── accounts.py          # Accounts — list mail accounts
-│   │       ├── folders.py           # Folders — list mail folders
-│   │       └── messages.py          # Messages — send, list, download attachments
-│   ├── cliq/
-│   │   └── client.py                # ZohoCliqAPI — send_notification
-│   ├── sheet/
-│   │   └── client.py                # ZohoSheetAPI — workbook/sheet/row operations
-│   ├── creator/
-│   │   └── client.py                # ZohoCreatorAPI — app records CRUD + bulk helpers
-│   ├── analytics/                    # View/SQL exports and workspace metadata snapshots
-│   └── inventory/                   # Zoho Inventory service
-│       ├── client.py                # ZohoInventoryAPI — main client + module wiring
-│       ├── base.py                  # BaseResource (Inventory version)
-│       └── resources/
-│           ├── items.py             # Items
-│           ├── item_groups.py       # ItemGroups
-│           ├── move_orders.py       # MoveOrders
-│           ├── transfer_orders.py   # TransferOrders
-│           ├── inventory_adjustments.py  # InventoryAdjustments
-│           ├── packages.py          # Packages
-│           ├── shipments.py         # Shipments
-│           ├── picklists.py         # Picklists
-│           ├── bins.py              # Bins
-│           └── batches.py           # Batches
-├── src/google_sheets/               # Google Sheets API v4 SDK
-│   ├── __init__.py                  # Public exports: GoogleSheetsClient, create_credentials
-│   ├── client.py                    # GoogleSheetsClient — typed v4 spreadsheet operations
-│   ├── auth.py                      # create_credentials (OAuth token & Service Account)
-│   └── exceptions.py                # GoogleSheetsError, GoogleSheetsAuthError, SpreadsheetNotFoundError
-├── src/workflows/                   # Multi-service domain workflows
-│   ├── bank_vendor_ledger_matching/
-│   ├── collection_reconciliation/
-│   ├── duplicate_payment_check/
-│   ├── gstr1_verification/
-│   └── vendor_ledger_reconciliation/ # Additional workflows are indexed in OKF
-├── apps/                            # Permanent web servers, dashboards & CLI runners
-├── scripts/                         # Ephemeral scratch scripts (< 24h lifespan)
-├── tests/                           # Pytest tests
-│   ├── test_auth.py
-│   ├── test_books.py
-│   ├── test_cliq.py
-│   ├── test_creator.py
-│   ├── test_inventory.py
-│   ├── test_mail.py
-│   ├── test_sheet.py
-│   └── test_wd.py
-├── logs/                            # Runtime log files
-└── pyproject.toml                   # Package metadata (name: WOA, version: 0.2.0)
+├── src/
+│   ├── utils/                       # Shared infrastructure
+│   │   ├── http_utils/              # Requests, retries, transport and downloads
+│   │   ├── file_utils/              # JSON, YAML and PDF handling
+│   │   └── general_utils/           # Encoding, sequences and module aliases
+│   ├── zoho/                        # Public service clients
+│   │   ├── core_sdk/                # Auth, transport base, errors and security
+│   │   ├── books/                   # Client, custom resources and openapi/
+│   │   ├── erp/                     # Client and generated openapi/ resources
+│   │   ├── inventory/
+│   │   │   └── resources/           # catalog/, fulfillment/ and movements/
+│   │   └── .../                     # Analytics, Creator, Mail, Sheet, Cliq, WD
+│   ├── helpers/                     # Composite API operations
+│   │   ├── catalog/                 # Items, contacts, bins and custom fields
+│   │   ├── reports/                 # Accounts, ledgers and P&L
+│   │   ├── formatting/              # Dates, references, GST and sequences
+│   │   └── operations/              # Files, verified reads and transactions
+│   ├── google_sheets/               # Focused Google Sheets SDK
+│   └── workflows/                   # Public lazy exports and domain packages
+│       ├── runtime/                 # Configuration, client factories and logging
+│       ├── core/                    # Pure matching, dates, snapshots and recovery
+│       ├── collection_payments/     # Collection allocation, identities and records
+│       ├── collection_reconciliation/ # Review and reconciliation orchestration
+│       ├── creator_payments/        # Payment links, backfill and OCR
+│       ├── customer_payments/       # Payment inspection and unused balances
+│       ├── bank_statements/         # Statement completeness checks
+│       ├── purchasing/              # Bill updates
+│       └── .../                     # Other domains: see WORKFLOWS.md
+├── apps/                            # Dispatchers, dashboard and CLI adapters
+│   ├── tools/                       # Analysis, cleanup and code generators
+│   ├── static/                      # Web HTML, CSS and JavaScript
+│   └── .../                         # Domain CLI implementations
+├── tests/                           # Mirrors SDK, utilities, helpers and workflows
+│   └── contracts/                   # Cross-package architecture/security checks
+├── scripts/                         # Ignored temporary scratch work
+└── output/                          # Ignored reports and recovery artifacts
 ```
 
 ---
@@ -637,6 +598,8 @@ The `ZANALYTICS-ORGID` header is injected into every request.
 
 | Attribute | Resource | Purpose |
 |---|---|---|
+| `client.openapi` | `AnalyticsResources` | [Generated Analytics v2 operations](okf/zoho-analytics.md) by domain |
+| `client.metadata` | `Metadata` | Workspace metadata and resumable snapshots |
 | `client.views` | `Views` | Synchronous and asynchronous view exports |
 | `client.queries` | `Queries` | Dynamic SQL SELECT exports |
 
@@ -875,9 +838,9 @@ Log output during tests goes to `tests/logs/`. Set `TESTING=true` or run under p
 
 ## Workflow helper migration
 
-- `zoho.helpers.sequences.parse_doc_number`: shared lower-layer number parsing.
+- `helpers.formatting.sequences.parse_doc_number`: shared lower-layer number parsing.
 - `workflows.core.dates` and `workflows.core.sequences`: pure FY selection and bounded series analysis.
-- `workflows.payment_inspection`: injected Analytics queries and payment summaries.
+- `workflows.customer_payments.inspection`: injected Analytics queries and payment summaries.
 - `workflows.payment_renumbering`: live-checked planning and checkpointed execution.
 - `workflows.customer_validation`: pure contact rules and Books validation reports.
 - `workflows.sales_order_import`: validated invoice-YAML import using Books and Inventory.

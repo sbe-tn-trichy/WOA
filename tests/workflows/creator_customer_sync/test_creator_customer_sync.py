@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from workflows import CreatorCustomerSyncConfig, sync_creator_customers
-from workflows.core.exceptions import ReconciliationError
+from workflows.runtime.exceptions import ReconciliationError
 from zoho.creator import ZohoCreatorAPI
 
 

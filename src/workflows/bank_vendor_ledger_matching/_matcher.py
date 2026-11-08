@@ -6,7 +6,7 @@ import logging
 from datetime import date, timedelta
 from typing import Any
 
-from zoho.helpers import extract_bank_withdrawals
+from helpers import extract_bank_withdrawals
 from ..core.matching import (
     get_bank_reference,
     parse_date,

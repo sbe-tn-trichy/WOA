@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-from ..base_resource import BaseResource as _BaseResource
+from zoho.core_sdk.base_resource import BaseResource as _BaseResource
 from .exceptions import ZohoBooksError
 
 

@@ -5,86 +5,97 @@ Shared HTTP transport, authentication managers, base resource abstractions, exce
 
 ## Table of Contents
 
-- [`utils.http`](#utils-http)
-  - [Class `SeekableStream`](#utils-http-seekablestream)
-  - [Class `_HttpMethodCallable`](#utils-http-_httpmethodcallable)
-  - [Class `_HttpRequestCallable`](#utils-http-_httprequestcallable)
-  - [Class `_ChunkIterable`](#utils-http-_chunkiterable)
-  - [Function `is_json_content_type`](#utils-http-is_json_content_type)
-  - [Function `is_html_body`](#utils-http-is_html_body)
-  - [Function `sanitize_error_text`](#utils-http-sanitize_error_text)
-  - [Function `extract_retry_after`](#utils-http-extract_retry_after)
-  - [Function `parse_retry_after`](#utils-http-parse_retry_after)
-  - [Function `validate_https_override_url`](#utils-http-validate_https_override_url)
-  - [Function `capture_upload_positions`](#utils-http-capture_upload_positions)
-  - [Function `rewind_uploads`](#utils-http-rewind_uploads)
-  - [Function `filter_request_kwargs`](#utils-http-filter_request_kwargs)
-  - [Function `send_http_request`](#utils-http-send_http_request)
-  - [Function `unwrap_json_body`](#utils-http-unwrap_json_body)
-  - [Function `get_json_value`](#utils-http-get_json_value)
-  - [Function `request_json`](#utils-http-request_json)
-  - [Function `decode_response`](#utils-http-decode_response)
-  - [Function `write_response_to_file`](#utils-http-write_response_to_file)
-- [`utils.json`](#utils-json)
-  - [Function `dumps`](#utils-json-dumps)
-  - [Function `loads`](#utils-json-loads)
-  - [Function `dump`](#utils-json-dump)
-  - [Function `load`](#utils-json-load)
-- [`utils.http_transport`](#utils-http_transport)
-  - [Class `TransportError`](#utils-http_transport-transporterror)
-  - [Class `HTTPError`](#utils-http_transport-httperror)
-  - [Class `RequestOptions`](#utils-http_transport-requestoptions)
-  - [Class `_Headers`](#utils-http_transport-_headers)
-  - [Class `Response`](#utils-http_transport-response)
-  - [Class `_Readable`](#utils-http_transport-_readable)
-  - [Class `Session`](#utils-http_transport-session)
-  - [Function `request`](#utils-http_transport-request)
-  - [Function `get`](#utils-http_transport-get)
-  - [Function `post`](#utils-http_transport-post)
-- [`utils.yaml`](#utils-yaml)
-  - [Function `safe_load`](#utils-yaml-safe_load)
-- [`utils.pdf`](#utils-pdf)
-  - [Function `read_pdf_pages`](#utils-pdf-read_pdf_pages)
-- [`zoho.auth`](#zoho-auth)
-  - [Class `HttpTokenProvider`](#zoho-auth-httptokenprovider)
-  - [Class `ZohoOAuth2Manager`](#zoho-auth-zohooauth2manager)
-  - [Class `CatalystAuth`](#zoho-auth-catalystauth)
-  - [Function `fetch_token_from_catalyst`](#zoho-auth-fetch_token_from_catalyst)
-- [`zoho.base_client`](#zoho-base_client)
-  - [Class `BaseZohoClient`](#zoho-base_client-basezohoclient)
-- [`zoho.base_resource`](#zoho-base_resource)
-  - [Class `BaseResource`](#zoho-base_resource-baseresource)
-- [`zoho.exceptions`](#zoho-exceptions)
-  - [Class `ZohoError`](#zoho-exceptions-zohoerror)
-  - [Class `ZohoERPError`](#zoho-exceptions-zohoerperror)
-  - [Class `ZohoAuthError`](#zoho-exceptions-zohoautherror)
-  - [Class `ZohoAnalyticsError`](#zoho-exceptions-zohoanalyticserror)
-  - [Class `ZohoBooksError`](#zoho-exceptions-zohobookserror)
-  - [Class `ZohoInventoryError`](#zoho-exceptions-zohoinventoryerror)
-  - [Class `ZohoWorkdriveError`](#zoho-exceptions-zohoworkdriveerror)
-  - [Class `ZohoMailError`](#zoho-exceptions-zohomailerror)
-  - [Class `ZohoCreatorError`](#zoho-exceptions-zohocreatorerror)
-  - [Class `ZohoCliqError`](#zoho-exceptions-zohocliqerror)
-  - [Class `ZohoSheetError`](#zoho-exceptions-zohosheeterror)
-- [`zoho.security`](#zoho-security)
-  - [Function `mask_sensitive_value`](#zoho-security-mask_sensitive_value)
-  - [Function `sanitize_log_params`](#zoho-security-sanitize_log_params)
-  - [Function `sanitize_filename`](#zoho-security-sanitize_filename)
-  - [Function `resolve_output_path`](#zoho-security-resolve_output_path)
-- [`zoho.validation`](#zoho-validation)
-  - [Function `require_record`](#zoho-validation-require_record)
-  - [Function `require_records`](#zoho-validation-require_records)
-  - [Function `require_text`](#zoho-validation-require_text)
-- [`zoho.identifiers`](#zoho-identifiers)
-- [`zoho.logging`](#zoho-logging)
-  - [Function `configure_service_logger`](#zoho-logging-configure_service_logger)
-  - [Function `configure_logger`](#zoho-logging-configure_logger)
+- [`utils.http_utils.http`](#utils-http_utils-http)
+  - [Class `SeekableStream`](#utils-http_utils-http-seekablestream)
+  - [Class `_HttpMethodCallable`](#utils-http_utils-http-_httpmethodcallable)
+  - [Class `_HttpRequestCallable`](#utils-http_utils-http-_httprequestcallable)
+  - [Class `_ChunkIterable`](#utils-http_utils-http-_chunkiterable)
+  - [Function `is_json_content_type`](#utils-http_utils-http-is_json_content_type)
+  - [Function `is_html_body`](#utils-http_utils-http-is_html_body)
+  - [Function `sanitize_error_text`](#utils-http_utils-http-sanitize_error_text)
+  - [Function `extract_retry_after`](#utils-http_utils-http-extract_retry_after)
+  - [Function `parse_retry_after`](#utils-http_utils-http-parse_retry_after)
+  - [Function `validate_https_override_url`](#utils-http_utils-http-validate_https_override_url)
+  - [Function `capture_upload_positions`](#utils-http_utils-http-capture_upload_positions)
+  - [Function `rewind_uploads`](#utils-http_utils-http-rewind_uploads)
+  - [Function `filter_request_kwargs`](#utils-http_utils-http-filter_request_kwargs)
+  - [Function `send_http_request`](#utils-http_utils-http-send_http_request)
+  - [Function `unwrap_json_body`](#utils-http_utils-http-unwrap_json_body)
+  - [Function `get_json_value`](#utils-http_utils-http-get_json_value)
+  - [Function `request_json`](#utils-http_utils-http-request_json)
+  - [Function `decode_response`](#utils-http_utils-http-decode_response)
+  - [Function `write_response_to_file`](#utils-http_utils-http-write_response_to_file)
+- [`utils.file_utils.json`](#utils-file_utils-json)
+  - [Function `dumps`](#utils-file_utils-json-dumps)
+  - [Function `loads`](#utils-file_utils-json-loads)
+  - [Function `dump`](#utils-file_utils-json-dump)
+  - [Function `load`](#utils-file_utils-json-load)
+- [`utils.http_utils.http_transport`](#utils-http_utils-http_transport)
+  - [Class `TransportError`](#utils-http_utils-http_transport-transporterror)
+  - [Class `HTTPError`](#utils-http_utils-http_transport-httperror)
+  - [Class `RequestOptions`](#utils-http_utils-http_transport-requestoptions)
+  - [Class `_Headers`](#utils-http_utils-http_transport-_headers)
+  - [Class `Response`](#utils-http_utils-http_transport-response)
+  - [Class `_Readable`](#utils-http_utils-http_transport-_readable)
+  - [Class `Session`](#utils-http_utils-http_transport-session)
+  - [Function `request`](#utils-http_utils-http_transport-request)
+  - [Function `get`](#utils-http_utils-http_transport-get)
+  - [Function `post`](#utils-http_utils-http_transport-post)
+- [`utils.file_utils.yaml`](#utils-file_utils-yaml)
+  - [Function `safe_load`](#utils-file_utils-yaml-safe_load)
+- [`utils.file_utils.pdf`](#utils-file_utils-pdf)
+  - [Function `read_pdf_pages`](#utils-file_utils-pdf-read_pdf_pages)
+- [`utils.general_utils.sequences`](#utils-general_utils-sequences)
+  - [Function `parse_doc_number`](#utils-general_utils-sequences-parse_doc_number)
+- [`utils.general_utils.module_aliases`](#utils-general_utils-module_aliases)
+  - [Class `_AliasLoader`](#utils-general_utils-module_aliases-_aliasloader)
+  - [Class `_AliasFinder`](#utils-general_utils-module_aliases-_aliasfinder)
+  - [Function `register_module_aliases`](#utils-general_utils-module_aliases-register_module_aliases)
+- [`utils.general_utils.encoding`](#utils-general_utils-encoding)
+  - [Function `detect_encoding`](#utils-general_utils-encoding-detect_encoding)
+- [`zoho.core_sdk.auth`](#zoho-core_sdk-auth)
+  - [Class `HttpTokenProvider`](#zoho-core_sdk-auth-httptokenprovider)
+  - [Class `ZohoOAuth2Manager`](#zoho-core_sdk-auth-zohooauth2manager)
+  - [Class `CatalystAuth`](#zoho-core_sdk-auth-catalystauth)
+  - [Function `fetch_token_from_catalyst`](#zoho-core_sdk-auth-fetch_token_from_catalyst)
+- [`zoho.core_sdk.base_client`](#zoho-core_sdk-base_client)
+  - [Class `BaseZohoClient`](#zoho-core_sdk-base_client-basezohoclient)
+- [`zoho.core_sdk.base_resource`](#zoho-core_sdk-base_resource)
+  - [Class `BaseResource`](#zoho-core_sdk-base_resource-baseresource)
+- [`zoho.core_sdk.exceptions`](#zoho-core_sdk-exceptions)
+  - [Class `ZohoError`](#zoho-core_sdk-exceptions-zohoerror)
+  - [Class `ZohoERPError`](#zoho-core_sdk-exceptions-zohoerperror)
+  - [Class `ZohoAuthError`](#zoho-core_sdk-exceptions-zohoautherror)
+  - [Class `ZohoConfigurationError`](#zoho-core_sdk-exceptions-zohoconfigurationerror)
+  - [Class `ZohoTokenResponseError`](#zoho-core_sdk-exceptions-zohotokenresponseerror)
+  - [Class `ZohoTokenServiceError`](#zoho-core_sdk-exceptions-zohotokenserviceerror)
+  - [Class `ZohoAnalyticsError`](#zoho-core_sdk-exceptions-zohoanalyticserror)
+  - [Class `ZohoBooksError`](#zoho-core_sdk-exceptions-zohobookserror)
+  - [Class `ZohoInventoryError`](#zoho-core_sdk-exceptions-zohoinventoryerror)
+  - [Class `ZohoWorkdriveError`](#zoho-core_sdk-exceptions-zohoworkdriveerror)
+  - [Class `ZohoMailError`](#zoho-core_sdk-exceptions-zohomailerror)
+  - [Class `ZohoCreatorError`](#zoho-core_sdk-exceptions-zohocreatorerror)
+  - [Class `ZohoCliqError`](#zoho-core_sdk-exceptions-zohocliqerror)
+  - [Class `ZohoSheetError`](#zoho-core_sdk-exceptions-zohosheeterror)
+- [`zoho.core_sdk.security`](#zoho-core_sdk-security)
+  - [Function `mask_sensitive_value`](#zoho-core_sdk-security-mask_sensitive_value)
+  - [Function `sanitize_log_params`](#zoho-core_sdk-security-sanitize_log_params)
+  - [Function `sanitize_filename`](#zoho-core_sdk-security-sanitize_filename)
+  - [Function `resolve_output_path`](#zoho-core_sdk-security-resolve_output_path)
+- [`zoho.core_sdk.validation`](#zoho-core_sdk-validation)
+  - [Function `require_record`](#zoho-core_sdk-validation-require_record)
+  - [Function `require_records`](#zoho-core_sdk-validation-require_records)
+  - [Function `require_text`](#zoho-core_sdk-validation-require_text)
+- [`zoho.core_sdk.identifiers`](#zoho-core_sdk-identifiers)
+- [`zoho.core_sdk.logging`](#zoho-core_sdk-logging)
+  - [Function `configure_service_logger`](#zoho-core_sdk-logging-configure_service_logger)
+  - [Function `configure_logger`](#zoho-core_sdk-logging-configure_logger)
 
 ---
 
-## Module `utils.http`
+## Module `utils.http_utils.http`
 
-**Source:** [`src/utils/http.py`](src/utils/http.py)
+**Source:** [`src/utils/http_utils/http.py`](src/utils/http_utils/http.py)
 
 Reusable HTTP transport, session, retry, and streaming download utilities.
 
@@ -262,9 +273,9 @@ Write bytes or a streaming HTTP response to ``destination`` and close it.
 
 ---
 
-## Module `utils.json`
+## Module `utils.file_utils.json`
 
-**Source:** [`src/utils/json.py`](src/utils/json.py)
+**Source:** [`src/utils/file_utils/json.py`](src/utils/file_utils/json.py)
 
 Project JSON codec backed by python-rapidjson.
 
@@ -305,9 +316,9 @@ Read one JSON document from a text or binary stream.
 
 ---
 
-## Module `utils.http_transport`
+## Module `utils.http_utils.http_transport`
 
-**Source:** [`src/utils/http_transport.py`](src/utils/http_transport.py)
+**Source:** [`src/utils/http_utils/http_transport.py`](src/utils/http_utils/http_transport.py)
 
 Synchronous pyqwest transport for the project's HTTP request conventions.
 
@@ -460,9 +471,9 @@ def post(url: str, **kwargs: Unpack[RequestOptions]) -> Response
 
 ---
 
-## Module `utils.yaml`
+## Module `utils.file_utils.yaml`
 
-**Source:** [`src/utils/yaml.py`](src/utils/yaml.py)
+**Source:** [`src/utils/file_utils/yaml.py`](src/utils/file_utils/yaml.py)
 
 YAMLRocks loading with the project's existing safe YAML policy.
 
@@ -479,9 +490,9 @@ Read one document, preserving legacy scalars and rejecting custom tags.
 
 ---
 
-## Module `utils.pdf`
+## Module `utils.file_utils.pdf`
 
-**Source:** [`src/utils/pdf.py`](src/utils/pdf.py)
+**Source:** [`src/utils/file_utils/pdf.py`](src/utils/file_utils/pdf.py)
 
 Text extraction shared by supplier PDF parsers.
 
@@ -498,9 +509,105 @@ Extract page text with normalized newlines and close native handles.
 
 ---
 
-## Module `zoho.auth`
+## Module `utils.general_utils.sequences`
 
-**Source:** [`src/zoho/auth.py`](src/zoho/auth.py)
+**Source:** [`src/utils/general_utils/sequences.py`](src/utils/general_utils/sequences.py)
+
+Generic document-number parsing shared by resources and workflows.
+
+**Declared Exports (`__all__`):**
+`parse_doc_number`
+
+### Function `parse_doc_number`
+
+```python
+def parse_doc_number(doc_no: str) -> tuple[str, int, int]
+```
+
+Return prefix, trailing integer and observed width; width zero means no suffix.
+
+---
+
+## Module `utils.general_utils.module_aliases`
+
+**Source:** [`src/utils/general_utils/module_aliases.py`](src/utils/general_utils/module_aliases.py)
+
+Explicit lazy import aliases for modules moved into focused packages.
+
+### Class `_AliasLoader`
+
+**Bases:** `importlib.abc.Loader`
+
+#### Methods
+
+##### `_AliasLoader.__init__`
+
+```python
+def __init__(self, target: str) -> None
+```
+
+##### `_AliasLoader.create_module`
+
+```python
+def create_module(self, spec: importlib.machinery.ModuleSpec) -> ModuleType
+```
+
+##### `_AliasLoader.exec_module`
+
+```python
+def exec_module(self, module: ModuleType) -> None
+```
+
+### Class `_AliasFinder`
+
+**Bases:** `importlib.abc.MetaPathFinder`
+
+#### Methods
+
+##### `_AliasFinder.__init__`
+
+```python
+def __init__(self) -> None
+```
+
+##### `_AliasFinder.find_spec`
+
+```python
+def find_spec(self, fullname: str, path: Sequence[str] | None = None, target: ModuleType | None = None) -> importlib.machinery.ModuleSpec | None
+```
+
+### Function `register_module_aliases`
+
+```python
+def register_module_aliases(aliases: Mapping[str, str]) -> None
+```
+
+Register explicit old-to-canonical names without loading their targets.
+
+---
+
+## Module `utils.general_utils.encoding`
+
+**Source:** [`src/utils/general_utils/encoding.py`](src/utils/general_utils/encoding.py)
+
+Fast text and stream character encoding detection using Rust chardetng.
+
+**Declared Exports (`__all__`):**
+`detect_encoding`
+
+### Function `detect_encoding`
+
+```python
+def detect_encoding(data: bytes, fallback: str = 'utf-8') -> str
+```
+
+Detect the character encoding of bytes using Rust chardetng, falling back safely.
+
+---
+
+## Module `zoho.core_sdk.auth`
+
+**Source:** [`src/zoho/core_sdk/auth.py`](src/zoho/core_sdk/auth.py)
 
 ### Class `HttpTokenProvider`
 
@@ -599,9 +706,9 @@ requested token. Error messages never include response payloads or tokens.
 
 ---
 
-## Module `zoho.base_client`
+## Module `zoho.core_sdk.base_client`
 
-**Source:** [`src/zoho/base_client.py`](src/zoho/base_client.py)
+**Source:** [`src/zoho/core_sdk/base_client.py`](src/zoho/core_sdk/base_client.py)
 
 ### Class `BaseZohoClient`
 
@@ -639,9 +746,9 @@ def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None
 
 ---
 
-## Module `zoho.base_resource`
+## Module `zoho.core_sdk.base_resource`
 
-**Source:** [`src/zoho/base_resource.py`](src/zoho/base_resource.py)
+**Source:** [`src/zoho/core_sdk/base_resource.py`](src/zoho/core_sdk/base_resource.py)
 
 ### Class `BaseResource`
 
@@ -730,9 +837,14 @@ Helper for action endpoints like /invoices/{id}/status/sent.
 
 ---
 
-## Module `zoho.exceptions`
+## Module `zoho.core_sdk.exceptions`
 
-**Source:** [`src/zoho/exceptions.py`](src/zoho/exceptions.py)
+**Source:** [`src/zoho/core_sdk/exceptions.py`](src/zoho/core_sdk/exceptions.py)
+
+SDK failures with stable service types and explicit authentication categories.
+
+Response metadata is available for inspection; string conversion deliberately
+contains only the caller-supplied message, never the response payload.
 
 ### Class `ZohoError`
 
@@ -745,7 +857,7 @@ Base exception class for all Zoho SDK errors.
 ##### `ZohoError.__init__`
 
 ```python
-def __init__(self, message: str, status_code: int | None = None, error_code: str | int | None = None, response_data: Any | None = None, endpoint: str | None = None, retry_after: str | int | None = None)
+def __init__(self, message: str, status_code: int | None = None, error_code: str | int | None = None, response_data: object = None, endpoint: str | None = None, retry_after: str | int | None = None) -> None
 ```
 
 ### Class `ZohoERPError`
@@ -759,6 +871,24 @@ Zoho ERP API failure.
 **Bases:** `ZohoError`
 
 Authentication or token-provider failure.
+
+### Class `ZohoConfigurationError`
+
+**Bases:** `ZohoError`, `ValueError`
+
+Missing or invalid local SDK configuration; fix before retrying.
+
+### Class `ZohoTokenResponseError`
+
+**Bases:** `ZohoAuthError`, `ValueError`
+
+A token response is rejected, missing required fields, or malformed.
+
+### Class `ZohoTokenServiceError`
+
+**Bases:** `ZohoAuthError`
+
+The token service could not complete an HTTP request.
 
 ### Class `ZohoAnalyticsError`
 
@@ -810,9 +940,9 @@ Custom exception for Zoho Sheet API errors.
 
 ---
 
-## Module `zoho.security`
+## Module `zoho.core_sdk.security`
 
-**Source:** [`src/zoho/security.py`](src/zoho/security.py)
+**Source:** [`src/zoho/core_sdk/security.py`](src/zoho/core_sdk/security.py)
 
 ### Constants & Settings
 
@@ -859,9 +989,9 @@ Safely resolve an output file path.
 
 ---
 
-## Module `zoho.validation`
+## Module `zoho.core_sdk.validation`
 
-**Source:** [`src/zoho/validation.py`](src/zoho/validation.py)
+**Source:** [`src/zoho/core_sdk/validation.py`](src/zoho/core_sdk/validation.py)
 
 Small shape checks for untrusted service and file records.
 
@@ -885,9 +1015,9 @@ def require_text(value: object, context: str, *, allow_empty: bool = False) -> s
 
 ---
 
-## Module `zoho.identifiers`
+## Module `zoho.core_sdk.identifiers`
 
-**Source:** [`src/zoho/identifiers.py`](src/zoho/identifiers.py)
+**Source:** [`src/zoho/core_sdk/identifiers.py`](src/zoho/core_sdk/identifiers.py)
 
 Nominal identifiers for validated records; these do not validate tenant scope.
 
@@ -896,9 +1026,9 @@ Nominal identifiers for validated records; these do not validate tenant scope.
 
 ---
 
-## Module `zoho.logging`
+## Module `zoho.core_sdk.logging`
 
-**Source:** [`src/zoho/logging.py`](src/zoho/logging.py)
+**Source:** [`src/zoho/core_sdk/logging.py`](src/zoho/core_sdk/logging.py)
 
 ### Function `configure_service_logger`
 

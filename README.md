@@ -53,17 +53,22 @@ linked operational documentation.
 ## Code organization
 
 ```text
-src/zoho/       API clients, transport, resources and generic API helpers
-src/workflows/ Business rules; injected clients; no servers or CLI parsers
-apps/          CLI commands and local review servers
-apps/static/   Web HTML, CSS and JavaScript
-tests/        SDK and application tests (workflow tests also live beside code)
-scripts/       Temporary, ignored scratch work
-output/        Generated reports and checkpoints, ignored by Git
+src/utils/       HTTP, file and general utility subpackages
+src/zoho/        Service clients; shared SDK code in core_sdk/
+src/helpers/     Catalog, reports, formatting and composite operations
+src/workflows/   Domain packages; runtime/ setup and core/ pure mechanics
+apps/            Dispatchers and CLI adapters; implementations in domain folders
+apps/tools/      Project analysis, cleanup and code generation
+apps/static/     Web HTML, CSS and JavaScript
+tests/           Tests mirroring source ownership and shared contracts
+scripts/         Temporary, ignored scratch work
+output/          Generated reports and checkpoints, ignored by Git
 ```
 
-Imports flow `zoho <- workflows <- apps`. Shared workflow mechanics live in
-`workflows.core`; domain rules stay in their workflow packages. Inventory owns
+Imports flow `utils <- zoho <- helpers <- workflows <- apps`. Shared pure workflow
+mechanics live in `workflows.core`; configuration and client factories live in
+`workflows.runtime`. See [package layout](okf/project-organization.md#capability-packages)
+for canonical locations and import compatibility. Domain rules stay in their workflow packages. Inventory owns
 item/catalog operations, including item lookups needed for Books transactions.
 
 ## Use the library
@@ -71,7 +76,7 @@ item/catalog operations, including item lookups needed for Books transactions.
 For the generated ERP client, see [ERP SDK usage and regeneration](okf/zoho-erp.md).
 
 Low-level SDK constructors take credentials explicitly. Application runners load
-configuration and construct clients through `workflows.core.auth`. Keep tokens
+configuration and construct clients through `workflows.runtime.auth`. Keep tokens
 out of source code, reports and logs.
 
 ```python

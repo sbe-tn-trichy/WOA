@@ -8,12 +8,12 @@ from decimal import Decimal
 from pathlib import Path
 from collections.abc import Sequence
 from typing import Protocol
-from utils import json
+from utils.file_utils import json
 import re
 import time
 
 from workflows.core.checkpoint import write_atomic_json
-from zoho.validation import require_record, require_records, require_text
+from zoho.core_sdk.validation import require_record, require_records, require_text
 from .processor import number, stocks
 
 

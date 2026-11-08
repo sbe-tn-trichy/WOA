@@ -12,16 +12,16 @@ try:
 except ImportError:
     import _bootstrap  # noqa: F401
 
-from workflows.core.auth import get_books_client
+from workflows.runtime.auth import get_books_client
 from workflows.core.checkpoint import write_atomic_json
-from workflows.core.config import Config, get_config
+from workflows.runtime.config import Config, get_config
 from workflows.core.dates import get_fy_date_range
 from workflows.polycab_credit_review import (
     CreditCorrectionError, CreditCorrectionResult, RmaCreditPolicy, build_credit_correction_plan,
     execute_credit_correction, review_polycab_vendor_credits,
     review_saved_polycab_vendor_credits,
 )
-from zoho.security import resolve_output_path
+from zoho.core_sdk.security import resolve_output_path
 
 
 def main(argv: list[str] | None = None) -> int:

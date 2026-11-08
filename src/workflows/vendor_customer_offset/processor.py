@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 from collections import defaultdict
 from dataclasses import dataclass
@@ -12,7 +12,7 @@ from decimal import Decimal, InvalidOperation
 from math import isfinite
 from collections.abc import Iterable, Mapping, Sequence
 
-from zoho.helpers import (
+from helpers import (
     GSTIN_PATTERN,
     allocate_documents_fifo,
     fetch_open_bills,
@@ -23,7 +23,7 @@ from zoho.helpers import (
 )
 from ..core.checkpoint import write_atomic_json
 from ..core.matching import to_decimal
-from zoho.validation import require_record, require_records, require_text
+from zoho.core_sdk.validation import require_record, require_records, require_text
 from .contracts import (
     AmbiguousPair, BillAllocation, InvoiceAllocation, OffsetBooksClient,
     OffsetReport, OffsetTranche, PairSummary, SkippedOffset, FailedOffset,

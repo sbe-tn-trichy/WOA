@@ -8,7 +8,7 @@ from collections.abc import Mapping, Sequence
 from typing import NotRequired, TypedDict
 
 from workflows.core.matching import to_decimal
-from zoho.validation import require_record, require_records, require_text
+from zoho.core_sdk.validation import require_record, require_records, require_text
 
 
 class StorageAllocation(TypedDict):

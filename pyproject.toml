@@ -53,31 +53,34 @@ extra-paths = ["src"]
 
 [tool.ty.src]
 include = [
-    "src/utils/http.py",
-    "src/utils/json.py",
-    "src/utils/http_transport.py",
-    "src/utils/yaml.py",
-    "src/utils/pdf.py",
+    "src/utils/http_utils/http.py",
+    "src/utils/file_utils/json.py",
+    "src/utils/http_utils/http_transport.py",
+    "src/utils/file_utils/yaml.py",
+    "src/utils/file_utils/pdf.py",
     "src/workflows/core/sequences.py",
     "src/workflows/core/dates.py",
     "src/workflows/core/checkpoint.py",
     "src/workflows/core/payments.py",
-    "src/workflows/collection_reconciliation/allocator.py",
-    "src/workflows/collection_reconciliation/types.py",
-    "src/workflows/collection_reconciliation/identifiers.py",
-    "src/workflows/collection_reconciliation/transaction_index.py",
+    "src/workflows/collection_payments/allocator.py",
+    "src/workflows/collection_payments/types.py",
+    "src/workflows/collection_payments/identifiers.py",
+    "src/workflows/collection_payments/transaction_index.py",
     "src/workflows/stock_transfer",
-    "src/zoho/helpers/sequences.py",
-    "src/zoho/helpers/dates.py",
-    "src/zoho/validation.py",
-    "src/zoho/identifiers.py",
-    "src/zoho/base_resource.py",
+    "src/helpers/formatting/sequences.py",
+    "src/utils/general_utils/sequences.py",
+    "src/utils/general_utils/module_aliases.py",
+    "src/helpers/formatting/dates.py",
+    "src/zoho/core_sdk/validation.py",
+    "src/zoho/core_sdk/exceptions.py",
+    "src/zoho/core_sdk/identifiers.py",
+    "src/zoho/core_sdk/base_resource.py",
     "src/workflows/payment_renumbering",
     "src/workflows/vendor_customer_offset/__init__.py",
     "src/workflows/vendor_customer_offset/contracts.py",
     "src/workflows/vendor_customer_offset/processor.py",
     "apps/payments/renumber_sbe2627_payments.py",
-    "apps/analyze_project.py",
+    "apps/tools/analyze_project.py",
     "tests/typecheck/renumber_contracts.py",
 ]
 
@@ -85,7 +88,8 @@ include = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-"zoho.erp" = ["manifest.json"]
+"zoho.analytics.openapi" = ["manifest.json"]
+"zoho.erp.openapi" = ["manifest.json"]
 "zoho.books.openapi" = ["manifest.json"]
 
 [tool.pytest.ini_options]

@@ -5,8 +5,8 @@ type: workflow
 # Creator payment image OCR
 
 `apps/review_creator_payment_images.py` owns the read-only evidence workflow.
-`workflows.creator_payment_ocr` accepts an injected Creator client and OCR
-callable. The CLI constructs its client through `workflows.core.auth`.
+`workflows.creator_payments.ocr` accepts an injected Creator client and OCR
+callable. The CLI constructs its client through `workflows.runtime.auth`.
 
 Run a small sample:
 

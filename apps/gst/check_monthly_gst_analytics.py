@@ -3,16 +3,16 @@ import argparse
 from decimal import Decimal
 from datetime import date, datetime
 from pathlib import Path
-from utils import json
+from utils.file_utils import json
 try:
     from . import _bootstrap
 except ImportError:
     import _bootstrap
-from workflows.core.auth import get_analytics_client
+from workflows.runtime.auth import get_analytics_client
 from workflows.core.matching import parse_currency_amount
 from workflows.core.checkpoint import write_atomic_json, atomic_text_writer
 from workflows.audited_financials.reports import _firm_rule
-from workflows.gst_monthly import check_monthly_gst, month_bounds
+from workflows.gst.monthly import check_monthly_gst, month_bounds
 
 
 def main():

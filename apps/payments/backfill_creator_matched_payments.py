@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 from collections.abc import Sequence
 
@@ -13,16 +13,8 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client, get_creator_client
-from workflows.creator_books_payment_link import (
-    BackfillConfig,
-    BackfillResult,
-    CreatorBooksPaymentLinkBackfill,
-    build_native_payment_indexes,
-    classify_links,
-    find_creator_sequence_gaps,
-    resolve_books_payment,
-)
+from workflows.runtime.auth import get_books_client, get_creator_client
+from workflows.creator_payments.books_link import BackfillConfig, BackfillResult, CreatorBooksPaymentLinkBackfill, build_native_payment_indexes, classify_links, find_creator_sequence_gaps, resolve_books_payment
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -1,7 +1,7 @@
-from utils import json
+from utils.file_utils import json
 from typing import Any
-from utils.http import write_response_to_file
-from zoho.security import resolve_output_path
+from utils.http_utils.http import write_response_to_file
+from zoho.core_sdk.security import resolve_output_path
 
 from ..base import BaseResource
 from .mixins import ActiveInactiveMixin

@@ -5,7 +5,7 @@ description: Read-only, resumable workspace metadata collection and relationship
 tags: [analytics, metadata, relationships, rate-limits, snapshots]
 sources:
   - id: metadata-resource
-    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/zoho/analytics/metadata.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/zoho/analytics/custom/metadata.py
     title: Analytics metadata resource
     author: team:sbe-tn-trichy
     last_modified: 2026-08-02
@@ -13,6 +13,8 @@ status: active
 ---
 
 # Metadata Snapshot API
+
+See the [Analytics SDK reference](zoho-analytics.md) for the generated and custom resource layout.
 
 `ZohoAnalyticsAPI.metadata` provides read-only methods for workspace details,
 folders, data sources, paginated views, view details, table columns, and column

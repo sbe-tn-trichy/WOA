@@ -8,7 +8,7 @@ import pytest
 
 from zoho.books import ZohoBooksAPI
 from zoho.books.openapi import RESOURCE_TYPES
-from zoho.base_resource import BaseResource
+from zoho.core_sdk.base_resource import BaseResource
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = json.loads((ROOT / 'src/zoho/books/openapi/manifest.json').read_text())
@@ -28,7 +28,7 @@ def test_every_operation_routes_through_books_transport(api, resource, operation
     params = {n: 'value' for n in operation['required_query']}
     headers = {n: 'value' for n in operation['required_headers']}
     args = ['id /?#'] * len(operation['path_parameters'])
-    with patch('zoho.base_client.BaseZohoClient.request', return_value={'code': 0}) as request:
+    with patch('zoho.core_sdk.base_client.BaseZohoClient.request', return_value={'code': 0}) as request:
         result = getattr(getattr(api,resource),operation['name'])(
             *args, body={} if operation['body_required'] else None,
             params=params, headers=headers, timeout=11, stream=True)
@@ -52,7 +52,8 @@ def test_inventory_exclusion_and_existing_methods(api):
     for r,o in OPERATIONS:
         assert callable(getattr(getattr(api,o['wrapper_resource']),o['wrapper_name']))
         if o['generated']:
-            assert not any(o['name'] in vars(base) for base in type(getattr(api,r)).__mro__[1:])
+            hierarchy = type(getattr(api, r)).__mro__
+            assert sum(o['name'] in vars(base) for base in hierarchy) == 1
     from zoho.books.custom.purchases import Bills
     from zoho.books.custom.ledger import Registers
     assert isinstance(api.bills, Bills)
@@ -124,13 +125,32 @@ paths:
 ''')
     target = tmp_path/'generated'
     module.generate(source,target)
-    first = (target/'generated.py').read_bytes()
+    def snapshot():
+        return {path.relative_to(target): path.read_bytes()
+                for path in target.rglob('*') if path.is_file()}
+
+    first = snapshot()
     module.generate(source,target)
-    assert (target/'generated.py').read_bytes() == first
+    assert snapshot() == first
     f.write_text(f.read_text().replace('www.zohoapis.com','example.com'))
     with pytest.raises(ValueError,match='server'):
         module.generate(source,target)
-    assert (target/'generated.py').read_bytes() == first
+    assert snapshot() == first
+
+
+def test_generated_layout_limits_and_resource_imports():
+    from zoho.books.openapi.generated import Contacts, CreditNotes, Invoices
+
+    package = ROOT / 'src/zoho/books/openapi'
+    generated = [package / 'generated.py', *(package / 'resources').rglob('*.py')]
+    assert len(generated) > len(RESOURCE_TYPES)
+    for path in generated:
+        assert len(path.read_text(encoding='utf-8').splitlines()) <= 400, path
+    for directory in {path.parent for path in generated}:
+        assert sum(path.is_file() for path in directory.iterdir()) <= 10, directory
+    for name, cls in [('contacts', Contacts), ('credit_notes', CreditNotes), ('invoices', Invoices)]:
+        assert RESOURCE_TYPES[name] is cls
+        assert cls.__module__.startswith('zoho.books.openapi.resources.')
 
 
 def test_one_canonical_wrapper_per_http_route(api):
@@ -201,7 +221,7 @@ paths:
     actions = [o for v in manifest.values() for o in v['operations'] if o['method']=='POST']
     assert sum(o['generated'] for o in actions) == 1
     assert len({(o['wrapper_resource'],o['wrapper_name']) for o in actions}) == 1
-    text = (tmp_path/'target/generated.py').read_text()
+    text = '\n'.join(path.read_text() for path in (tmp_path/'target/resources').rglob('*.py'))
     assert 'def get_copy(' not in text
     assert text.count('def do_action(') == 1
 

@@ -109,7 +109,7 @@ whose number already uses the destination series while its Books location is
 still the source is held for manual reconciliation.
 
 `apps/move_inter_location_customer_payments.py` calls the reusable
-`workflows.inter_location_payment_updates` helper for reviewed FY 2025–26
+`workflows.inter_location.payment_updates` helper for reviewed FY 2025–26
 customer payments. The default batch is up to 15 `SB2526CP-` payments;
 the prefix can be selected explicitly for another FY 2025–26 series.
 It checks current Books payments,

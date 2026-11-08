@@ -5,7 +5,7 @@ description: Runtime configuration, environment variables, organization identifi
 tags: [configuration, environment, credentials]
 sources:
   - id: config-module
-    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/workflows/core/config.py
+    resource: https://github.com/sbe-tn-trichy/WOA/blob/main/src/workflows/runtime/config.py
     title: Workflow Configuration module
     author: team:sbe-tn-trichy
     last_modified: 2026-08-02
@@ -32,7 +32,7 @@ non-object configuration, and missing active profiles fail closed instead of
 falling through to a lower-priority file, preventing accidental cross-tenant
 identifier selection.
 
-YAML uses YAMLRocks from the base dependencies through `utils.yaml`. The shared
+YAML uses YAMLRocks from the base dependencies through `utils.file_utils.yaml`. The shared
 loader retains legacy scalar interpretation, rejects custom/Python tags and
 multiple documents, and validates source tags before conversion.
 YAMLRocks may normalize formatting on writes; date objects are emitted as quoted

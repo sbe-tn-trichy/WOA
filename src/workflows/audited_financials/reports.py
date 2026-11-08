@@ -1,14 +1,14 @@
 """Configuration-driven, registration-specific read-only Books report helpers."""
 from __future__ import annotations
 
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 from collections.abc import Mapping
 from typing import Any
 
-from utils import yaml
+from utils.file_utils import yaml
 
-from workflows.core.config import Config, get_config
+from workflows.runtime.config import Config, get_config
 
 
 def _normalize(value: str) -> str:

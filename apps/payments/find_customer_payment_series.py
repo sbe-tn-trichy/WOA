@@ -1,7 +1,7 @@
 """Find and analyze unique transaction number series for customer payments in Zoho Books using Zoho Analytics with FY filtering."""
 
 import argparse
-from utils import json
+from utils.file_utils import json
 import os
 from datetime import datetime
 from pathlib import Path
@@ -12,9 +12,9 @@ try:
 except ImportError:
     import _bootstrap
 
-from workflows.core.auth import get_analytics_client
+from workflows.runtime.auth import get_analytics_client
 from workflows.core.dates import get_fy_date_range
-from workflows.payment_inspection import fetch_customer_payments, extract_series_info
+from workflows.customer_payments.inspection import fetch_customer_payments, extract_series_info
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 

@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import importlib
-import importlib.abc
-import importlib.machinery
 import sys
 import types
-from collections.abc import Sequence
 
 from . import _bootstrap  # noqa: F401
 
 _REDIRECT_MAP: dict[str, str] = {
+    "apps.analyze_project": "apps.tools.analyze_project",
+    "apps.cleanup_project": "apps.tools.cleanup_project",
+    "apps.generate_api_reference": "apps.tools.generate_api_reference",
+    "apps.generate_erp_sdk": "apps.tools.generate_erp_sdk",
     # tools
     "apps.analytics_metadata": "apps.tools.analytics_metadata",
     "apps.download_books_custom_modules": "apps.tools.download_books_custom_modules",
@@ -89,35 +90,9 @@ _REDIRECT_MAP: dict[str, str] = {
 }
 
 
-class _AliasLoader(importlib.abc.Loader):
-    def __init__(self, target: str) -> None:
-        self.target = target
+from utils.general_utils.module_aliases import register_module_aliases
 
-    def create_module(self, spec: importlib.machinery.ModuleSpec) -> types.ModuleType:
-        mod: types.ModuleType = importlib.import_module(self.target)
-        sys.modules[spec.name] = mod
-        return mod
-
-    def exec_module(self, module: types.ModuleType) -> None:
-        pass
-
-
-class _AppsRedirectFinder(importlib.abc.MetaPathFinder):
-    def find_spec(
-        self,
-        fullname: str,
-        path: Sequence[str] | None = None,
-        target: types.ModuleType | None = None,
-    ) -> importlib.machinery.ModuleSpec | None:
-        if fullname in _REDIRECT_MAP:
-            target_name = _REDIRECT_MAP[fullname]
-            loader = _AliasLoader(target_name)
-            return importlib.machinery.ModuleSpec(fullname, loader, origin="alias")
-        return None
-
-
-if not any(isinstance(finder, _AppsRedirectFinder) for finder in sys.meta_path):
-    sys.meta_path.insert(0, _AppsRedirectFinder())
+register_module_aliases(_REDIRECT_MAP)
 
 
 def __getattr__(name: str) -> types.ModuleType:

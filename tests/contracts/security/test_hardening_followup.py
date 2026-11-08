@@ -7,14 +7,14 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from utils import yaml
+from utils.file_utils import yaml
 
-from workflows.core.auth import get_creator_client
-from workflows.core.config import Config, _load_config_dict, _flatten_profile
-from workflows.core.exceptions import ZohoAuthError
+from workflows.runtime.auth import get_creator_client
+from workflows.runtime.config import Config, _load_config_dict, _flatten_profile
+from workflows.runtime.exceptions import ZohoAuthError
 from workflows.core.matching import reconcile_rows
-from zoho.base_client import BaseZohoClient
-from zoho.exceptions import ZohoBooksError
+from zoho.core_sdk.base_client import BaseZohoClient
+from zoho.core_sdk.exceptions import ZohoBooksError
 
 
 def test_project_configuration_precedes_user_configuration(tmp_path: Path):
@@ -315,7 +315,7 @@ def blocked(name, *args, **kwargs):
         raise ImportError('blocked optional dependency')
     return real_import(name, *args, **kwargs)
 builtins.__import__ = blocked
-import workflows.core.auth
+import workflows.runtime.auth
 """
     completed = subprocess.run(
         [sys.executable, "-c", script],

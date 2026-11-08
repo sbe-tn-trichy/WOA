@@ -7,9 +7,9 @@ okf_version: "0.2"
 ## Orientation
 
 * [Project Overview](project-overview.md) - Unified purpose, scope, low-level clients, and workflow domain boundaries.
-* [Package Architecture](architecture.md) - Layered package architecture, import direction rules, and subpackage encapsulation.
+* [Package Architecture](architecture.md) - Core SDK, sibling composite helpers, import direction rules, and subpackage encapsulation.
 
-* [Project Organization](project-organization.md) - Navigation ownership, safe routine cleanup, promoted scratch operations, offline analysis, incremental reviews and overlapping command boundaries.
+* [Project Organization](project-organization.md) - Capability package map, file placement and refactoring policy, navigation ownership, safe routine cleanup, offline analysis and command boundaries.
 
 * [Project Analysis and Finding Register](../PROJECT_ANALYSIS.md) - SDK, helper and apps review ownership, finding status and verification criteria.
 
@@ -41,7 +41,7 @@ okf_version: "0.2"
 * [Google Sheets SDK](google-sheets-sdk.md) - Client, authentication helpers, and range operations for Google Sheets API v4.
 * [Zoho Inventory Client](zoho-inventory.md) - Item and inventory API routing, purchase-account scoping, and migration requirements.
 * [Zoho Books Client](zoho-books.md) - Canonical endpoint ownership, OpenAPI/custom resources, pagination, and customer-only contact retrieval.
-* [Zoho ERP SDK](zoho-erp.md) - Generated ERP v1/v3 resources, authentication and YAML regeneration.
+* [Zoho ERP SDK](zoho-erp.md) - Generated ERP v1/v3 resources, authentication, modular generation, compatibility and recovery contracts.
 * [Books Financial Statement Sheet](books-statement-sheet.md) - Reviewed Books report mappings into the linked FY 2025–26 Google Sheets template.
 * [NCE document Preparation](statement-schedules.md) - Two-year Schedule III notes, Google statement links, and current-year fixed-asset depreciation verification.
 * [Financial Statement Comparison](financial-statement-comparison.md) - Exact Google Sheet cells versus OAuth Books P&L and balance-sheet schedules.
@@ -52,6 +52,7 @@ okf_version: "0.2"
 * [Polycab RSO Import](polycab-rso-import.md) - Parse Polycab return-sales-order PDFs, create location-scoped Books sales orders, and attach the source PDF.
 * [Polycab Credit Import](polycab-credit-import.md) - Scheme Kitty credits and traceable RSO credit/journal/customer-payment creation.
 * [Polycab Vendor-credit Review](polycab-credit-review.md) - Poppler PDF audits, labeled references and reviewed RMA credit/journal/payment corrections.
+* [Zoho Analytics SDK](zoho-analytics.md) - Generated v2 domain operations, custom resources, and regeneration.
 * [Analytics Metadata Snapshots](analytics-metadata.md) - Cached SQLite analysis, manual sync, freshness timestamps, saved query SQL, and workflow impact.
 * [HDFC Statement Completeness](bank-statement-check.md) - Read-only CSV comparison with the Analytics Books bank-statement replica.
 * [Bank–Vendor Ledger Matching](bank-vendor-ledger-matching.md) - Books bank-withdrawal matching and ICICI UPI reference normalization.

@@ -11,9 +11,9 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client, get_creator_client
-from workflows.core.config import Config
-from workflows.creator_beat_sync import sync_creator_beats
+from workflows.runtime.auth import get_books_client, get_creator_client
+from workflows.runtime.config import Config
+from workflows.customer_management.creator_beat_sync import sync_creator_beats
 
 
 def main() -> int:

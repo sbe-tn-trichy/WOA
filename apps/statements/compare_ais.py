@@ -12,8 +12,8 @@ try:
 except ImportError:
     import _bootstrap
 
-from workflows.core.auth import get_books_client
-from workflows.core.config import Config
+from workflows.runtime.auth import get_books_client
+from workflows.runtime.config import Config
 from workflows.ais_reconciliation import (
     CollectionConfig, collect_books_snapshot, read_ais_master, read_snapshot,
     reconcile_ais, write_report, write_snapshot,

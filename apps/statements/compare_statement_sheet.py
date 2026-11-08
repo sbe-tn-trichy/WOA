@@ -5,7 +5,7 @@ import argparse
 from dataclasses import asdict
 from datetime import datetime, timezone
 from decimal import Decimal
-from utils import json
+from utils.file_utils import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,7 +15,7 @@ try:
 except ImportError:
     import _bootstrap  # noqa: F401
 
-from workflows.core.auth import get_books_client
+from workflows.runtime.auth import get_books_client
 from workflows.core.checkpoint import atomic_text_writer, write_atomic_json
 from workflows.financial_statement_comparison import (
     compare_statement_cells, fetch_schedule_reports, read_sheet_cells, render_comparison,

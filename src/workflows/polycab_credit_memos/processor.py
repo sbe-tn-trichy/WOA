@@ -1,15 +1,15 @@
 import os
 import re
-from utils.pdf import read_pdf_pages
+from utils.file_utils.pdf import read_pdf_pages
 import logging
 from datetime import datetime
 from typing import Any
-from zoho.helpers import (
+from helpers import (
     attach_file_to_books_resource,
     find_bill_by_number,
     workdrive_upload_file,
 )
-from ..core.config import Config
+from workflows.runtime.config import Config
 from ..vendor_ledger_reconciliation.matcher import fetch_vendor_credits
 
 logger = logging.getLogger(__name__)
@@ -306,7 +306,7 @@ def process_polycab_credit_memos(
         Dict[str, Any]: Detailed counts of processed, created, uploaded, and skipped items.
     """
     if not books_client or not wd_client:
-        from ..core.auth import get_books_client, get_workdrive_client, fetch_access_tokens
+        from workflows.runtime.auth import get_books_client, get_workdrive_client, fetch_access_tokens
         tokens = fetch_access_tokens()
         if not books_client:
             books_client = get_books_client(token=tokens.get("books"))
@@ -447,7 +447,7 @@ def check_vendor_credits_location(
         Dict[str, Any]: Categorized credit notes (correct, mismatched, no_location) and totals.
     """
     if not books_client:
-        from ..core.auth import get_books_client
+        from workflows.runtime.auth import get_books_client
         books_client = get_books_client()
 
     logger.info(f"Fetching ALL vendor credits for vendor_id={vendor_id}...")

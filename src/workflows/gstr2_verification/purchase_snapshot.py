@@ -8,7 +8,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from zoho.helpers import parse_date
+from helpers import parse_date
 
 from .bill_snapshot import _money
 

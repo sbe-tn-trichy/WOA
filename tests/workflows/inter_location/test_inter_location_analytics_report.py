@@ -1,10 +1,6 @@
 import pytest
 
-from workflows.inter_location_analytics_report import (
-    build_inter_location_document_query,
-    build_inter_location_query,
-    validate_document_rows,
-)
+from workflows.inter_location.analytics_report import build_inter_location_document_query, build_inter_location_query, validate_document_rows
 from zoho.analytics.resources import Views
 
 
@@ -90,7 +86,7 @@ def test_update_query_table_posts_config():
 @pytest.mark.parametrize("apply", [False, True])
 def test_managed_design_synchronizes_and_verifies_before_success(apply):
     from unittest.mock import MagicMock, patch
-    from workflows.inter_location_analytics_report import sync_inter_location_contra_query_table
+    from workflows.inter_location.analytics_report import sync_inter_location_contra_query_table
 
     analytics = MagicMock()
     row = {"Issue Type": "Customer payment vs invoice", "Debit Transaction ID": "cp",
@@ -115,7 +111,7 @@ def test_managed_design_synchronizes_and_verifies_before_success(apply):
 def test_managed_design_stops_on_sync_failure():
     from unittest.mock import MagicMock, patch
     from workflows.analytics_catalog import MetadataSyncError
-    from workflows.inter_location_analytics_report import sync_inter_location_contra_query_table
+    from workflows.inter_location.analytics_report import sync_inter_location_contra_query_table
 
     analytics = MagicMock()
     with patch("workflows.analytics_catalog.AnalyticsCatalog") as factory:

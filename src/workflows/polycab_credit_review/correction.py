@@ -6,8 +6,8 @@ from dataclasses import replace
 from collections.abc import Callable
 from typing import Any
 
-from zoho.helpers.references import update_reference_lines
-from zoho.helpers.records import get_verified_record
+from helpers.formatting.references import update_reference_lines
+from helpers.operations.records import get_verified_record
 from .models import (CreditAudit, CreditCorrectionError, CreditCorrectionPlan,
                      CreditCorrectionResult, RmaCreditPolicy)
 from .rules import evaluate, money, reference_pairs

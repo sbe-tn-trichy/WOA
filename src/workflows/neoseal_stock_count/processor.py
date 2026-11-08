@@ -9,7 +9,7 @@ from decimal import Decimal
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from zoho.helpers import get_custom_field_value
+from helpers import get_custom_field_value
 from zoho.inventory import ZohoInventoryAPI
 from workflows.core.matching import to_decimal, to_text
 

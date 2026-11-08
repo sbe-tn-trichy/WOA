@@ -1,0 +1,2102 @@
+{
+  "org_management": {
+    "source": "org-management-grouped-api.json",
+    "sha256": "3035f30e39c0ae41dda7397da0ccd746c97a639f50165c74e0c40799691f5ce4",
+    "module": "resources/administration/org_management.py",
+    "operations": [
+      {
+        "name": "get_org_workspaces",
+        "operation_id": "getOrgWorkspaces",
+        "method": "GET",
+        "path": "/restapi/v2/orgs/workspaces",
+        "category": "Org Level Listings",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_org_dashboards",
+        "operation_id": "getOrgDashboards",
+        "method": "GET",
+        "path": "/restapi/v2/orgs/dashboards",
+        "category": "Org Level Listings",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_org_recent_items",
+        "operation_id": "getOrgRecentItems",
+        "method": "GET",
+        "path": "/restapi/v2/orgs/recentitems",
+        "category": "Org Level Listings",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_resource_details",
+        "operation_id": "getResourceDetails",
+        "method": "GET",
+        "path": "/restapi/v2/resources",
+        "category": "Org Info & Settings",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.read"
+        ]
+      },
+      {
+        "name": "get_subscription_details",
+        "operation_id": "getSubscriptionDetails",
+        "method": "GET",
+        "path": "/restapi/v2/subscription",
+        "category": "Org Info & Settings",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.read"
+        ]
+      },
+      {
+        "name": "get_meta_details",
+        "operation_id": "getMetaDetails",
+        "method": "GET",
+        "path": "/restapi/v2/metadetails",
+        "category": "Org Info & Settings",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_org_access_restrictions",
+        "operation_id": "getOrgAccessRestrictions",
+        "method": "GET",
+        "path": "/restapi/v2/security-controls/access-restrictions",
+        "category": "Security Controls",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "update_org_access_restrictions",
+        "operation_id": "updateOrgAccessRestrictions",
+        "method": "PUT",
+        "path": "/restapi/v2/security-controls/access-restrictions",
+        "category": "Security Controls",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      },
+      {
+        "name": "get_workspace_access_restrictions",
+        "operation_id": "getWorkspaceAccessRestrictions",
+        "method": "GET",
+        "path": "/restapi/v2/security-controls/workspaces/{workspace-id}/access-restrictions",
+        "category": "Security Controls",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "update_workspace_access_restrictions",
+        "operation_id": "updateWorkspaceAccessRestrictions",
+        "method": "PUT",
+        "path": "/restapi/v2/security-controls/workspaces/{workspace-id}/access-restrictions",
+        "category": "Security Controls",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      }
+    ]
+  },
+  "user_groups": {
+    "source": "user-groups-grouped-api.json",
+    "sha256": "070a4160264ec0c94a891ed7ab15fd530f3993827c1631f7bdff5fdbafb04afc",
+    "module": "resources/administration/user_groups.py",
+    "operations": [
+      {
+        "name": "get_org_admins",
+        "operation_id": "getOrgAdmins",
+        "method": "GET",
+        "path": "/restapi/v2/orgadmins",
+        "category": "Org Users",
+        "scopes": [
+          "ZohoAnalytics.share.read"
+        ]
+      },
+      {
+        "name": "get_users",
+        "operation_id": "getUsers",
+        "method": "GET",
+        "path": "/restapi/v2/users",
+        "category": "Org Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.read"
+        ]
+      },
+      {
+        "name": "add_users",
+        "operation_id": "addUsers",
+        "method": "POST",
+        "path": "/restapi/v2/users",
+        "category": "Org Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.create"
+        ]
+      },
+      {
+        "name": "remove_users",
+        "operation_id": "removeUsers",
+        "method": "DELETE",
+        "path": "/restapi/v2/users",
+        "category": "Org Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.delete"
+        ]
+      },
+      {
+        "name": "activate_users",
+        "operation_id": "activateUsers",
+        "method": "PUT",
+        "path": "/restapi/v2/users/active",
+        "category": "Org Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.update"
+        ]
+      },
+      {
+        "name": "de_activate_users",
+        "operation_id": "deActivateUsers",
+        "method": "PUT",
+        "path": "/restapi/v2/users/inactive",
+        "category": "Org Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.update"
+        ]
+      },
+      {
+        "name": "change_user_role",
+        "operation_id": "changeUserRole",
+        "method": "PUT",
+        "path": "/restapi/v2/users/role",
+        "category": "Org Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.update"
+        ]
+      },
+      {
+        "name": "get_custom_roles",
+        "operation_id": "getCustomRoles",
+        "method": "GET",
+        "path": "/restapi/v2/orgs/roles",
+        "category": "Custom Roles",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.read"
+        ]
+      },
+      {
+        "name": "create_custom_role",
+        "operation_id": "createCustomRole",
+        "method": "POST",
+        "path": "/restapi/v2/orgs/roles",
+        "category": "Custom Roles",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.create"
+        ]
+      },
+      {
+        "name": "update_custom_role",
+        "operation_id": "updateCustomRole",
+        "method": "PUT",
+        "path": "/restapi/v2/orgs/roles/{role-id}",
+        "category": "Custom Roles",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.update"
+        ]
+      },
+      {
+        "name": "delete_custom_role",
+        "operation_id": "deleteCustomRole",
+        "method": "DELETE",
+        "path": "/restapi/v2/orgs/roles/{role-id}",
+        "category": "Custom Roles",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.delete"
+        ]
+      },
+      {
+        "name": "get_workspace_users",
+        "operation_id": "getWorkspaceUsers",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/users",
+        "category": "Workspace Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.read"
+        ]
+      },
+      {
+        "name": "add_workspace_users",
+        "operation_id": "addWorkspaceUsers",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/users",
+        "category": "Workspace Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.create"
+        ]
+      },
+      {
+        "name": "delete_workspace_users",
+        "operation_id": "deleteWorkspaceUsers",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/users",
+        "category": "Workspace Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.delete"
+        ]
+      },
+      {
+        "name": "change_workspace_users_role",
+        "operation_id": "changeWorkspaceUsersRole",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/users/role",
+        "category": "Workspace Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.update"
+        ]
+      },
+      {
+        "name": "change_workspace_users_status",
+        "operation_id": "changeWorkspaceUsersStatus",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/users/status",
+        "category": "Workspace Users",
+        "scopes": [
+          "ZohoAnalytics.usermanagement.update"
+        ]
+      },
+      {
+        "name": "get_workspace_admins",
+        "operation_id": "getWorkspaceAdmins",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/admins",
+        "category": "Workspace Users",
+        "scopes": [
+          "ZohoAnalytics.share.read"
+        ]
+      },
+      {
+        "name": "add_workspace_admins",
+        "operation_id": "addWorkspaceAdmins",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/admins",
+        "category": "Workspace Users",
+        "scopes": [
+          "ZohoAnalytics.share.create"
+        ]
+      },
+      {
+        "name": "remove_workspace_admins",
+        "operation_id": "removeWorkspaceAdmins",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/admins",
+        "category": "Workspace Users",
+        "scopes": [
+          "ZohoAnalytics.share.delete"
+        ]
+      },
+      {
+        "name": "get_groups",
+        "operation_id": "getGroups",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/groups",
+        "category": "Workspace Groups",
+        "scopes": [
+          "ZohoAnalytics.share.read"
+        ]
+      },
+      {
+        "name": "create_group",
+        "operation_id": "createGroup",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/groups",
+        "category": "Workspace Groups",
+        "scopes": [
+          "ZohoAnalytics.share.create"
+        ]
+      },
+      {
+        "name": "get_group_details",
+        "operation_id": "getGroupDetails",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/groups/{group-id}",
+        "category": "Workspace Groups",
+        "scopes": [
+          "ZohoAnalytics.share.read"
+        ]
+      },
+      {
+        "name": "rename_group",
+        "operation_id": "renameGroup",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/groups/{group-id}",
+        "category": "Workspace Groups",
+        "scopes": [
+          "ZohoAnalytics.share.update"
+        ]
+      },
+      {
+        "name": "delete_group",
+        "operation_id": "deleteGroup",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/groups/{group-id}",
+        "category": "Workspace Groups",
+        "scopes": [
+          "ZohoAnalytics.share.delete"
+        ]
+      },
+      {
+        "name": "add_group_members",
+        "operation_id": "addGroupMembers",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/groups/{group-id}/members",
+        "category": "Workspace Groups",
+        "scopes": [
+          "ZohoAnalytics.share.create"
+        ]
+      },
+      {
+        "name": "remove_group_members",
+        "operation_id": "removeGroupMembers",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/groups/{group-id}/members",
+        "category": "Workspace Groups",
+        "scopes": [
+          "ZohoAnalytics.share.delete"
+        ]
+      }
+    ]
+  },
+  "share_publish": {
+    "source": "share-publish-grouped-api.json",
+    "sha256": "f7b72111e544d22555ca0d3a243b43162d869b6f59148bf6935ba69ae2dddf00",
+    "module": "resources/administration/share_publish.py",
+    "operations": [
+      {
+        "name": "get_workspace_shared_details",
+        "operation_id": "getWorkspaceSharedDetails",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/share",
+        "category": "Sharing",
+        "scopes": [
+          "ZohoAnalytics.share.read"
+        ]
+      },
+      {
+        "name": "share_views",
+        "operation_id": "shareViews",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/share",
+        "category": "Sharing",
+        "scopes": [
+          "ZohoAnalytics.share.create"
+        ]
+      },
+      {
+        "name": "remove_share",
+        "operation_id": "removeShare",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/share",
+        "category": "Sharing",
+        "scopes": [
+          "ZohoAnalytics.share.delete"
+        ]
+      },
+      {
+        "name": "update_shared_details_for_view",
+        "operation_id": "UpdateSharedDetailsForView",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/share",
+        "category": "Sharing",
+        "scopes": [
+          "ZohoAnalytics.share.update"
+        ]
+      },
+      {
+        "name": "get_shared_details_for_views",
+        "operation_id": "getSharedDetailsForViews",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/share/shareddetails",
+        "category": "Sharing",
+        "scopes": [
+          "ZohoAnalytics.share.read"
+        ]
+      },
+      {
+        "name": "get_user_permissions",
+        "operation_id": "getUserPermissions",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/share/userpermissions",
+        "category": "Sharing",
+        "scopes": [
+          "ZohoAnalytics.share.read"
+        ]
+      },
+      {
+        "name": "make_views_public",
+        "operation_id": "makeViewsPublic",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/publish/public",
+        "category": "Publish",
+        "scopes": [
+          "ZohoAnalytics.embed.create"
+        ]
+      },
+      {
+        "name": "remove_public_permission",
+        "operation_id": "removePublicPermission",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/publish/public",
+        "category": "Publish",
+        "scopes": [
+          "ZohoAnalytics.embed.delete"
+        ]
+      },
+      {
+        "name": "create_private_url",
+        "operation_id": "createPrivateUrl",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/publish/privatelink",
+        "category": "Publish",
+        "scopes": [
+          "ZohoAnalytics.embed.update"
+        ]
+      },
+      {
+        "name": "get_private_url",
+        "operation_id": "getPrivateUrl",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/publish/privatelink",
+        "category": "Publish",
+        "scopes": [
+          "ZohoAnalytics.embed.read"
+        ]
+      },
+      {
+        "name": "remove_private_access",
+        "operation_id": "removePrivateAccess",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/publish/privatelink",
+        "category": "Publish",
+        "scopes": [
+          "ZohoAnalytics.embed.delete"
+        ]
+      },
+      {
+        "name": "get_publish_configurations",
+        "operation_id": "getPublishConfigurations",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/publish/config",
+        "category": "Publish",
+        "scopes": [
+          "ZohoAnalytics.embed.read"
+        ]
+      },
+      {
+        "name": "update_publish_configurations",
+        "operation_id": "updatePublishConfigurations",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/publish/config",
+        "category": "Publish",
+        "scopes": [
+          "ZohoAnalytics.embed.update"
+        ]
+      },
+      {
+        "name": "get_embed_url",
+        "operation_id": "getEmbedUrl",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/publish/embed",
+        "category": "Embed",
+        "scopes": [
+          "ZohoAnalytics.embed.read"
+        ]
+      },
+      {
+        "name": "create_slideshow",
+        "operation_id": "createSlideshow",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/slides",
+        "category": "Slideshow Management",
+        "scopes": [
+          "ZohoAnalytics.embed.create"
+        ]
+      },
+      {
+        "name": "get_slideshows",
+        "operation_id": "getSlideshows",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/slides",
+        "category": "Slideshow Management",
+        "scopes": [
+          "ZohoAnalytics.embed.read"
+        ]
+      },
+      {
+        "name": "update_slideshow",
+        "operation_id": "updateSlideshow",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/slides/{slide-id}",
+        "category": "Slideshow Management",
+        "scopes": [
+          "ZohoAnalytics.embed.update"
+        ]
+      },
+      {
+        "name": "delete_slideshow",
+        "operation_id": "deleteSlideshow",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/slides/{slide-id}",
+        "category": "Slideshow Management",
+        "scopes": [
+          "ZohoAnalytics.embed.delete"
+        ]
+      },
+      {
+        "name": "get_slideshow_details",
+        "operation_id": "getSlideshowDetails",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/slides/{slide-id}",
+        "category": "Slideshow Management",
+        "scopes": [
+          "ZohoAnalytics.embed.read"
+        ]
+      },
+      {
+        "name": "get_slideshow_url",
+        "operation_id": "getSlideshowUrl",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/slides/{slide-id}/publish",
+        "category": "Slideshow Management",
+        "scopes": [
+          "ZohoAnalytics.embed.read"
+        ]
+      }
+    ]
+  },
+  "schedules_alerts": {
+    "source": "schedules-alerts-grouped-api.json",
+    "sha256": "ae392b0e4cd8260d55fada7aa9f9df3eb0a227eb475cecec9e2829a58fe8940d",
+    "module": "resources/administration/schedules_alerts.py",
+    "operations": [
+      {
+        "name": "create_email_schedule",
+        "operation_id": "createEmailSchedule",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/emailschedules",
+        "category": "Email Schedules",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_email_schedules",
+        "operation_id": "getEmailSchedules",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/emailschedules",
+        "category": "Email Schedules",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "trigger_email_schedule",
+        "operation_id": "triggerEmailSchedule",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/emailschedules/{schedule-id}",
+        "category": "Email Schedules",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "update_email_schedule",
+        "operation_id": "updateEmailSchedule",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/emailschedules/{schedule-id}",
+        "category": "Email Schedules",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "delete_email_schedule",
+        "operation_id": "deleteEmailSchedule",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/emailschedules/{schedule-id}",
+        "category": "Email Schedules",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "change_email_schedule_status",
+        "operation_id": "changeEmailScheduleStatus",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/emailschedules/{schedule-id}/status",
+        "category": "Email Schedules",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "get_alerts_in_workspace",
+        "operation_id": "getAlertsInWorkspace",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/alerts",
+        "category": "Data Alerts",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "delete_alerts",
+        "operation_id": "deleteAlerts",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/alerts",
+        "category": "Data Alerts",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_alerts_in_view",
+        "operation_id": "getAlertsInView",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/alerts",
+        "category": "Data Alerts",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "create_alert",
+        "operation_id": "createAlert",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/alerts",
+        "category": "Data Alerts",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_view_metadata_for_alert",
+        "operation_id": "getViewMetadataForAlert",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/alerts/metadata",
+        "category": "Data Alerts",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_alert_configuration",
+        "operation_id": "getAlertConfiguration",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/alerts/{alert-id}",
+        "category": "Data Alerts",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "update_alert",
+        "operation_id": "updateAlert",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/alerts/{alert-id}",
+        "category": "Data Alerts",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "change_alert_status",
+        "operation_id": "changeAlertStatus",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/alerts/status",
+        "category": "Data Alerts",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "run_alert",
+        "operation_id": "runAlert",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/alerts/{alert-id}/execute",
+        "category": "Data Alerts",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_alert_events",
+        "operation_id": "getAlertEvents",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/alerts/{alert-id}/events",
+        "category": "Data Alerts",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      }
+    ]
+  },
+  "workspace_management": {
+    "source": "workspace-management-grouped-api.json",
+    "sha256": "830ecb04bc22df4dfd917ebbeabdba72adb946d26f39132b46b263367750d6fe",
+    "module": "resources/workspace/workspace_management.py",
+    "operations": [
+      {
+        "name": "create_workspace",
+        "operation_id": "createWorkspace",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces",
+        "category": "Workspace Operations",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_workspace_details",
+        "operation_id": "getWorkspaceDetails",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}",
+        "category": "Workspace Operations",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "copy_workspace",
+        "operation_id": "copyWorkspace",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}",
+        "category": "Workspace Operations",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "rename_workspace",
+        "operation_id": "renameWorkspace",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}",
+        "category": "Workspace Operations",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "delete_workspace",
+        "operation_id": "deleteWorkspace",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}",
+        "category": "Workspace Operations",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_workspace_secret_key",
+        "operation_id": "getWorkspaceSecretKey",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/secretkey",
+        "category": "Workspace Operations",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "export_as_template",
+        "operation_id": "exportAsTemplate",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/template/data",
+        "category": "Workspace Operations",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "add_default_workspace",
+        "operation_id": "addDefaultWorkspace",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/default",
+        "category": "Workspace Preferences",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      },
+      {
+        "name": "remove_default_workspace",
+        "operation_id": "removeDefaultWorkspace",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/default",
+        "category": "Workspace Preferences",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      },
+      {
+        "name": "add_favorite_workspace",
+        "operation_id": "addFavoriteWorkspace",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/favorite",
+        "category": "Workspace Preferences",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      },
+      {
+        "name": "remove_favorite_workspace",
+        "operation_id": "removeFavoriteWorkspace",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/favorite",
+        "category": "Workspace Preferences",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      },
+      {
+        "name": "enable_domain_workspace",
+        "operation_id": "enableDomainWorkspace",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/wlaccess",
+        "category": "Domain & White Label",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      },
+      {
+        "name": "disable_domain_workspace",
+        "operation_id": "disableDomainWorkspace",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/wlaccess",
+        "category": "Domain & White Label",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      },
+      {
+        "name": "get_folders",
+        "operation_id": "getFolders",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/folders",
+        "category": "Workspace Folders",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "create_folder",
+        "operation_id": "createFolder",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/folders",
+        "category": "Workspace Folders",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "rename_folder",
+        "operation_id": "renameFolder",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/folders/{folder-id}",
+        "category": "Workspace Folders",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "delete_folder",
+        "operation_id": "deleteFolder",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/folders/{folder-id}",
+        "category": "Workspace Folders",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "make_default_folder",
+        "operation_id": "makeDefaultFolder",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/folders/{folder-id}/default",
+        "category": "Workspace Folders",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "change_folder_hierarchy",
+        "operation_id": "changeFolderHierarchy",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/folders/{folder-id}/move",
+        "category": "Workspace Folders",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "change_folder_position",
+        "operation_id": "changeFolderPosition",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/folders/{folder-id}/reorder",
+        "category": "Workspace Folders",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "move_views_to_folder",
+        "operation_id": "moveViewsToFolder",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/movetofolder",
+        "category": "Workspace Folders",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "get_linked_workspaces_for_organization",
+        "operation_id": "getLinkedWorkspacesForOrganization",
+        "method": "GET",
+        "path": "/restapi/v2/linkedworkspaces",
+        "category": "Linked Workspaces",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_linked_workspaces_for_master_workspace",
+        "operation_id": "getLinkedWorkspacesForMasterWorkspace",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/linkedworkspaces",
+        "category": "Linked Workspaces",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "link_workspaces",
+        "operation_id": "linkWorkspaces",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/linkedworkspaces",
+        "category": "Linked Workspaces",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "unlink_workspaces",
+        "operation_id": "unlinkWorkspaces",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/linkedworkspaces",
+        "category": "Linked Workspaces",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_linkable_workspaces",
+        "operation_id": "getLinkableWorkspaces",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/linkedworkspaces/linkable",
+        "category": "Linked Workspaces",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_workspace_linking_compatibility",
+        "operation_id": "getWorkspaceLinkingCompatibility",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/linkedworkspaces/compatibility",
+        "category": "Linked Workspaces",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "sync_linked_workspaces",
+        "operation_id": "syncLinkedWorkspaces",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/linkedworkspaces/sync",
+        "category": "Linked Workspaces",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_linked_workspace_sync_details",
+        "operation_id": "getLinkedWorkspaceSyncDetails",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/linkedworkspaces/sync",
+        "category": "Linked Workspaces",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_workspace_backups",
+        "operation_id": "getWorkspaceBackups",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/backups",
+        "category": "Workspace Backup & Restore",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "backup_workspace_now",
+        "operation_id": "backupWorkspaceNow",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/backups",
+        "category": "Workspace Backup & Restore",
+        "scopes": [
+          "ZohoAnalytics.metadata.create"
+        ]
+      },
+      {
+        "name": "download_workspace_backup",
+        "operation_id": "downloadWorkspaceBackup",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/backups/{backup-id}/download",
+        "category": "Workspace Backup & Restore",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "restore_workspace_from_backup",
+        "operation_id": "restoreWorkspaceFromBackup",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/backups/{backup-id}/restore",
+        "category": "Workspace Backup & Restore",
+        "scopes": [
+          "ZohoAnalytics.metadata.create"
+        ]
+      },
+      {
+        "name": "get_workspace_backup_status",
+        "operation_id": "getWorkspaceBackupStatus",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/backups/{backup-id}/status",
+        "category": "Workspace Backup & Restore",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_workspace_restore_status",
+        "operation_id": "getWorkspaceRestoreStatus",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/restores/{restore-id}/status",
+        "category": "Workspace Backup & Restore",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      }
+    ]
+  },
+  "data_modeling_schema": {
+    "source": "data-modeling-schema-grouped-api.json",
+    "sha256": "e3fcb89ec11d5fd688fb0348d664ec5f805f70c26e7bb1880ee2f831037b6c19",
+    "module": "resources/workspace/data_modeling_schema.py",
+    "operations": [
+      {
+        "name": "create_table",
+        "operation_id": "createTable",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/tables",
+        "category": "Table & Schema",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_table_metadata",
+        "operation_id": "getTableMetadata",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/metadata",
+        "category": "Table & Schema",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "add_column",
+        "operation_id": "addColumn",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/columns",
+        "category": "Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "rename_column",
+        "operation_id": "renameColumn",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/columns/{column-id}",
+        "category": "Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "delete_column",
+        "operation_id": "deleteColumn",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/columns/{column-id}",
+        "category": "Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "reorder_columns",
+        "operation_id": "reorderColumns",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/columns/reorder",
+        "category": "Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "hide_columns",
+        "operation_id": "hideColumns",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/columns/hide",
+        "category": "Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "show_columns",
+        "operation_id": "showColumns",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/columns/show",
+        "category": "Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "get_column_dependents",
+        "operation_id": "getColumnDependents",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/columns/{column-id}/dependents",
+        "category": "Columns",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "sort_data_by_columns",
+        "operation_id": "sortDataByColumns",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/data/sort",
+        "category": "Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "add_lookup",
+        "operation_id": "addLookup",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/columns/{column-id}/lookup",
+        "category": "Lookups & Relationships",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "remove_lookup",
+        "operation_id": "removeLookup",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/columns/{column-id}/lookup",
+        "category": "Lookups & Relationships",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "get_query_tables",
+        "operation_id": "getQueryTables",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/querytables",
+        "category": "Query Tables",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "create_query_table",
+        "operation_id": "createQueryTable",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/querytables",
+        "category": "Query Tables",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "edit_query_table",
+        "operation_id": "editQueryTable",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/querytables/{querytable-id}",
+        "category": "Query Tables",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "get_query_table_details",
+        "operation_id": "getQueryTableDetails",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/querytables/{querytable-id}",
+        "category": "Query Tables",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "add_formula_column",
+        "operation_id": "addFormulaColumn",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/customformulas",
+        "category": "Formula Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_custom_formula_list",
+        "operation_id": "getCustomFormulaList",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/customformulas",
+        "category": "Formula Columns",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "copy_formulas",
+        "operation_id": "copyFormulas",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/formulas/copy",
+        "category": "Formula Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "edit_formula_column",
+        "operation_id": "editFormulaColumn",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/customformulas/{formula-id}",
+        "category": "Formula Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "delete_formula_column",
+        "operation_id": "deleteFormulaColumn",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/customformulas/{formula-id}",
+        "category": "Formula Columns",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "add_aggregate_formula",
+        "operation_id": "addAggregateFormula",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/aggregateformulas",
+        "category": "Aggregate Formulas",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_aggregate_formula_list",
+        "operation_id": "getAggregateFormulaList",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/aggregateformulas",
+        "category": "Aggregate Formulas",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "edit_aggregate_formula",
+        "operation_id": "editAggregateFormula",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/aggregateformulas/{formula-id}",
+        "category": "Aggregate Formulas",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "delete_aggregate_formula",
+        "operation_id": "deleteAggregateFormula",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/aggregateformulas/{formula-id}",
+        "category": "Aggregate Formulas",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_aggregate_formula_value",
+        "operation_id": "getAggregateFormulaValue",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/aggregateformulas/{formula-id}/value",
+        "category": "Aggregate Formulas",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_aggregate_formula_dependents",
+        "operation_id": "getAggregateFormulaDependents",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/aggregateformulas/{formula-id}/dependents",
+        "category": "Aggregate Formulas",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_aggregate_formulas_in_workspace",
+        "operation_id": "getAggregateFormulasInWorkspace",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/aggregateformulas",
+        "category": "Aggregate Formulas",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "create_variable",
+        "operation_id": "createVariable",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/variables",
+        "category": "Workspace Variables",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_variables",
+        "operation_id": "getVariables",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/variables",
+        "category": "Workspace Variables",
+        "scopes": [
+          "ZohoAnalytics.modeling.read"
+        ]
+      },
+      {
+        "name": "update_variable",
+        "operation_id": "updateVariable",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/variables/{variable-id}",
+        "category": "Workspace Variables",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "delete_variable",
+        "operation_id": "deleteVariable",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/variables/{variable-id}",
+        "category": "Workspace Variables",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_variable_details",
+        "operation_id": "getVariableDetails",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/variables/{variable-id}",
+        "category": "Workspace Variables",
+        "scopes": [
+          "ZohoAnalytics.modeling.read"
+        ]
+      }
+    ]
+  },
+  "data_operations": {
+    "source": "data-operations-grouped-api.json",
+    "sha256": "f19023a5d7f953ad36ece6a6b0c28d9e8301d2c681ec511ea4fead8db9a84a20",
+    "module": "resources/workspace/data_operations.py",
+    "operations": [
+      {
+        "name": "add_row",
+        "operation_id": "addRow",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/rows",
+        "category": "Row Operations",
+        "scopes": [
+          "ZohoAnalytics.data.create"
+        ]
+      },
+      {
+        "name": "update_rows",
+        "operation_id": "updateRows",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/rows",
+        "category": "Row Operations",
+        "scopes": [
+          "ZohoAnalytics.data.update"
+        ]
+      },
+      {
+        "name": "delete_rows",
+        "operation_id": "deleteRows",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/rows",
+        "category": "Row Operations",
+        "scopes": [
+          "ZohoAnalytics.data.delete"
+        ]
+      },
+      {
+        "name": "import_data_new_table",
+        "operation_id": "importDataNewTable",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/data",
+        "category": "Data Import (Synchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.create"
+        ]
+      },
+      {
+        "name": "import_data_existing_table",
+        "operation_id": "importDataExistingTable",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/data",
+        "category": "Data Import (Synchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.create"
+        ]
+      },
+      {
+        "name": "export_data_view",
+        "operation_id": "exportDataView",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/data",
+        "category": "Data Export (Synchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.read"
+        ]
+      },
+      {
+        "name": "create_import_job_new_table",
+        "operation_id": "createImportJobNewTable",
+        "method": "POST",
+        "path": "/restapi/v2/bulk/workspaces/{workspace-id}/data",
+        "category": "Data Import (Asynchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.create"
+        ]
+      },
+      {
+        "name": "create_export_job_sql_query",
+        "operation_id": "createExportJobSQLQuery",
+        "method": "GET",
+        "path": "/restapi/v2/bulk/workspaces/{workspace-id}/data",
+        "category": "Data Export (Asynchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.read"
+        ]
+      },
+      {
+        "name": "create_import_job_existing_table",
+        "operation_id": "createImportJobExistingTable",
+        "method": "POST",
+        "path": "/restapi/v2/bulk/workspaces/{workspace-id}/views/{view-id}/data",
+        "category": "Data Import (Asynchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.create"
+        ]
+      },
+      {
+        "name": "create_export_job_view_id",
+        "operation_id": "createExportJobViewId",
+        "method": "GET",
+        "path": "/restapi/v2/bulk/workspaces/{workspace-id}/views/{view-id}/data",
+        "category": "Data Export (Asynchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.read"
+        ]
+      },
+      {
+        "name": "batch_import_new_table",
+        "operation_id": "batchImportNewTable",
+        "method": "POST",
+        "path": "/restapi/v2/bulk/workspaces/{workspace-id}/data/batch",
+        "category": "Data Import (Asynchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.create"
+        ]
+      },
+      {
+        "name": "batch_import_existing_table",
+        "operation_id": "batchImportExistingTable",
+        "method": "POST",
+        "path": "/restapi/v2/bulk/workspaces/{workspace-id}/views/{view-id}/data/batch",
+        "category": "Data Import (Asynchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.create"
+        ]
+      },
+      {
+        "name": "get_import_job_details",
+        "operation_id": "getImportJobDetails",
+        "method": "GET",
+        "path": "/restapi/v2/bulk/workspaces/{workspace-id}/importjobs/{job-id}",
+        "category": "Data Import (Asynchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.create"
+        ]
+      },
+      {
+        "name": "get_export_job_details",
+        "operation_id": "getExportJobDetails",
+        "method": "GET",
+        "path": "/restapi/v2/bulk/workspaces/{workspace-id}/exportjobs/{job-id}",
+        "category": "Data Export (Asynchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.read"
+        ]
+      },
+      {
+        "name": "download_exported_data",
+        "operation_id": "downloadExportedData",
+        "method": "GET",
+        "path": "/restapi/v2/bulk/workspaces/{workspace-id}/exportjobs/{job-id}/data",
+        "category": "Data Export (Asynchronous)",
+        "scopes": [
+          "ZohoAnalytics.data.read"
+        ]
+      },
+      {
+        "name": "get_last_import_details",
+        "operation_id": "getLastImportDetails",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/importdetails",
+        "category": "Data Sync & Connectivity",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "refetch_datasource",
+        "operation_id": "refetchDatasource",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/sync",
+        "category": "Data Sync & Connectivity",
+        "scopes": [
+          "ZohoAnalytics.metadata.create"
+        ]
+      },
+      {
+        "name": "sync_datasource",
+        "operation_id": "syncDatasource",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/datasources/{datasource-id}/sync",
+        "category": "Data Sync & Connectivity",
+        "scopes": [
+          "ZohoAnalytics.metadata.create"
+        ]
+      },
+      {
+        "name": "update_datasource_connection",
+        "operation_id": "updateDatasourceConnection",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/datasources/{datasource-id}",
+        "category": "Data Sync & Connectivity",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      },
+      {
+        "name": "get_datasources",
+        "operation_id": "getDatasources",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/datasources",
+        "category": "Data Sync & Connectivity",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      }
+    ]
+  },
+  "views_management": {
+    "source": "views-management-grouped-api.json",
+    "sha256": "76ee5b4473def92c4a75e2bcf3e9314ea5909577f7af2d89470ea724cfeb1b39",
+    "module": "resources/workspace/views_management.py",
+    "operations": [
+      {
+        "name": "save_as_view",
+        "operation_id": "saveAsView",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/saveas",
+        "category": "View Operations",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "copy_views",
+        "operation_id": "copyViews",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/copy",
+        "category": "View Operations",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "create_similar_views",
+        "operation_id": "createSimilarViews",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/similarviews",
+        "category": "View Operations",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "rename_view",
+        "operation_id": "renameView",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}",
+        "category": "View Operations",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "delete_view",
+        "operation_id": "deleteView",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}",
+        "category": "View Operations",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_views",
+        "operation_id": "getViews",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views",
+        "category": "View Operations",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_view_details",
+        "operation_id": "getViewDetails",
+        "method": "GET",
+        "path": "/restapi/v2/views/{view-id}",
+        "category": "View Operations",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_view_url",
+        "operation_id": "getViewUrl",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/publish",
+        "category": "View Operations",
+        "scopes": [
+          "ZohoAnalytics.embed.read"
+        ]
+      },
+      {
+        "name": "get_view_dependents",
+        "operation_id": "getViewDependents",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/dependents",
+        "category": "View Operations",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "auto_analyse_column",
+        "operation_id": "autoAnalyseColumn",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/columns/{column-id}/autoanalyse",
+        "category": "Auto Analysis",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "auto_analyse_view",
+        "operation_id": "autoAnalyseView",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/autoanalyse",
+        "category": "Auto Analysis",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "add_favorite_view",
+        "operation_id": "addFavoriteView",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/favorite",
+        "category": "View Preferences",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      },
+      {
+        "name": "remove_favorite_view",
+        "operation_id": "removeFavoriteView",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/favorite",
+        "category": "View Preferences",
+        "scopes": [
+          "ZohoAnalytics.metadata.update"
+        ]
+      },
+      {
+        "name": "get_tags",
+        "operation_id": "getTags",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/tags",
+        "category": "Tags",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "create_tag",
+        "operation_id": "createTag",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/tags",
+        "category": "Tags",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "update_tag",
+        "operation_id": "updateTag",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/tags/{tag-id}",
+        "category": "Tags",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "delete_tag",
+        "operation_id": "deleteTag",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/tags/{tag-id}",
+        "category": "Tags",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_tagged_views",
+        "operation_id": "getTaggedViews",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/tags/{tag-id}/views",
+        "category": "Tags",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "add_tag_to_views",
+        "operation_id": "addTagToViews",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/tags/{tag-id}/views",
+        "category": "Tags",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "remove_tag_from_views",
+        "operation_id": "removeTagFromViews",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/tags/{tag-id}/views",
+        "category": "Tags",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_view_tags",
+        "operation_id": "getViewTags",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/tags",
+        "category": "Tags",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "add_tags_to_view",
+        "operation_id": "addTagsToView",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/tags",
+        "category": "Tags",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "remove_tags_from_view",
+        "operation_id": "removeTagsFromView",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/views/{view-id}/tags",
+        "category": "Tags",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_trash_views",
+        "operation_id": "getTrashViews",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/trash",
+        "category": "Trash Management",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "restore_trash_view",
+        "operation_id": "restoreTrashView",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/trash/{view-id}",
+        "category": "Trash Management",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "delete_trash_view",
+        "operation_id": "deleteTrashView",
+        "method": "DELETE",
+        "path": "/restapi/v2/workspaces/{workspace-id}/trash/{view-id}",
+        "category": "Trash Management",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      }
+    ]
+  },
+  "reports_dashboards": {
+    "source": "reports-dashboards-grouped-api.json",
+    "sha256": "b3d1267282706738767c40cc87a4e3184b748003a714d8a04139cf6eb88a0302",
+    "module": "resources/workspace/reports_dashboards.py",
+    "operations": [
+      {
+        "name": "create_report",
+        "operation_id": "createReport",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/reports",
+        "category": "Reports",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "update_report",
+        "operation_id": "updateReport",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/reports/{view-id}",
+        "category": "Reports",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      },
+      {
+        "name": "get_report_metadata",
+        "operation_id": "getReportMetadata",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/reports/{view-id}/metadata",
+        "category": "Reports",
+        "scopes": [
+          "ZohoAnalytics.modeling.read"
+        ]
+      },
+      {
+        "name": "create_dashboard",
+        "operation_id": "createDashboard",
+        "method": "POST",
+        "path": "/restapi/v2/workspaces/{workspace-id}/dashboards",
+        "category": "Dashboard",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_dashboard_metadata",
+        "operation_id": "getDashboardMetadata",
+        "method": "GET",
+        "path": "/restapi/v2/workspaces/{workspace-id}/dashboards/{dashboard-id}/metadata",
+        "category": "Dashboard",
+        "scopes": [
+          "ZohoAnalytics.modeling.read"
+        ]
+      },
+      {
+        "name": "update_dashboard",
+        "operation_id": "updateDashboard",
+        "method": "PUT",
+        "path": "/restapi/v2/workspaces/{workspace-id}/dashboards/{dashboard-id}",
+        "category": "Dashboard",
+        "scopes": [
+          "ZohoAnalytics.modeling.update"
+        ]
+      }
+    ]
+  },
+  "dsml": {
+    "source": "dsml-grouped-api.json",
+    "sha256": "da68e74171f9ba90ddbfe142b8e3285eb716cd1ae7a8ded1b59be1089dc8683f",
+    "module": "resources/workspace/dsml.py",
+    "operations": [
+      {
+        "name": "create_auto_ml_analysis",
+        "operation_id": "createAutoMLAnalysis",
+        "method": "POST",
+        "path": "/restapi/v2/automl/workspaces/{workspace-id}/analysis",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "get_auto_ml_analysis_in_workspace",
+        "operation_id": "getAutoMLAnalysisInWorkspace",
+        "method": "GET",
+        "path": "/restapi/v2/automl/workspaces/{workspace-id}/analysis",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "run_auto_ml_analysis",
+        "operation_id": "runAutoMLAnalysis",
+        "method": "POST",
+        "path": "/restapi/v2/automl/workspaces/{workspace-id}/analysis/{analysis-id}/deployments/{deployment-id}/execute",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "delete_auto_ml_analysis",
+        "operation_id": "deleteAutoMLAnalysis",
+        "method": "DELETE",
+        "path": "/restapi/v2/automl/workspaces/{workspace-id}/analysis/{analysis-id}",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_auto_ml_analysis_details",
+        "operation_id": "getAutoMLAnalysisDetails",
+        "method": "GET",
+        "path": "/restapi/v2/automl/workspaces/{workspace-id}/analysis/{analysis-id}",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "get_auto_ml_analysis_in_org",
+        "operation_id": "getAutoMLAnalysisInOrg",
+        "method": "GET",
+        "path": "/restapi/v2/automl/analysis",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "delete_auto_ml_analysis_model",
+        "operation_id": "deleteAutoMLAnalysisModel",
+        "method": "DELETE",
+        "path": "/restapi/v2/automl/workspaces/{workspace-id}/analysis/{analysis-id}/models/{model-id}",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "get_deployments_for_model",
+        "operation_id": "getDeploymentsForModel",
+        "method": "GET",
+        "path": "/restapi/v2/automl/workspaces/{workspace-id}/analysis/{analysis-id}/models/{model-id}/deployments",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.metadata.read"
+        ]
+      },
+      {
+        "name": "create_auto_ml_analysis_deployment",
+        "operation_id": "createAutoMLAnalysisDeployment",
+        "method": "POST",
+        "path": "/restapi/v2/automl/workspaces/{workspace-id}/analysis/{analysis-id}/models/{model-id}/deployments",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      },
+      {
+        "name": "delete_auto_ml_analysis_model_deployment",
+        "operation_id": "deleteAutoMLAnalysisModelDeployment",
+        "method": "DELETE",
+        "path": "/restapi/v2/automl/workspaces/{workspace-id}/analysis/{analysis-id}/deployments/{deployment-id}",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.modeling.delete"
+        ]
+      },
+      {
+        "name": "auto_ml_what_if_analysis",
+        "operation_id": "autoMLWhatIfAnalysis",
+        "method": "POST",
+        "path": "/restapi/v2/automl/workspaces/{workspace-id}/analysis/{analysis-id}/models/{model-id}/whatif",
+        "category": "AutoML Analysis",
+        "scopes": [
+          "ZohoAnalytics.modeling.create"
+        ]
+      }
+    ]
+  }
+}

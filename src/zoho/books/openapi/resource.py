@@ -1,7 +1,7 @@
 """Wire encoding and argument guards for generated Books operations."""
 from __future__ import annotations
 
-from utils import json
+from utils.file_utils import json
 from typing import Any
 from urllib.parse import quote
 

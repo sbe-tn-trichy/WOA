@@ -3,10 +3,10 @@ from decimal import Decimal
 from unittest.mock import Mock
 
 import pytest
-from utils import yaml
+from utils.file_utils import yaml
 
 from apps import update_books_statement_sheet as app
-from workflows.books_pnl_notes import NOTE_INPUTS, NOTE_SHEET
+from workflows.books_statements.pnl_notes import NOTE_INPUTS, NOTE_SHEET
 
 
 def test_pnl_only_preview_uses_saved_mapping_without_catalog(monkeypatch, tmp_path, capsys):

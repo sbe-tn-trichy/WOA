@@ -1,7 +1,7 @@
 """Local Books customer mirror and reviewed edits. Never writes to Books."""
 from __future__ import annotations
 
-from utils import json
+from utils.file_utils import json
 import sqlite3
 import time
 from datetime import datetime, timezone
@@ -192,7 +192,7 @@ def export_pending(db: sqlite3.Connection, path: Path) -> dict[str, int]:
 
 def stage_creator_beats_locally(db: sqlite3.Connection, rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Stage assigned Creator beats for active local customers, preserving manual beat edits."""
-    from zoho.helpers.custom_fields import get_custom_field_value
+    from helpers.catalog.custom_fields import get_custom_field_value
 
     changes: list[dict[str, str]] = []
     preserved: list[dict[str, str]] = []

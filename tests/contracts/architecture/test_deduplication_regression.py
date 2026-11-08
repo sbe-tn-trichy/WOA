@@ -15,12 +15,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 import pytest
 
-from zoho.helpers.gst import (
-    GSTIN_PATTERN,
-    group_contacts_by_gstin,
-    is_valid_gstin,
-    normalize_gstin,
-)
+from helpers.formatting.gst import GSTIN_PATTERN, group_contacts_by_gstin, is_valid_gstin, normalize_gstin
 from workflows.core.matching import (
     parse_date,
     ref_match,

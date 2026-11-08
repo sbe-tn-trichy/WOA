@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from workflows.books_pnl_notes import NOTE_INPUTS, prepare_pnl_note_updates
+from workflows.books_statements.pnl_notes import NOTE_INPUTS, prepare_pnl_note_updates
 
 
 def _fixture():

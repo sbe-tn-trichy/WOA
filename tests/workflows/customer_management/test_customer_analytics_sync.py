@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from workflows.customer_analytics_sync import sync_analytics_customers
-from workflows.customer_normalization import SOURCE_NAMES, build_normalized_customers
+from workflows.customer_management.analytics_sync import sync_analytics_customers
+from workflows.customer_management.normalization import SOURCE_NAMES, build_normalized_customers
 
 
 def source(tmp_path, name, *, customers=None, addresses=None, persons=None, organization='org', workspace='workspace'):

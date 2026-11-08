@@ -1,1 +1,1 @@
-from zoho.exceptions import ZohoWorkdriveError
+from zoho.core_sdk.exceptions import ZohoWorkdriveError

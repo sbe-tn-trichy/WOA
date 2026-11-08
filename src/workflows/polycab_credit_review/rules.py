@@ -6,8 +6,8 @@ from decimal import Decimal
 from typing import Any
 
 from workflows.core.matching import parse_currency_amount, parse_date
-from zoho.helpers.custom_fields import get_custom_field_value
-from zoho.helpers.references import format_reference_lines, parse_reference_lines
+from helpers.catalog.custom_fields import get_custom_field_value
+from helpers.formatting.references import format_reference_lines, parse_reference_lines
 from .models import CreditAudit, CreditFinding, RmaCreditPolicy
 
 

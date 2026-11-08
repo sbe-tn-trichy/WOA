@@ -1,7 +1,7 @@
 import logging
-from utils import json
+from utils.file_utils import json
 from typing import Any
-from zoho.base_client import BaseZohoClient
+from zoho.core_sdk.base_client import BaseZohoClient
 
 class ZohoSheetAPI(BaseZohoClient):
     """
@@ -87,7 +87,7 @@ class ZohoSheetAPI(BaseZohoClient):
                 if error_code == 2884:
                     return []
                 if error_code or res.get("status") == "error":
-                    from zoho.exceptions import ZohoSheetError
+                    from zoho.core_sdk.exceptions import ZohoSheetError
                     raise ZohoSheetError(
                         res.get("error_message") or res.get("message") or f"Sheet Error (code={error_code})",
                         error_code=error_code,

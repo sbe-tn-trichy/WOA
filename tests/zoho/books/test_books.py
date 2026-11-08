@@ -28,7 +28,7 @@ class TestZohoBooksAPI(unittest.TestCase):
         with self.assertRaises(ValueError):
             ZohoBooksAPI(access_token=self.access_token, organization_id="")
 
-    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_utils.http_transport.Session.request")
     def test_request_success(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -52,7 +52,7 @@ class TestZohoBooksAPI(unittest.TestCase):
             timeout=30
         )
 
-    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_utils.http_transport.Session.request")
     def test_request_supports_form_data(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -76,7 +76,7 @@ class TestZohoBooksAPI(unittest.TestCase):
             timeout=30,
         )
 
-    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_utils.http_transport.Session.request")
     def test_request_token_refresh(self, mock_request):
         token_callback = MagicMock(return_value="new_token")
         client = ZohoBooksAPI(access_token="old_token", organization_id="org123", token_refresh_callback=token_callback)
@@ -480,7 +480,7 @@ class TestSalesOrders(unittest.TestCase):
             ("rso.pdf", mock_open()),
         )
 
-    @patch("utils.http_transport.Session.request")
+    @patch("utils.http_utils.http_transport.Session.request")
     def test_create_from_yaml(self, mock_request):
         from zoho.books.custom.sales import SalesOrders
         client = ZohoBooksAPI(access_token="tok", organization_id="org123", domain="com")
@@ -532,8 +532,8 @@ class TestProjectsAndTimeEntries(unittest.TestCase):
 
 
 class TestBooksCatalystAuth(unittest.TestCase):
-    @patch("utils.http_transport.Session.request")
-    @patch("utils.http_transport.post")
+    @patch("utils.http_utils.http_transport.Session.request")
+    @patch("utils.http_utils.http_transport.post")
     def test_catalyst_auth_all_mutations(self, mock_post, mock_request):
         mock_response_catalyst = MagicMock()
         mock_response_catalyst.status_code = 200
@@ -549,7 +549,7 @@ class TestBooksCatalystAuth(unittest.TestCase):
         mock_response_zoho.text = '{"status": "ok"}'
         mock_request.return_value = mock_response_zoho
 
-        from zoho.auth import CatalystAuth
+        from zoho.core_sdk.auth import CatalystAuth
         auth = CatalystAuth(
             direct_token="direct_token",
             catalyst_token_url="http://localhost:3000/server/new/tokens",

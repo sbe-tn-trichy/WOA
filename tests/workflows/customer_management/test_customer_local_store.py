@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from workflows.customer_local_store import open_store, sync_customers, stage_mobile_plan, export_pending
+from workflows.customer_management.local_store import open_store, sync_customers, stage_mobile_plan, export_pending
 
 STAMP = '2026-10-27T10:00:00+05:30'
 
@@ -92,7 +92,7 @@ def test_export_keeps_edit_baseline_after_cloud_change(tmp_path):
 
 
 def test_editable_columns_roundtrip_and_sync_conflict(tmp_path):
-    from workflows.customer_table import customer_json
+    from workflows.customer_management.table import customer_json
     db = open_store(tmp_path / 'c.db', organization_id='org')
     original = {**contact(), 'active_flag': True, 'empty_object': {}, 'empty_list': [],
                 'nullable': None, 'credit': '12.30', 'billing_address': {'address': ', Test, '},
@@ -112,7 +112,7 @@ def test_editable_columns_roundtrip_and_sync_conflict(tmp_path):
 
 
 def test_legacy_migration_backup_and_roundtrip(tmp_path):
-    from workflows.customer_table import customer_json
+    from workflows.customer_management.table import customer_json
     path = tmp_path / 'c.db'
     db = open_store(path, organization_id='org')
     original = {**contact(), 'is_portal_enabled': False, 'tags': []}
@@ -133,7 +133,7 @@ def test_legacy_migration_backup_and_roundtrip(tmp_path):
 
 
 def test_invalid_json_and_identity_edits_rejected(tmp_path):
-    from workflows.customer_table import customer_json
+    from workflows.customer_management.table import customer_json
     db = open_store(tmp_path / 'c.db', organization_id='org')
     sync_customers(db, client(page([{**contact(), 'tags': [], 'enabled': True}])))
     db.execute("UPDATE customers SET tags='{}'")
@@ -148,7 +148,7 @@ def test_invalid_json_and_identity_edits_rejected(tmp_path):
 
 
 def test_compact_constants_roundtrip_and_promote_changed_field(tmp_path):
-    from workflows.customer_table import compact_customer_columns, customer_json
+    from workflows.customer_management.table import compact_customer_columns, customer_json
     db = open_store(tmp_path/'c.db', organization_id='org')
     original = [{**contact(str(i)), 'flag': False, 'nullable': None, 'nested': [],
                  'varying_type': 0 if i == 1 else 0.0} for i in (1, 2)]
@@ -176,7 +176,7 @@ def test_compact_constants_roundtrip_and_promote_changed_field(tmp_path):
 
 
 def test_compact_preserves_missing_vs_null(tmp_path):
-    from workflows.customer_table import compact_customer_columns, customer_json
+    from workflows.customer_management.table import compact_customer_columns, customer_json
     db = open_store(tmp_path/'c.db', organization_id='org')
     sync_customers(db, client(page([{**contact(), 'optional': None}, contact('2')])))
     with db:

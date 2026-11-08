@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,8 +15,8 @@ try:
 except ImportError:  # Direct script execution.
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_analytics_client
-from workflows.core.config import Config
+from workflows.runtime.auth import get_analytics_client
+from workflows.runtime.config import Config
 from workflows.customer_payment_date_check import (
     check_customer_payment_dates_analytics,
     render_csv_report,

@@ -5,75 +5,74 @@ Reusable financial helpers: fiscal-year date parsing, sequence numbering, accoun
 
 ## Table of Contents
 
-- [`zoho.helpers.dates`](#zoho-helpers-dates)
-  - [Function `parse_date`](#zoho-helpers-dates-parse_date)
-  - [Function `get_month_range`](#zoho-helpers-dates-get_month_range)
-  - [Function `get_previous_month_range`](#zoho-helpers-dates-get_previous_month_range)
-  - [Function `get_financial_year_range`](#zoho-helpers-dates-get_financial_year_range)
-- [`zoho.helpers.sequences`](#zoho-helpers-sequences)
-  - [Function `parse_doc_number`](#zoho-helpers-sequences-parse_doc_number)
-- [`zoho.helpers.accounts`](#zoho-helpers-accounts)
-  - [Function `find_bank_account_by_name`](#zoho-helpers-accounts-find_bank_account_by_name)
-  - [Function `fetch_bank_accounts_map`](#zoho-helpers-accounts-fetch_bank_accounts_map)
-  - [Function `extract_bank_withdrawals`](#zoho-helpers-accounts-extract_bank_withdrawals)
-  - [Function `extract_bank_deposits`](#zoho-helpers-accounts-extract_bank_deposits)
-- [`zoho.helpers.bins`](#zoho-helpers-bins)
-  - [Function `get_bins_for_items`](#zoho-helpers-bins-get_bins_for_items)
-  - [Function `get_bins_by_item_map`](#zoho-helpers-bins-get_bins_by_item_map)
-- [`zoho.helpers.contacts`](#zoho-helpers-contacts)
-  - [Function `find_contact_by_gstin`](#zoho-helpers-contacts-find_contact_by_gstin)
-  - [Function `find_contact_by_name`](#zoho-helpers-contacts-find_contact_by_name)
-  - [Function `fetch_active_customers_map`](#zoho-helpers-contacts-fetch_active_customers_map)
-- [`zoho.helpers.custom_fields`](#zoho-helpers-custom_fields)
-  - [Function `get_custom_field_value`](#zoho-helpers-custom_fields-get_custom_field_value)
-  - [Function `extract_custom_fields_dict`](#zoho-helpers-custom_fields-extract_custom_fields_dict)
-  - [Function `ensure_books_custom_fields`](#zoho-helpers-custom_fields-ensure_books_custom_fields)
-- [`zoho.helpers.equity_ledger`](#zoho-helpers-equity_ledger)
-  - [Class `EquityLedgerEntry`](#zoho-helpers-equity_ledger-equityledgerentry)
-  - [Function `resolve_excluded_location_name`](#zoho-helpers-equity_ledger-resolve_excluded_location_name)
-  - [Function `fetch_equity_general_ledger`](#zoho-helpers-equity_ledger-fetch_equity_general_ledger)
-- [`zoho.helpers.files`](#zoho-helpers-files)
-  - [Function `download_books_document`](#zoho-helpers-files-download_books_document)
-  - [Function `workdrive_upload_file`](#zoho-helpers-files-workdrive_upload_file)
-  - [Function `attach_file_to_books_resource`](#zoho-helpers-files-attach_file_to_books_resource)
-  - [Function `workdrive_upload_and_attach`](#zoho-helpers-files-workdrive_upload_and_attach)
-- [`zoho.helpers.gst`](#zoho-helpers-gst)
-  - [Function `normalize_gstin`](#zoho-helpers-gst-normalize_gstin)
-  - [Function `is_valid_gstin`](#zoho-helpers-gst-is_valid_gstin)
-  - [Function `group_contacts_by_gstin`](#zoho-helpers-gst-group_contacts_by_gstin)
-- [`zoho.helpers.inter_branch_ledger`](#zoho-helpers-inter_branch_ledger)
-  - [Class `InterBranchLedgerEntry`](#zoho-helpers-inter_branch_ledger-interbranchledgerentry)
-  - [Class `InterBranchGeneralLedger`](#zoho-helpers-inter_branch_ledger-interbranchgeneralledger)
-  - [Function `fetch_inter_branch_general_ledger`](#zoho-helpers-inter_branch_ledger-fetch_inter_branch_general_ledger)
-  - [Function `fetch_inter_branch_register_transactions`](#zoho-helpers-inter_branch_ledger-fetch_inter_branch_register_transactions)
-- [`zoho.helpers.items`](#zoho-helpers-items)
-  - [Function `fetch_items_lookup`](#zoho-helpers-items-fetch_items_lookup)
-  - [Function `fetch_items_by_purchase_account`](#zoho-helpers-items-fetch_items_by_purchase_account)
-  - [Function `find_item_by_sku_or_name`](#zoho-helpers-items-find_item_by_sku_or_name)
-  - [Function `find_item_by_exact_sku`](#zoho-helpers-items-find_item_by_exact_sku)
-- [`zoho.helpers.profit_and_loss`](#zoho-helpers-profit_and_loss)
-  - [Function `fetch_profit_and_loss_schedule_format`](#zoho-helpers-profit_and_loss-fetch_profit_and_loss_schedule_format)
-- [`zoho.helpers.records`](#zoho-helpers-records)
-  - [Class `_RecordResource`](#zoho-helpers-records-_recordresource)
-  - [Function `get_verified_record`](#zoho-helpers-records-get_verified_record)
-- [`zoho.helpers.references`](#zoho-helpers-references)
-  - [Function `format_reference_lines`](#zoho-helpers-references-format_reference_lines)
-  - [Function `parse_reference_lines`](#zoho-helpers-references-parse_reference_lines)
-  - [Function `update_reference_lines`](#zoho-helpers-references-update_reference_lines)
-- [`zoho.helpers.transactions`](#zoho-helpers-transactions)
-  - [Function `normalize_cheque_number`](#zoho-helpers-transactions-normalize_cheque_number)
-  - [Function `fetch_open_invoices`](#zoho-helpers-transactions-fetch_open_invoices)
-  - [Function `fetch_open_bills`](#zoho-helpers-transactions-fetch_open_bills)
-  - [Function `find_bill_by_number`](#zoho-helpers-transactions-find_bill_by_number)
-  - [Function `allocate_documents_fifo`](#zoho-helpers-transactions-allocate_documents_fifo)
-  - [Function `unwrap_record`](#zoho-helpers-transactions-unwrap_record)
-  - [Function `find_transaction_by_number`](#zoho-helpers-transactions-find_transaction_by_number)
+- [`helpers.formatting.dates`](#helpers-formatting-dates)
+  - [Function `parse_date`](#helpers-formatting-dates-parse_date)
+  - [Function `get_month_range`](#helpers-formatting-dates-get_month_range)
+  - [Function `get_previous_month_range`](#helpers-formatting-dates-get_previous_month_range)
+  - [Function `get_financial_year_range`](#helpers-formatting-dates-get_financial_year_range)
+- [`helpers.formatting.sequences`](#helpers-formatting-sequences)
+- [`helpers.reports.accounts`](#helpers-reports-accounts)
+  - [Function `find_bank_account_by_name`](#helpers-reports-accounts-find_bank_account_by_name)
+  - [Function `fetch_bank_accounts_map`](#helpers-reports-accounts-fetch_bank_accounts_map)
+  - [Function `extract_bank_withdrawals`](#helpers-reports-accounts-extract_bank_withdrawals)
+  - [Function `extract_bank_deposits`](#helpers-reports-accounts-extract_bank_deposits)
+- [`helpers.catalog.bins`](#helpers-catalog-bins)
+  - [Function `get_bins_for_items`](#helpers-catalog-bins-get_bins_for_items)
+  - [Function `get_bins_by_item_map`](#helpers-catalog-bins-get_bins_by_item_map)
+- [`helpers.catalog.contacts`](#helpers-catalog-contacts)
+  - [Function `find_contact_by_gstin`](#helpers-catalog-contacts-find_contact_by_gstin)
+  - [Function `find_contact_by_name`](#helpers-catalog-contacts-find_contact_by_name)
+  - [Function `fetch_active_customers_map`](#helpers-catalog-contacts-fetch_active_customers_map)
+- [`helpers.catalog.custom_fields`](#helpers-catalog-custom_fields)
+  - [Function `get_custom_field_value`](#helpers-catalog-custom_fields-get_custom_field_value)
+  - [Function `extract_custom_fields_dict`](#helpers-catalog-custom_fields-extract_custom_fields_dict)
+  - [Function `ensure_books_custom_fields`](#helpers-catalog-custom_fields-ensure_books_custom_fields)
+- [`helpers.reports.equity_ledger`](#helpers-reports-equity_ledger)
+  - [Class `EquityLedgerEntry`](#helpers-reports-equity_ledger-equityledgerentry)
+  - [Function `resolve_excluded_location_name`](#helpers-reports-equity_ledger-resolve_excluded_location_name)
+  - [Function `fetch_equity_general_ledger`](#helpers-reports-equity_ledger-fetch_equity_general_ledger)
+- [`helpers.operations.files`](#helpers-operations-files)
+  - [Function `download_books_document`](#helpers-operations-files-download_books_document)
+  - [Function `workdrive_upload_file`](#helpers-operations-files-workdrive_upload_file)
+  - [Function `attach_file_to_books_resource`](#helpers-operations-files-attach_file_to_books_resource)
+  - [Function `workdrive_upload_and_attach`](#helpers-operations-files-workdrive_upload_and_attach)
+- [`helpers.formatting.gst`](#helpers-formatting-gst)
+  - [Function `normalize_gstin`](#helpers-formatting-gst-normalize_gstin)
+  - [Function `is_valid_gstin`](#helpers-formatting-gst-is_valid_gstin)
+  - [Function `group_contacts_by_gstin`](#helpers-formatting-gst-group_contacts_by_gstin)
+- [`helpers.reports.inter_branch_ledger`](#helpers-reports-inter_branch_ledger)
+  - [Class `InterBranchLedgerEntry`](#helpers-reports-inter_branch_ledger-interbranchledgerentry)
+  - [Class `InterBranchGeneralLedger`](#helpers-reports-inter_branch_ledger-interbranchgeneralledger)
+  - [Function `fetch_inter_branch_general_ledger`](#helpers-reports-inter_branch_ledger-fetch_inter_branch_general_ledger)
+  - [Function `fetch_inter_branch_register_transactions`](#helpers-reports-inter_branch_ledger-fetch_inter_branch_register_transactions)
+- [`helpers.catalog.items`](#helpers-catalog-items)
+  - [Function `fetch_items_lookup`](#helpers-catalog-items-fetch_items_lookup)
+  - [Function `fetch_items_by_purchase_account`](#helpers-catalog-items-fetch_items_by_purchase_account)
+  - [Function `find_item_by_sku_or_name`](#helpers-catalog-items-find_item_by_sku_or_name)
+  - [Function `find_item_by_exact_sku`](#helpers-catalog-items-find_item_by_exact_sku)
+- [`helpers.reports.profit_and_loss`](#helpers-reports-profit_and_loss)
+  - [Function `fetch_profit_and_loss_schedule_format`](#helpers-reports-profit_and_loss-fetch_profit_and_loss_schedule_format)
+- [`helpers.operations.records`](#helpers-operations-records)
+  - [Class `_RecordResource`](#helpers-operations-records-_recordresource)
+  - [Function `get_verified_record`](#helpers-operations-records-get_verified_record)
+- [`helpers.formatting.references`](#helpers-formatting-references)
+  - [Function `format_reference_lines`](#helpers-formatting-references-format_reference_lines)
+  - [Function `parse_reference_lines`](#helpers-formatting-references-parse_reference_lines)
+  - [Function `update_reference_lines`](#helpers-formatting-references-update_reference_lines)
+- [`helpers.operations.transactions`](#helpers-operations-transactions)
+  - [Function `normalize_cheque_number`](#helpers-operations-transactions-normalize_cheque_number)
+  - [Function `fetch_open_invoices`](#helpers-operations-transactions-fetch_open_invoices)
+  - [Function `fetch_open_bills`](#helpers-operations-transactions-fetch_open_bills)
+  - [Function `find_bill_by_number`](#helpers-operations-transactions-find_bill_by_number)
+  - [Function `allocate_documents_fifo`](#helpers-operations-transactions-allocate_documents_fifo)
+  - [Function `unwrap_record`](#helpers-operations-transactions-unwrap_record)
+  - [Function `find_transaction_by_number`](#helpers-operations-transactions-find_transaction_by_number)
 
 ---
 
-## Module `zoho.helpers.dates`
+## Module `helpers.formatting.dates`
 
-**Source:** [`src/zoho/helpers/dates.py`](src/zoho/helpers/dates.py)
+**Source:** [`src/helpers/formatting/dates.py`](src/helpers/formatting/dates.py)
 
 Date parsing and financial period calculation utilities for Zoho APIs.
 
@@ -113,28 +112,20 @@ Defaults to the Indian financial year (April 1 to March 31).
 
 ---
 
-## Module `zoho.helpers.sequences`
+## Module `helpers.formatting.sequences`
 
-**Source:** [`src/zoho/helpers/sequences.py`](src/zoho/helpers/sequences.py)
+**Source:** [`src/helpers/formatting/sequences.py`](src/helpers/formatting/sequences.py)
 
-Generic document-number parsing shared by resources and workflows.
+Public helper export for shared document-number parsing.
 
 **Declared Exports (`__all__`):**
 `parse_doc_number`
 
-### Function `parse_doc_number`
-
-```python
-def parse_doc_number(doc_no: str) -> tuple[str, int, int]
-```
-
-Return prefix, trailing integer and observed width; width zero means no suffix.
-
 ---
 
-## Module `zoho.helpers.accounts`
+## Module `helpers.reports.accounts`
 
-**Source:** [`src/zoho/helpers/accounts.py`](src/zoho/helpers/accounts.py)
+**Source:** [`src/helpers/reports/accounts.py`](src/helpers/reports/accounts.py)
 
 Higher-level helper functions for Zoho Books bank account operations.
 
@@ -172,9 +163,9 @@ Filter a list of bank transactions down to inflows (deposits / credits / receipt
 
 ---
 
-## Module `zoho.helpers.bins`
+## Module `helpers.catalog.bins`
 
-**Source:** [`src/zoho/helpers/bins.py`](src/zoho/helpers/bins.py)
+**Source:** [`src/helpers/catalog/bins.py`](src/helpers/catalog/bins.py)
 
 Higher-level helper functions for Zoho Analytics and Inventory bin operations.
 
@@ -230,9 +221,9 @@ Returns a mapping of {key_value: [bin_record_1, bin_record_2, ...]}.
 
 ---
 
-## Module `zoho.helpers.contacts`
+## Module `helpers.catalog.contacts`
 
-**Source:** [`src/zoho/helpers/contacts.py`](src/zoho/helpers/contacts.py)
+**Source:** [`src/helpers/catalog/contacts.py`](src/helpers/catalog/contacts.py)
 
 Higher-level helper functions for Zoho Books contact operations.
 
@@ -266,9 +257,9 @@ Keys are extracted from either direct attributes or custom fields using `key_fie
 
 ---
 
-## Module `zoho.helpers.custom_fields`
+## Module `helpers.catalog.custom_fields`
 
-**Source:** [`src/zoho/helpers/custom_fields.py`](src/zoho/helpers/custom_fields.py)
+**Source:** [`src/helpers/catalog/custom_fields.py`](src/helpers/catalog/custom_fields.py)
 
 Utilities for safely inspecting, extracting, and provisioning Zoho custom field values.
 
@@ -303,9 +294,9 @@ Verify and optionally provision custom fields on a Zoho Books entity.
 
 ---
 
-## Module `zoho.helpers.equity_ledger`
+## Module `helpers.reports.equity_ledger`
 
-**Source:** [`src/zoho/helpers/equity_ledger.py`](src/zoho/helpers/equity_ledger.py)
+**Source:** [`src/helpers/reports/equity_ledger.py`](src/helpers/reports/equity_ledger.py)
 
 Collect detailed Zoho Books ledger rows for every equity account.
 
@@ -345,9 +336,9 @@ fails closed rather than silently widening the report scope.
 
 ---
 
-## Module `zoho.helpers.files`
+## Module `helpers.operations.files`
 
-**Source:** [`src/zoho/helpers/files.py`](src/zoho/helpers/files.py)
+**Source:** [`src/helpers/operations/files.py`](src/helpers/operations/files.py)
 
 Higher-level helper functions for WorkDrive uploads and Books attachments.
 
@@ -385,9 +376,9 @@ Upload a file to WorkDrive and attach it to a Books resource in a single composi
 
 ---
 
-## Module `zoho.helpers.gst`
+## Module `helpers.formatting.gst`
 
-**Source:** [`src/zoho/helpers/gst.py`](src/zoho/helpers/gst.py)
+**Source:** [`src/helpers/formatting/gst.py`](src/helpers/formatting/gst.py)
 
 GST (Goods and Services Tax) identification and validation helpers.
 
@@ -423,9 +414,9 @@ Group contact records by their normalized valid GSTIN.
 
 ---
 
-## Module `zoho.helpers.inter_branch_ledger`
+## Module `helpers.reports.inter_branch_ledger`
 
-**Source:** [`src/zoho/helpers/inter_branch_ledger.py`](src/zoho/helpers/inter_branch_ledger.py)
+**Source:** [`src/helpers/reports/inter_branch_ledger.py`](src/helpers/reports/inter_branch_ledger.py)
 
 Fetch one inter-branch account's detailed Zoho Books ledger.
 
@@ -473,9 +464,9 @@ Read raw register postings, which may omit branch-generated balances.
 
 ---
 
-## Module `zoho.helpers.items`
+## Module `helpers.catalog.items`
 
-**Source:** [`src/zoho/helpers/items.py`](src/zoho/helpers/items.py)
+**Source:** [`src/helpers/catalog/items.py`](src/helpers/catalog/items.py)
 
 Higher-level helper functions for Zoho Inventory item operations.
 
@@ -519,9 +510,9 @@ Find an exact Inventory SKU in one purchase account, preferring active items.
 
 ---
 
-## Module `zoho.helpers.profit_and_loss`
+## Module `helpers.reports.profit_and_loss`
 
-**Source:** [`src/zoho/helpers/profit_and_loss.py`](src/zoho/helpers/profit_and_loss.py)
+**Source:** [`src/helpers/reports/profit_and_loss.py`](src/helpers/reports/profit_and_loss.py)
 
 Convenience wrapper for the branch-scoped schedule-format P&L.
 
@@ -535,9 +526,9 @@ Fetch an accrual P&L excluding one Books branch by location ID.
 
 ---
 
-## Module `zoho.helpers.records`
+## Module `helpers.operations.records`
 
-**Source:** [`src/zoho/helpers/records.py`](src/zoho/helpers/records.py)
+**Source:** [`src/helpers/operations/records.py`](src/helpers/operations/records.py)
 
 Fetch resource details with explicit response-shape and identity checks.
 
@@ -567,9 +558,9 @@ missing IDs and mismatched IDs raise ValueError; resource errors propagate.
 
 ---
 
-## Module `zoho.helpers.references`
+## Module `helpers.formatting.references`
 
-**Source:** [`src/zoho/helpers/references.py`](src/zoho/helpers/references.py)
+**Source:** [`src/helpers/formatting/references.py`](src/helpers/formatting/references.py)
 
 Lossless, labeled references shared by transaction narrations.
 
@@ -599,9 +590,9 @@ Replace managed lines idempotently, preserving unrelated human notes.
 
 ---
 
-## Module `zoho.helpers.transactions`
+## Module `helpers.operations.transactions`
 
-**Source:** [`src/zoho/helpers/transactions.py`](src/zoho/helpers/transactions.py)
+**Source:** [`src/helpers/operations/transactions.py`](src/helpers/operations/transactions.py)
 
 Higher-level helper functions for Zoho Books transaction lookups and response unwrapping.
 

@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import Any
-from zoho.base_client import BaseZohoClient
+from zoho.core_sdk.base_client import BaseZohoClient
 from .exceptions import ZohoCreatorError
 
 class ZohoCreatorAPI(BaseZohoClient):
@@ -117,7 +117,7 @@ class ZohoCreatorAPI(BaseZohoClient):
         Attachment URLs are never followed, keeping OAuth on the API host.
         """
         from urllib.parse import quote
-        from utils.http import write_response_to_file
+        from utils.http_utils.http import write_response_to_file
 
         parts = (self.account_owner_name, app_link_name, report_link_name,
                  record_id, field_link_name)

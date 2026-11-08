@@ -59,6 +59,12 @@ Regenerate offline using the workspace interpreter:
 .venv/bin/python apps/tools/generate_books_sdk.py /absolute/path/to/openapi-folder
 ```
 
+Generated resource classes live under `openapi/resources/` by domain.
+Large resources compose operation groups in their own packages. The generator
+caps each Python output at 400 lines and each generated directory at ten files.
+`openapi/generated.py` re-exports the resource classes and provides the typed
+client registry. Existing imports through that module continue to work.
+
 Generation discovers inherited/custom route owners and deduplicates all source
 files before emitting methods. It rejects conflicting custom wrappers within a
 resource. SHA-256 source hashes are recorded in the manifest. Generation needs
@@ -188,7 +194,7 @@ availability still needs live verification; automated tests mock network access.
 
 `reports.profit_and_loss_schedule_format(from_date=..., to_date=..., rule=...)`
 requests the schedule-format P&L figures for an explicit ISO date range. The
-`zoho.helpers.fetch_profit_and_loss_schedule_format(api, from_date=...,
+`helpers.fetch_profit_and_loss_schedule_format(api, from_date=...,
 to_date=..., excluded_location_id=...)` wrapper constructs the Books branch
 `not_in` rule and requests accrual basis. The SDK calls the data endpoint
 `reports/scheduleprofitandloss` with `is_expand=true` and `response_option=1`.
@@ -221,7 +227,7 @@ rows = api.registers.iter_transactions(
 )
 ```
 
-`zoho.helpers.fetch_equity_general_ledger(api, from_date=..., to_date=...,
+`helpers.fetch_equity_general_ledger(api, from_date=..., to_date=...,
 excluded_location_id=...)` discovers active and inactive equity accounts and
 calls `registers.iter_transactions_for_accounts` once for the whole set. It
 resolves the excluded location ID to a unique Books location name, then removes
@@ -231,7 +237,7 @@ IDs; missing or ambiguous branch metadata stops the helper. It returns
 
 `reports.general_ledger(from_date=..., to_date=..., rule=...)` calls the public
 `reports/generalledger` endpoint and validates its echoed dates, accrual basis,
-and rule columns. `zoho.helpers.fetch_inter_branch_general_ledger` wraps it
+and rule columns. `helpers.fetch_inter_branch_general_ledger` wraps it
 with the inter-branch account ID and SBE exclusion and returns debit, credit,
 and closing balance. For FY 2025–26, the branch-filtered report returned
 debits 14,945, credits 63,120, and a 48,175 credit balance. This is the
@@ -334,7 +340,7 @@ api.contacts.bulk_update([
 
 Item catalog operations use [Zoho Inventory](zoho-inventory.md), including
 `inventory.items.list_by_purchase_account(account_id, status="all")` and the
-`zoho.helpers.items` helpers with an Inventory client. Purchase-account scoping
+`helpers.catalog.items` helpers with an Inventory client. Purchase-account scoping
 prevents cross-vendor item collisions. `ZohoBooksAPI.items` has been removed.
 
 The YAML sales-order importer requires an explicit `inventory_client=` for

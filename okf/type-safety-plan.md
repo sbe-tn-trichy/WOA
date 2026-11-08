@@ -89,7 +89,7 @@ and the [project changelog](../CHANGELOG.md) own operational and test evidence.
 
 - `pyproject.toml` and `.github/workflows/tests.yml` have pytest coverage but no
   configured static checker or type-checking job.
-- `zoho.base_client` and `zoho.base_resource` expose dynamic transport/resource
+- `zoho.core_sdk.base_client` and `zoho.core_sdk.base_resource` expose dynamic transport/resource
   records; resource clients and several callbacks are typed as `Any`.
 - `workflows.payment_renumbering.engine` already has `RenumberPlan` and
   `RenumberResult` TypedDicts, but clients, snapshots, and status strings remain
@@ -99,7 +99,7 @@ and the [project changelog](../CHANGELOG.md) own operational and test evidence.
   dataclass but dynamic contact, allocation, and result dictionaries.
 - `workflows.stock_transfer.processor` has a `TransferLine` dataclass but dynamic
   item/location/bin inputs and nested storage records.
-- `workflows.core.snapshots` and `zoho.helpers.records` demonstrate existing
+- `workflows.core.snapshots` and `helpers.operations.records` demonstrate existing
   Protocol patterns. Extend the owning modules rather than build a new framework.
 
 ## Design rules

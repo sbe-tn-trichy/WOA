@@ -1,4 +1,4 @@
-from workflows.inter_location_location_proposals import propose_location_updates
+from workflows.inter_location.location_proposals import propose_location_updates
 
 
 def row(**changes):

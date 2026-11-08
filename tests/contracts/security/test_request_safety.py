@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from zoho.auth import CatalystAuth, ZohoOAuth2Manager
-from zoho.base_client import BaseZohoClient
-from zoho.exceptions import ZohoBooksError
+from zoho.core_sdk.auth import CatalystAuth, ZohoOAuth2Manager
+from zoho.core_sdk.base_client import BaseZohoClient
+from zoho.core_sdk.exceptions import ZohoBooksError
 
 
 def _client(response):
@@ -68,7 +68,7 @@ def test_missing_refreshed_token_does_not_expose_response():
     manager = ZohoOAuth2Manager("client", "secret", "refresh")
     response = MagicMock()
     response.json.return_value = {"error": "invalid", "access_token_hint": "must-not-leak"}
-    with patch("utils.http_transport.post", return_value=response):
+    with patch("utils.http_utils.http_transport.post", return_value=response):
         with pytest.raises(ValueError) as caught:
             manager.refresh_access_token()
     assert "must-not-leak" not in str(caught.value)
@@ -80,7 +80,7 @@ def test_retry_after_is_bounded_and_invalid_values_use_default(header, delay):
     success = MagicMock(status_code=204, text="", headers={})
     client = _client(success)
     client.session.request.side_effect = [limited, success]
-    with patch("zoho.base_client.time.sleep") as sleep:
+    with patch("zoho.core_sdk.base_client.time.sleep") as sleep:
         assert client.request("GET", "invoices") == {}
     sleep.assert_called_once_with(delay)
     limited.close.assert_called_once()
@@ -90,7 +90,7 @@ def test_negative_retry_after_exhaustion_raises_structured_error():
     limited = MagicMock(status_code=429, text="limited", headers={"Retry-After": "-1"})
     limited.json.return_value = {"code": 429, "message": "limited"}
     client = _client(limited)
-    with patch("zoho.base_client.time.sleep") as sleep:
+    with patch("zoho.core_sdk.base_client.time.sleep") as sleep:
         with pytest.raises(ZohoBooksError) as caught:
             client.request("GET", "invoices")
     assert caught.value.status_code == 429
@@ -113,7 +113,7 @@ def test_refresh_preserves_dynamic_token_classification(method, is_mutation):
         return unauthorized if len(headers) == 1 else success
 
     client.session.request.side_effect = request
-    with patch("zoho.auth.fetch_token_from_catalyst", return_value="fresh-mutation") as broker:
+    with patch("zoho.core_sdk.auth.fetch_token_from_catalyst", return_value="fresh-mutation") as broker:
         assert client.request(method, "invoices", is_mutation=is_mutation) == {}
     expected_mutation = method == "POST" and is_mutation is not False
     expected = "fresh-mutation" if expected_mutation else "fresh-direct"

@@ -4,15 +4,61 @@ from __future__ import annotations
 
 from importlib import import_module
 
+from utils.general_utils.module_aliases import register_module_aliases
 
-from .core.auth import (
+_MODULE_ALIASES = {
+    "workflows.core.auth": "workflows.runtime.auth",
+    "workflows.core.config": "workflows.runtime.config",
+    "workflows.core.exceptions": "workflows.runtime.exceptions",
+    "workflows.core.logging_config": "workflows.runtime.logging_config",
+    "workflows.collection_reconciliation.allocator": "workflows.collection_payments.allocator",
+    "workflows.collection_reconciliation.cheques": "workflows.collection_payments.cheques",
+    "workflows.collection_reconciliation.identifiers": "workflows.collection_payments.identifiers",
+    "workflows.collection_reconciliation.payments": "workflows.collection_payments.payments",
+    "workflows.collection_reconciliation.transaction_index": "workflows.collection_payments.transaction_index",
+    "workflows.collection_reconciliation.types": "workflows.collection_payments.types",
+    "workflows.bank_statement_check": "workflows.bank_statements.checker",
+    "workflows.bill_updates": "workflows.purchasing.bill_updates",
+    "workflows.creator_beat_allocation": "workflows.customer_management.creator_beat_allocation",
+    "workflows.creator_beat_sync": "workflows.customer_management.creator_beat_sync",
+    "workflows.creator_books_payment_link": "workflows.creator_payments.books_link",
+    "workflows.online_payment_creator_backfill": "workflows.creator_payments.online_backfill",
+    "workflows.creator_payment_ocr": "workflows.creator_payments.ocr",
+    "workflows.payment_inspection": "workflows.customer_payments.inspection",
+    "workflows.unearned_revenue": "workflows.customer_payments.unearned_revenue",
+    "workflows.apply_inter_location_updates": "workflows.inter_location.apply_updates",
+    "workflows.customer_analytics_sync": "workflows.customer_management.analytics_sync",
+    "workflows.inter_location_vendor_payment_proposals": "workflows.inter_location.vendor_payment_proposals",
+    "workflows.books_statement_sheet": "workflows.books_statements.statement_sheet",
+    "workflows.customer_invoice_payment_review": "workflows.customer_management.invoice_payment_review",
+    "workflows.books_pnl_notes": "workflows.books_statements.pnl_notes",
+    "workflows.inter_location_analytics_report": "workflows.inter_location.analytics_report",
+    "workflows.customer_normalization": "workflows.customer_management.normalization",
+    "workflows.gst_monthly": "workflows.gst.monthly",
+    "workflows.inter_location_location_proposals": "workflows.inter_location.location_proposals",
+    "workflows.inter_location_payment_proposals": "workflows.inter_location.payment_proposals",
+    "workflows.inter_location_vendor_payment_updates": "workflows.inter_location.vendor_payment_updates",
+    "workflows.books_custom_module_store": "workflows.books_statements.custom_module_store",
+    "workflows.inter_location_payment_updates": "workflows.inter_location.payment_updates",
+    "workflows.customer_table": "workflows.customer_management.table",
+    "workflows.customer_local_store": "workflows.customer_management.local_store",
+    "workflows.gst_cash_ledger": "workflows.gst.cash_ledger",
+    "workflows.inter_location_contra": "workflows.inter_location.contra",
+    "workflows.inter_location_split_proposals": "workflows.inter_location.split_proposals",
+    "workflows.books_account_catalog": "workflows.books_statements.account_catalog",
+    "workflows.it_balance_sheet_comparison": "workflows.books_statements.it_balance_sheet_comparison",
+}
+register_module_aliases(_MODULE_ALIASES)
+
+
+from workflows.runtime.auth import (
     fetch_access_tokens,
     get_books_client,
     get_inventory_client,
     get_sheet_client,
     get_workdrive_client,
 )
-from .core.exceptions import (
+from workflows.runtime.exceptions import (
     LedgerParsingError,
     ReconciliationError,
     SchemaValidationError,
@@ -23,30 +69,75 @@ from .core.models import DotDict
 
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
-    "sync_analytics_customers": (".customer_analytics_sync", "sync_analytics_customers"),
-    "CustomerAnalyticsSyncResult": (".customer_analytics_sync", "CustomerAnalyticsSyncResult"),
-    "build_normalized_customers": (".customer_normalization", "build_normalized_customers"),
-    "download_customer_normalization_sources": (".customer_normalization", "download_customer_normalization_sources"),
-    "CustomerNormalizationResult": (".customer_normalization", "CustomerNormalizationResult"),
-    "compact_customer_columns": (".customer_table", "compact_customer_columns"),
-    "stage_creator_beats_locally": (".customer_local_store", "stage_creator_beats_locally"),
-    "stage_new_beat": (".books_custom_module_store", "stage_new_beat"),
-    "download_books_custom_modules": (".books_custom_module_store", "download_books_custom_modules"),
-    "module_record_json": (".books_custom_module_store", "module_record_json"),
-    "ModuleDownloadResult": (".books_custom_module_store", "ModuleDownloadResult"),
-    "open_customer_store": (".customer_local_store", "open_store"),
-    "sync_local_customers": (".customer_local_store", "sync_customers"),
-    "export_customer_json": (".customer_table", "customer_json"),
-    "review_unearned_revenue_analytics": (".unearned_revenue", "review_unearned_revenue_analytics"),
-    "find_unused_customer_payments": (".unearned_revenue", "find_unused_customer_payments"),
-    "UnusedPayment": (".unearned_revenue", "UnusedPayment"),
-    "UnearnedRevenueReview": (".unearned_revenue", "UnearnedRevenueReview"),
+    "sync_analytics_customers": (
+        ".customer_management.analytics_sync",
+        "sync_analytics_customers",
+    ),
+    "CustomerAnalyticsSyncResult": (
+        ".customer_management.analytics_sync",
+        "CustomerAnalyticsSyncResult",
+    ),
+    "build_normalized_customers": (
+        ".customer_management.normalization",
+        "build_normalized_customers",
+    ),
+    "download_customer_normalization_sources": (
+        ".customer_management.normalization",
+        "download_customer_normalization_sources",
+    ),
+    "CustomerNormalizationResult": (
+        ".customer_management.normalization",
+        "CustomerNormalizationResult",
+    ),
+    "compact_customer_columns": (
+        ".customer_management.table",
+        "compact_customer_columns",
+    ),
+    "stage_creator_beats_locally": (
+        ".customer_management.local_store",
+        "stage_creator_beats_locally",
+    ),
+    "stage_new_beat": (".books_statements.custom_module_store", "stage_new_beat"),
+    "download_books_custom_modules": (
+        ".books_statements.custom_module_store",
+        "download_books_custom_modules",
+    ),
+    "module_record_json": (
+        ".books_statements.custom_module_store",
+        "module_record_json",
+    ),
+    "ModuleDownloadResult": (
+        ".books_statements.custom_module_store",
+        "ModuleDownloadResult",
+    ),
+    "open_customer_store": (".customer_management.local_store", "open_store"),
+    "sync_local_customers": (".customer_management.local_store", "sync_customers"),
+    "export_customer_json": (".customer_management.table", "customer_json"),
+    "review_unearned_revenue_analytics": (
+        ".customer_payments.unearned_revenue",
+        "review_unearned_revenue_analytics",
+    ),
+    "find_unused_customer_payments": (
+        ".customer_payments.unearned_revenue",
+        "find_unused_customer_payments",
+    ),
+    "UnusedPayment": (".customer_payments.unearned_revenue", "UnusedPayment"),
+    "UnearnedRevenueReview": (
+        ".customer_payments.unearned_revenue",
+        "UnearnedRevenueReview",
+    ),
     "sync_customer_numbers": (".customer_registration", "sync_customer_numbers"),
     "CustomerNumberChange": (".customer_registration", "CustomerNumberChange"),
     "CustomerNumberSyncResult": (".customer_registration", "CustomerNumberSyncResult"),
     "register_customer": (".customer_registration", "register_customer"),
-    "CustomerRegistrationResult": (".customer_registration", "CustomerRegistrationResult"),
-    "CustomerRegistrationError": (".customer_registration", "CustomerRegistrationError"),
+    "CustomerRegistrationResult": (
+        ".customer_registration",
+        "CustomerRegistrationResult",
+    ),
+    "CustomerRegistrationError": (
+        ".customer_registration",
+        "CustomerRegistrationError",
+    ),
     "RmaCreditPolicy": (".polycab_credit_review", "RmaCreditPolicy"),
     "CreditAudit": (".polycab_credit_review", "CreditAudit"),
     "CreditFinding": (".polycab_credit_review", "CreditFinding"),
@@ -54,21 +145,42 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "CreditCorrectionPlan": (".polycab_credit_review", "CreditCorrectionPlan"),
     "CreditCorrectionResult": (".polycab_credit_review", "CreditCorrectionResult"),
     "CreditCorrectionError": (".polycab_credit_review", "CreditCorrectionError"),
-    "review_polycab_vendor_credits": (".polycab_credit_review", "review_polycab_vendor_credits"),
-    "review_saved_polycab_vendor_credits": (".polycab_credit_review", "review_saved_polycab_vendor_credits"),
-    "build_credit_correction_plan": (".polycab_credit_review", "build_credit_correction_plan"),
-    "execute_credit_correction": (".polycab_credit_review", "execute_credit_correction"),
-    "fetch_trial_balance_for_firm": (".audited_financials", "fetch_trial_balance_for_firm"),
-    "fetch_trial_balance_for_gstin": (".audited_financials", "fetch_trial_balance_for_gstin"),
+    "review_polycab_vendor_credits": (
+        ".polycab_credit_review",
+        "review_polycab_vendor_credits",
+    ),
+    "review_saved_polycab_vendor_credits": (
+        ".polycab_credit_review",
+        "review_saved_polycab_vendor_credits",
+    ),
+    "build_credit_correction_plan": (
+        ".polycab_credit_review",
+        "build_credit_correction_plan",
+    ),
+    "execute_credit_correction": (
+        ".polycab_credit_review",
+        "execute_credit_correction",
+    ),
+    "fetch_trial_balance_for_firm": (
+        ".audited_financials",
+        "fetch_trial_balance_for_firm",
+    ),
+    "fetch_trial_balance_for_gstin": (
+        ".audited_financials",
+        "fetch_trial_balance_for_gstin",
+    ),
     "compare_audited_financials": (".audited_financials", "compare_audited_financials"),
     "ComparisonPeriod": (".audited_financials", "ComparisonPeriod"),
     "ComparisonResult": (".audited_financials", "ComparisonResult"),
     "CustomerValidationReport": (".customer_validation", "CustomerValidationReport"),
     "ContactValidation": (".customer_validation", "ContactValidation"),
     "ValidationIssue": (".customer_validation", "ValidationIssue"),
-    "PaymentSeriesSummary": (".payment_inspection", "PaymentSeriesSummary"),
+    "PaymentSeriesSummary": (".customer_payments.inspection", "PaymentSeriesSummary"),
     "CustomerValidator": (".customer_validation", "CustomerValidator"),
-    "create_sales_order_from_yaml": (".sales_order_import", "create_sales_order_from_yaml"),
+    "create_sales_order_from_yaml": (
+        ".sales_order_import",
+        "create_sales_order_from_yaml",
+    ),
     "parse_invoice_yaml": (".sales_order_import", "parse_invoice_yaml"),
     "InvoiceData": (".sales_order_import", "InvoiceData"),
     "InvoiceLine": (".sales_order_import", "InvoiceLine"),
@@ -80,84 +192,205 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "build_renumber_plan": (".payment_renumbering", "build_renumber_plan"),
     "execute_renumbering": (".payment_renumbering", "execute_renumbering"),
     "get_target_payments": (".payment_renumbering", "get_target_payments"),
-    "extract_series_info": (".payment_inspection", "extract_series_info"),
-    "fetch_customer_payments": (".payment_inspection", "fetch_customer_payments"),
-
-    "CustomerInvoicePaymentReview": (".customer_invoice_payment_review", "CustomerInvoicePaymentReview"),
-    "InvoicePaymentRow": (".customer_invoice_payment_review", "InvoicePaymentRow"),
-    "PaymentAllocationRow": (".customer_invoice_payment_review", "PaymentAllocationRow"),
-    "review_customer_invoices_payments": (".customer_invoice_payment_review", "review_customer_invoices_payments"),
-    "invoice_discount_percentage": (".customer_invoice_payment_review", "invoice_discount_percentage"),
-    "PaymentMove": (".inter_location_payment_updates", "PaymentMove"),
-    "plan_customer_payment_moves": (".inter_location_payment_updates", "plan_customer_payment_moves"),
-    "apply_customer_payment_move": (".inter_location_payment_updates", "apply_customer_payment_move"),
-    "submit_customer_payment_move": (".inter_location_payment_updates", "submit_customer_payment_move"),
-    "verify_customer_payment_batch": (".inter_location_payment_updates", "verify_customer_payment_batch"),
-    "VendorPaymentMove": (".inter_location_vendor_payment_proposals", "VendorPaymentMove"),
-    "propose_vendor_payment_moves": (".inter_location_vendor_payment_proposals", "propose_vendor_payment_moves"),
-    "sync_account_catalog": (".books_account_catalog", "sync_account_catalog"),
-    "refresh_mapping_account_names": (".books_account_catalog", "refresh_mapping_account_names"),
-    "StatementMapping": (".books_statement_sheet", "StatementMapping"),
-    "StatementPeriod": (".books_statement_sheet", "StatementPeriod"),
-    "EquityMapping": (".books_statement_sheet", "EquityMapping"),
-    "prepare_statement_sheet_updates": (".books_statement_sheet", "prepare_updates"),
-    "prepare_equity_updates": (".books_statement_sheet", "prepare_equity_updates"),
-    "BillUpdateResult": (".bill_updates", "BillUpdateResult"),
-    "BillPostingDateResult": (".bill_updates", "BillPostingDateResult"),
-    "update_bill_transaction_posting_date": (".bill_updates", "update_bill_transaction_posting_date"),
-    "update_bill_with_payment_reallocation": (".bill_updates", "update_bill_with_payment_reallocation"),
+    "extract_series_info": (".customer_payments.inspection", "extract_series_info"),
+    "fetch_customer_payments": (
+        ".customer_payments.inspection",
+        "fetch_customer_payments",
+    ),
+    "CustomerInvoicePaymentReview": (
+        ".customer_management.invoice_payment_review",
+        "CustomerInvoicePaymentReview",
+    ),
+    "InvoicePaymentRow": (
+        ".customer_management.invoice_payment_review",
+        "InvoicePaymentRow",
+    ),
+    "PaymentAllocationRow": (
+        ".customer_management.invoice_payment_review",
+        "PaymentAllocationRow",
+    ),
+    "review_customer_invoices_payments": (
+        ".customer_management.invoice_payment_review",
+        "review_customer_invoices_payments",
+    ),
+    "invoice_discount_percentage": (
+        ".customer_management.invoice_payment_review",
+        "invoice_discount_percentage",
+    ),
+    "PaymentMove": (".inter_location.payment_updates", "PaymentMove"),
+    "plan_customer_payment_moves": (
+        ".inter_location.payment_updates",
+        "plan_customer_payment_moves",
+    ),
+    "apply_customer_payment_move": (
+        ".inter_location.payment_updates",
+        "apply_customer_payment_move",
+    ),
+    "submit_customer_payment_move": (
+        ".inter_location.payment_updates",
+        "submit_customer_payment_move",
+    ),
+    "verify_customer_payment_batch": (
+        ".inter_location.payment_updates",
+        "verify_customer_payment_batch",
+    ),
+    "VendorPaymentMove": (
+        ".inter_location.vendor_payment_proposals",
+        "VendorPaymentMove",
+    ),
+    "propose_vendor_payment_moves": (
+        ".inter_location.vendor_payment_proposals",
+        "propose_vendor_payment_moves",
+    ),
+    "sync_account_catalog": (
+        ".books_statements.account_catalog",
+        "sync_account_catalog",
+    ),
+    "refresh_mapping_account_names": (
+        ".books_statements.account_catalog",
+        "refresh_mapping_account_names",
+    ),
+    "StatementMapping": (".books_statements.statement_sheet", "StatementMapping"),
+    "StatementPeriod": (".books_statements.statement_sheet", "StatementPeriod"),
+    "EquityMapping": (".books_statements.statement_sheet", "EquityMapping"),
+    "prepare_statement_sheet_updates": (
+        ".books_statements.statement_sheet",
+        "prepare_updates",
+    ),
+    "prepare_equity_updates": (
+        ".books_statements.statement_sheet",
+        "prepare_equity_updates",
+    ),
+    "BillUpdateResult": (".purchasing.bill_updates", "BillUpdateResult"),
+    "BillPostingDateResult": (".purchasing.bill_updates", "BillPostingDateResult"),
+    "update_bill_transaction_posting_date": (
+        ".purchasing.bill_updates",
+        "update_bill_transaction_posting_date",
+    ),
+    "update_bill_with_payment_reallocation": (
+        ".purchasing.bill_updates",
+        "update_bill_with_payment_reallocation",
+    ),
     "CollectionReconciler": (".collection_reconciliation", "CollectionReconciler"),
-    "CollectionReconciliationConfig": (".collection_reconciliation", "CollectionReconciliationConfig"),
-    "OnlinePaymentReviewConfig": (".collection_reconciliation", "OnlinePaymentReviewConfig"),
-    "OnlinePaymentReviewService": (".collection_reconciliation", "OnlinePaymentReviewService"),
+    "CollectionReconciliationConfig": (
+        ".collection_reconciliation",
+        "CollectionReconciliationConfig",
+    ),
+    "OnlinePaymentReviewConfig": (
+        ".collection_reconciliation",
+        "OnlinePaymentReviewConfig",
+    ),
+    "OnlinePaymentReviewService": (
+        ".collection_reconciliation",
+        "OnlinePaymentReviewService",
+    ),
     "REQUIRED_OAUTH_SCOPES": (".collection_reconciliation", "REQUIRED_OAUTH_SCOPES"),
     "missing_oauth_scopes": (".collection_reconciliation", "missing_oauth_scopes"),
     "reconcile_collections": (".collection_reconciliation", "reconcile_collections"),
     "CreditImportPolicy": (".polycab_credit_memos.importer", "CreditImportPolicy"),
     "import_credit_pdf": (".polycab_credit_memos.importer", "import_credit_pdf"),
-    "check_vendor_credits_location": (".polycab_credit_memos.processor", "check_vendor_credits_location"),
-    "create_vendor_credit_from_pdf": (".polycab_credit_memos.processor", "create_vendor_credit_from_pdf"),
-    "parse_polycab_credit_memo": (".polycab_credit_memos.processor", "parse_polycab_credit_memo"),
-    "process_polycab_credit_memos": (".polycab_credit_memos.processor", "process_polycab_credit_memos"),
+    "check_vendor_credits_location": (
+        ".polycab_credit_memos.processor",
+        "check_vendor_credits_location",
+    ),
+    "create_vendor_credit_from_pdf": (
+        ".polycab_credit_memos.processor",
+        "create_vendor_credit_from_pdf",
+    ),
+    "parse_polycab_credit_memo": (
+        ".polycab_credit_memos.processor",
+        "parse_polycab_credit_memo",
+    ),
+    "process_polycab_credit_memos": (
+        ".polycab_credit_memos.processor",
+        "process_polycab_credit_memos",
+    ),
     "upload_to_workdrive": (".polycab_credit_memos.processor", "upload_to_workdrive"),
-    "upload_vendor_credit_attachment": (".polycab_credit_memos.processor", "upload_vendor_credit_attachment"),
+    "upload_vendor_credit_attachment": (
+        ".polycab_credit_memos.processor",
+        "upload_vendor_credit_attachment",
+    ),
     "import_polycab_rso_pdf": (".polycab_rso", "import_polycab_rso_pdf"),
     "parse_polycab_rso_pdf": (".polycab_rso", "parse_polycab_rso_pdf"),
     "clean_ledger_file": (".vendor_ledger_reconciliation.cleaner", "clean_ledger_file"),
-    "get_ledger_metadata": (".vendor_ledger_reconciliation.cleaner", "get_ledger_metadata"),
-    "match_bank_with_vendor_ledger": (".bank_vendor_ledger_matching.matcher", "match_bank_with_vendor_ledger"),
-    "match_ledger_entries": (".bank_vendor_ledger_matching.matcher", "match_ledger_entries"),
+    "get_ledger_metadata": (
+        ".vendor_ledger_reconciliation.cleaner",
+        "get_ledger_metadata",
+    ),
+    "match_bank_with_vendor_ledger": (
+        ".bank_vendor_ledger_matching.matcher",
+        "match_bank_with_vendor_ledger",
+    ),
+    "match_ledger_entries": (
+        ".bank_vendor_ledger_matching.matcher",
+        "match_ledger_entries",
+    ),
     "reconcile_vendor": (".vendor_ledger_reconciliation.matcher", "reconcile_vendor"),
-    "reconcile_vendor_account": (".vendor_ledger_reconciliation.matcher", "reconcile_vendor_account"),
-    "consolidate_zeiss_statements": (".vendor_ledger_reconciliation.zeiss_pdf", "consolidate_zeiss_statements"),
-    "parse_zeiss_pdf_statement": (".vendor_ledger_reconciliation.zeiss_pdf", "parse_zeiss_pdf_statement"),
+    "reconcile_vendor_account": (
+        ".vendor_ledger_reconciliation.matcher",
+        "reconcile_vendor_account",
+    ),
+    "consolidate_zeiss_statements": (
+        ".vendor_ledger_reconciliation.zeiss_pdf",
+        "consolidate_zeiss_statements",
+    ),
+    "parse_zeiss_pdf_statement": (
+        ".vendor_ledger_reconciliation.zeiss_pdf",
+        "parse_zeiss_pdf_statement",
+    ),
     "GSTR1VerificationConfig": (".gstr1_verification", "GSTR1VerificationConfig"),
     "GSTR1Verifier": (".gstr1_verification", "GSTR1Verifier"),
     "verify_gstr1": (".gstr1_verification", "verify_gstr1"),
     "DuplicatePaymentChecker": (".duplicate_payment_check", "DuplicatePaymentChecker"),
-    "check_duplicate_payments": (".duplicate_payment_check", "check_duplicate_payments"),
-    "CreatorCustomerSyncConfig": (".creator_customer_sync", "CreatorCustomerSyncConfig"),
+    "check_duplicate_payments": (
+        ".duplicate_payment_check",
+        "check_duplicate_payments",
+    ),
+    "CreatorCustomerSyncConfig": (
+        ".creator_customer_sync",
+        "CreatorCustomerSyncConfig",
+    ),
     "CreatorCustomerSyncer": (".creator_customer_sync", "CreatorCustomerSyncer"),
     "sync_creator_customers": (".creator_customer_sync", "sync_creator_customers"),
-    "CreatorBeatAllocationService": (".creator_beat_allocation", "CreatorBeatAllocationService"),
+    "CreatorBeatAllocationService": (
+        ".customer_management.creator_beat_allocation",
+        "CreatorBeatAllocationService",
+    ),
     "NeosealItemAuditor": (".neoseal_audit", "NeosealItemAuditor"),
     "audit_neoseal_items": (".neoseal_audit", "audit_neoseal_items"),
     "fetch_neoseal_stock_count": (".neoseal_stock_count", "fetch_neoseal_stock_count"),
-    "CreatorBooksPaymentLinkBackfill": (".creator_books_payment_link", "CreatorBooksPaymentLinkBackfill"),
-    "BackfillConfig": (".creator_books_payment_link", "BackfillConfig"),
-    "CustomerPaymentDateChecker": (".customer_payment_date_check", "CustomerPaymentDateChecker"),
-    "check_customer_payment_dates": (".customer_payment_date_check", "check_customer_payment_dates"),
+    "CreatorBooksPaymentLinkBackfill": (
+        ".creator_payments.books_link",
+        "CreatorBooksPaymentLinkBackfill",
+    ),
+    "BackfillConfig": (".creator_payments.books_link", "BackfillConfig"),
+    "CustomerPaymentDateChecker": (
+        ".customer_payment_date_check",
+        "CustomerPaymentDateChecker",
+    ),
+    "check_customer_payment_dates": (
+        ".customer_payment_date_check",
+        "check_customer_payment_dates",
+    ),
 }
 
 
-_LAZY_EXPORTS.update({
-    "render_payment_ocr_markdown": (".creator_payment_ocr", "render_payment_ocr_markdown"),
-    "PaymentOCRSource": (".creator_payment_ocr", "PaymentOCRSource"),
-    "review_creator_payment_images": (".creator_payment_ocr", "review_creator_payment_images"),
-    "OCRDetails": (".creator_payment_ocr", "OCRDetails"),
-    "extract_payment_details": (".creator_payment_ocr", "extract_payment_details"),
-    "cross_check_payment": (".creator_payment_ocr", "cross_check_payment"),
-})
+_LAZY_EXPORTS.update(
+    {
+        "render_payment_ocr_markdown": (
+            ".creator_payments.ocr",
+            "render_payment_ocr_markdown",
+        ),
+        "PaymentOCRSource": (".creator_payments.ocr", "PaymentOCRSource"),
+        "review_creator_payment_images": (
+            ".creator_payments.ocr",
+            "review_creator_payment_images",
+        ),
+        "OCRDetails": (".creator_payments.ocr", "OCRDetails"),
+        "extract_payment_details": (".creator_payments.ocr", "extract_payment_details"),
+        "cross_check_payment": (".creator_payments.ocr", "cross_check_payment"),
+    }
+)
 
 
 def __getattr__(name: str):
@@ -182,13 +415,25 @@ def __getattr__(name: str):
 def __dir__():
     return sorted(set(globals()) | set(_LAZY_EXPORTS))
 
+
 __all__ = [
-    "sync_customer_numbers", "CustomerNumberChange", "CustomerNumberSyncResult",
-    "register_customer", "CustomerRegistrationResult", "CustomerRegistrationError",
-    "RmaCreditPolicy", "CreditAudit", "CreditFinding", "CreditMemoEvidence", "CreditCorrectionPlan",
-    "CreditCorrectionResult", "CreditCorrectionError", "review_polycab_vendor_credits",
+    "sync_customer_numbers",
+    "CustomerNumberChange",
+    "CustomerNumberSyncResult",
+    "register_customer",
+    "CustomerRegistrationResult",
+    "CustomerRegistrationError",
+    "RmaCreditPolicy",
+    "CreditAudit",
+    "CreditFinding",
+    "CreditMemoEvidence",
+    "CreditCorrectionPlan",
+    "CreditCorrectionResult",
+    "CreditCorrectionError",
+    "review_polycab_vendor_credits",
     "review_saved_polycab_vendor_credits",
-    "build_credit_correction_plan", "execute_credit_correction",
+    "build_credit_correction_plan",
+    "execute_credit_correction",
     "CustomerValidationReport",
     "ContactValidation",
     "ValidationIssue",
@@ -272,10 +517,26 @@ __all__ = [
     "fetch_gst_cash_ledger_report",
 ]
 
-from .gst_cash_ledger import GSTCashLedgerCheck, check_gst_cash_ledger, fetch_gst_cash_ledger_report
-from .gst_monthly import MonthlyGSTCheck, check_monthly_gst, gst_movements, month_bounds
-__all__ += ['MonthlyGSTCheck', 'check_monthly_gst', 'gst_movements', 'month_bounds']
+from workflows.gst.cash_ledger import (
+    GSTCashLedgerCheck,
+    check_gst_cash_ledger,
+    fetch_gst_cash_ledger_report,
+)
+from workflows.gst.monthly import (
+    MonthlyGSTCheck,
+    check_monthly_gst,
+    gst_movements,
+    month_bounds,
+)
 
-__all__ += ["PaymentOCRSource", "review_creator_payment_images", "OCRDetails", "extract_payment_details", "cross_check_payment"]
+__all__ += ["MonthlyGSTCheck", "check_monthly_gst", "gst_movements", "month_bounds"]
+
+__all__ += [
+    "PaymentOCRSource",
+    "review_creator_payment_images",
+    "OCRDetails",
+    "extract_payment_details",
+    "cross_check_payment",
+]
 
 __all__ += ["render_payment_ocr_markdown"]

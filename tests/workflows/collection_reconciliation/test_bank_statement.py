@@ -72,7 +72,7 @@ def test_cash_salary_reviewed_posting(tmp_path, kind, direction, description, ac
     service.categorize_bank_line("tx")
     action.assert_called_once()
 from workflows.collection_reconciliation.review import OnlinePaymentReviewConfig, OnlinePaymentReviewService
-from workflows.core.exceptions import ReconciliationError
+from workflows.runtime.exceptions import ReconciliationError
 
 
 def test_extract_remitter_tokens_handles_upi_and_neft():
@@ -327,7 +327,7 @@ def test_bank_source_retains_all_lines_and_competing_creator_records(tmp_path):
     ([], "", "No Presented_Date or Cheque_Date is available"),
 ])
 def test_optional_cheque_presentation(details, date, error):
-    from workflows.collection_reconciliation.cheques import attach_presented_dates
+    from workflows.collection_payments.cheques import attach_presented_dates
     payment = {"_review_payment_type": "Cheque", "Reference": "0432", "Customer_Name": {"ID": "c"}, "Cheque_Date": date}
     attach_presented_dates([payment], details)
     assert payment["_review_presented_date"] == date

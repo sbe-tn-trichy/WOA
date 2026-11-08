@@ -12,8 +12,8 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_sheet_client
-from workflows.core.config import Config
+from workflows.runtime.auth import get_sheet_client
+from workflows.runtime.config import Config
 from workflows.neoseal_stock_count import (
     read_stable_sync_plan, apply_stable_sync_plan, verify_stockcount_formulas,
 )

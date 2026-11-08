@@ -9,7 +9,7 @@ from pathlib import Path
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from zoho.helpers import unwrap_record
+from helpers import unwrap_record
 
 from workflows.core.checkpoint import write_atomic_json
 

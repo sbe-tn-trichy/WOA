@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from workflows.customer_local_store import open_store, sync_customers, stage_creator_beats_locally
+from workflows.customer_management.local_store import open_store, sync_customers, stage_creator_beats_locally
 
 
 def setup(tmp_path):
@@ -46,7 +46,7 @@ def test_duplicate_rolls_back_whole_batch(tmp_path):
 
 
 def test_creator_staging_after_constant_compaction(tmp_path):
-    from workflows.customer_table import compact_customer_columns, customer_json
+    from workflows.customer_management.table import compact_customer_columns, customer_json
     db=setup(tmp_path)
     with db:
         compact_customer_columns(db)

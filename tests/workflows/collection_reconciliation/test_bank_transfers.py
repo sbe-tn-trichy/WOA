@@ -6,8 +6,8 @@ import pytest
 
 from workflows.collection_reconciliation import OnlinePaymentReviewConfig, OnlinePaymentReviewService
 from workflows.collection_reconciliation.bank_transfers import transfer_proposals
-from workflows.core.exceptions import ReconciliationError
-from workflows.core.config import Config
+from workflows.runtime.exceptions import ReconciliationError
+from workflows.runtime.config import Config
 
 
 def line(account, transaction, direction, **values):

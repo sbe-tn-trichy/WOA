@@ -1,7 +1,7 @@
 """Review or resume FY 2025-26 customer-payment renumbering; dry-run by default."""
 import argparse
 import importlib
-from utils import json
+from utils.file_utils import json
 import os
 from datetime import datetime
 from pathlib import Path
@@ -11,7 +11,7 @@ if __package__:
 else:
     importlib.import_module("_bootstrap")
 
-from workflows.core.auth import get_analytics_client, get_books_client
+from workflows.runtime.auth import get_analytics_client, get_books_client
 from workflows.core.checkpoint import write_atomic_json
 from workflows.core.dates import get_fy_date_range
 from workflows.payment_renumbering import (

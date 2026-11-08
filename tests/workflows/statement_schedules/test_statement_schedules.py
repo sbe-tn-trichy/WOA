@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
-from utils import yaml
+from utils.file_utils import yaml
 
 from workflows.statement_schedules import build_schedule_plan, fetch_schedule_sources, validate_sources, verify_asset
 from zoho.books.custom.ledger import FixedAssets

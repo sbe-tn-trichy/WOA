@@ -29,6 +29,11 @@ correctness and data safety:
 
 ## Task Scope and Acceptance
 
+- When the user requests an implementation plan, use the repository-root
+  `IMPLEMENTATION.md` alongside `CHECKLIST.md`. Create it if needed and update
+  the existing file for plan revisions, unless the user specifies another path.
+  Keep the plan local and Git-ignored.
+
 - Establish the expected outcome, acceptance criteria, and whether live changes
   are authorized from the user's request and session context. Ask only when
   material information or authorization is missing; routine work does not need
@@ -42,8 +47,8 @@ correctness and data safety:
 
 ## Architecture
 
-- Library code lives in `src/utils/` (cross-service utilities such as `utils.http`),
-  `src/zoho/` (low-level clients), and `src/workflows/` (domain workflows);
+- Library code lives in `src/utils/` (cross-service utilities such as `utils.http_utils.http`),
+  `src/zoho/` (core SDK), `src/helpers/` (composite API operations), and `src/workflows/` (domain workflows);
   permanent entry points live in `apps/`.
 - Read `project_structure.max_nested_folder_depth` from `config/config.yaml` for
   the maximum directory depth beneath `apps/`, `src/workflows/`, and `output/`
@@ -57,13 +62,43 @@ correctness and data safety:
   (e.g., `apps/<domain>/`) alongside unified entry-point dispatchers at the `apps/`
   root. Transparent meta-path redirection in `apps/__init__.py` preserves
   backward-compatible imports for legacy script paths.
-- Imports flow `utils <- zoho <- workflows <- apps`. `utils` must not import from
-  `zoho`, `workflows`, `google_sheets`, `apps`, or `scripts`; neither `zoho` nor
-  `workflows` may import from `apps` or `scripts`; workflows contain no servers
-  or CLI parsers.
+- Imports flow `utils <- zoho <- helpers <- workflows <- apps`. `utils` must not import from
+  `zoho`, `helpers`, `workflows`, `google_sheets`, `apps`, or `scripts`. The core SDK
+  must not import `helpers` or `workflows`; helpers must not import `workflows`.
+  Neither SDK, helpers nor workflows may import from `apps` or `scripts`; workflows
+  contain no servers or CLI parsers.
 - `scripts/` is Git-ignored scratch space with a retention target under 24 hours.
 - Keep web HTML/CSS/JS in `apps/static/`, loaded from Python rather than embedded.
 - Export supported public APIs and exceptions from the relevant `__init__.py`.
+
+### File organization and refactoring
+
+- Apply responsibility-based organization to every package, including the core
+  SDK, helpers, workflows, apps and tests. Before adding or expanding a file,
+  inspect its owner, neighboring modules, imports and callers; choose placement
+  deliberately rather than defaulting to the package root.
+- Follow the established capability-package pattern (for example, `utils.http_utils`
+  and `zoho.core_sdk`); see the [package map](okf/project-organization.md#capability-packages).
+  Keep package roots focused on public exports and essential shared contracts.
+  Group related implementations into clearly named subpackages when a directory
+  mixes responsibilities or would exceed ten files. Respect the configured
+  nesting limit wherever it applies; do not flatten unrelated code to satisfy it.
+- Keep each module focused on one cohesive responsibility. Extract independent
+  responsibilities when extending a mixed module; merge modules only when they
+  share ownership, dependencies and reasons to change. A shared topic such as
+  "security" does not by itself justify combining authentication, path handling
+  and log redaction.
+- Use descriptive domain or capability names. Avoid catch-all `misc`, `common`
+  or `helpers` modules inside packages when a specific owner can be named;
+  `src/helpers/` remains the established composite API layer.
+- Scope reorganization to the requested work and affected owners. Existing mixed
+  or overfull directories require a focused correction when touched, not an
+  unrelated repository-wide rewrite; file length alone does not justify a split.
+- For moves or splits, update imports, package exports, mirrored tests, type-check
+  targets, generators and owning documentation together. Preserve supported
+  public imports through tested re-exports when compatibility is required, and
+  document intentional breaking changes. Verify import direction and cycles,
+  relevant behavior and directory file counts before reporting completion.
 
 ## Implementation
 
@@ -78,11 +113,11 @@ correctness and data safety:
   for needed compatibility, documented and covered by tests.
 - Fail with actionable context. Never silently skip invalid financial records
   or report incomplete work as successful.
-- Books and Inventory resources reuse `zoho.base_resource.BaseResource`.
+- Books and Inventory resources reuse `zoho.core_sdk.base_resource.BaseResource`.
 - Reuse `workflows.core.matching` conversions when their semantics fit.
 - Public APIs use explicit typed parameters. Use `TypedDict` or dataclasses for
   stable structured records crossing workflow boundaries.
-- Applications construct SDK clients through `workflows.core.auth` factories.
+- Applications construct SDK clients through `workflows.runtime.auth` factories.
 - Use the Zoho Inventory API for item and inventory-related operations, including
   item catalog reads and updates, stock, warehouses, and inventory adjustments.
 - Scope item catalog queries in vendor workflows (bills, purchase orders, vendor

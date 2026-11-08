@@ -7,7 +7,7 @@ from datetime import date
 from decimal import Decimal
 from collections.abc import Callable, Mapping, Sequence
 
-from zoho.validation import require_record, require_records
+from zoho.core_sdk.validation import require_record, require_records
 
 from .matching import normalize_payment_reference, parse_currency_amount, parse_date, to_decimal, to_text
 

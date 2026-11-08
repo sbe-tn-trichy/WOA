@@ -5,14 +5,14 @@ from datetime import datetime
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import copy_context
-from utils.http import write_response_to_file
-from zoho.exceptions import ZohoBooksError
-from zoho.security import resolve_output_path
+from utils.http_utils.http import write_response_to_file
+from zoho.core_sdk.exceptions import ZohoBooksError
+from zoho.core_sdk.security import resolve_output_path
 from ..base import BaseResource
 
 logger = logging.getLogger("zoho_books")
 
-from zoho.helpers.sequences import parse_doc_number
+from utils.general_utils.sequences import parse_doc_number
 
 class GST(BaseResource):
     """

@@ -5,7 +5,7 @@ from datetime import date
 from collections.abc import Mapping, Sequence
 from typing import TypedDict
 
-from zoho.helpers.sequences import parse_doc_number
+from helpers.formatting.sequences import parse_doc_number
 from .matching import parse_date
 
 

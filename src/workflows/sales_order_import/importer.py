@@ -7,8 +7,8 @@ from decimal import Decimal
 from collections.abc import Mapping
 from typing import Any
 
-from zoho.exceptions import ZohoError
-from zoho.helpers.items import find_item_by_exact_sku
+from zoho.core_sdk.exceptions import ZohoError
+from helpers.catalog.items import find_item_by_exact_sku
 from workflows.core.matching import to_finite_decimal
 
 

@@ -9,7 +9,7 @@ from workflows.polycab_credit_memos.processor import (
     upload_vendor_credit_attachment,
     upload_to_workdrive
 )
-from workflows.core.config import Config
+from workflows.runtime.config import Config
 
 class TestCreditMemoProcessor(unittest.TestCase):
     @patch("os.path.exists")

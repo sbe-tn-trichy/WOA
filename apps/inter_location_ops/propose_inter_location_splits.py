@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from utils import json
+from utils.file_utils import json
 from collections import Counter
 from pathlib import Path
 
@@ -11,8 +11,8 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client
-from workflows.inter_location_split_proposals import propose_split
+from workflows.runtime.auth import get_books_client
+from workflows.inter_location.split_proposals import propose_split
 
 
 SOURCE = Path("output/inter_location_payment_proposals.json")

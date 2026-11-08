@@ -1,1 +1,1 @@
-from zoho.exceptions import ZohoInventoryError
+from zoho.core_sdk.exceptions import ZohoInventoryError

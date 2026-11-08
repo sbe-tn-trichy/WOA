@@ -10,8 +10,8 @@ from workflows.collection_reconciliation.review import (
     OnlinePaymentReviewConfig,
     OnlinePaymentReviewService,
 )
-from workflows.core.exceptions import ReconciliationError
-from workflows.core.config import Config
+from workflows.runtime.exceptions import ReconciliationError
+from workflows.runtime.config import Config
 
 
 class TestOnlinePaymentReviewService(unittest.TestCase):

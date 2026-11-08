@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from zoho import HttpTokenProvider, ZohoAnalyticsAPI
-from workflows.core.config import _load_config_dict
+from workflows.runtime.config import _load_config_dict
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]

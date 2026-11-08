@@ -3,10 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from workflows.books_statement_sheet import (
-    EquityMapping, StatementMapping, StatementPeriod,
-    prepare_equity_updates, prepare_updates,
-)
+from workflows.books_statements.statement_sheet import EquityMapping, StatementMapping, StatementPeriod, prepare_equity_updates, prepare_updates
 
 
 PERIODS = StatementPeriod("2025-04-01", "2026-03-31", "2024-04-01", "2025-03-31")
@@ -82,7 +79,7 @@ def test_equity_updates_reconcile_ledger_and_leave_closing_formula(monkeypatch):
         {"account_id": "owner", "transaction": {"debit": "0", "credit": "5", "offset_account_id": "interest"}},
         {"account_id": "owner", "transaction": {"debit": "20", "credit": "0", "transaction_type": "transfer_fund"}},
     ])
-    monkeypatch.setattr("workflows.books_statement_sheet.fetch_equity_general_ledger", ledger)
+    monkeypatch.setattr("workflows.books_statements.statement_sheet.fetch_equity_general_ledger", ledger)
 
     updates = prepare_equity_updates(
         books, PERIODS, [EQUITY], location_ids=["location"],
@@ -107,7 +104,7 @@ def test_equity_updates_reconcile_ledger_and_leave_closing_formula(monkeypatch):
 def test_equity_reconciliation_rejects_mismatch(monkeypatch):
     books = Mock()
     books.request.side_effect = _equity_report
-    monkeypatch.setattr("workflows.books_statement_sheet.fetch_equity_general_ledger", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr("workflows.books_statements.statement_sheet.fetch_equity_general_ledger", lambda *_args, **_kwargs: [])
     with pytest.raises(ValueError, match="does not reconcile"):
         prepare_equity_updates(
             books, PERIODS, [EQUITY], location_ids=["location"],
@@ -119,7 +116,7 @@ def test_equity_reconciliation_rejects_mismatch(monkeypatch):
 def test_equity_rejects_invalid_ledger_amount(monkeypatch):
     books = Mock()
     books.request.side_effect = _equity_report
-    monkeypatch.setattr("workflows.books_statement_sheet.fetch_equity_general_ledger", lambda *_args, **_kwargs: [
+    monkeypatch.setattr("workflows.books_statements.statement_sheet.fetch_equity_general_ledger", lambda *_args, **_kwargs: [
         {"account_id": "owner", "transaction": {"debit": "NaN", "credit": "5"}},
     ])
     with pytest.raises(ValueError, match="invalid debit"):

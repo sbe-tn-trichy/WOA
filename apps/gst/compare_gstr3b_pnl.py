@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 import sys
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -16,8 +16,8 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client
-from workflows.core.config import Config
+from workflows.runtime.auth import get_books_client
+from workflows.runtime.config import Config
 from workflows.gstr3b_pnl_comparison import (
     ComparisonConfig, compare_gstr3b_to_pnl, write_comparison_csv,
 )

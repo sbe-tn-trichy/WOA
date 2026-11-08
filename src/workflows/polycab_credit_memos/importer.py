@@ -8,7 +8,7 @@ from typing import Any
 from workflows.core.checkpoint import write_atomic_json
 from workflows.core.matching import parse_currency_amount
 from workflows.polycab_credit_review.pdf import read_credit_memo_pdf
-from zoho.helpers.records import get_verified_record
+from helpers.operations.records import get_verified_record
 from .processor import upload_vendor_credit_attachment
 
 

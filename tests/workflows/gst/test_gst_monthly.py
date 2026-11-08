@@ -1,5 +1,5 @@
 import pytest
-from workflows.gst_monthly import month_bounds, check_monthly_gst
+from workflows.gst.monthly import month_bounds, check_monthly_gst
 
 
 def report(month, cash=20):

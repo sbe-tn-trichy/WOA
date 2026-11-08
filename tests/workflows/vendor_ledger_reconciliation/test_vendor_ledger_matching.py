@@ -215,7 +215,7 @@ class TestReconcileVendor(unittest.TestCase):
         self.ledger_path_unknown = "input_files/unknown/ledger.xls"
 
     @patch("workflows.vendor_ledger_reconciliation._reconciler.reconcile_vendor_account")
-    @patch("workflows.core.auth.get_books_client")
+    @patch("workflows.runtime.auth.get_books_client")
     def test_reconcile_vendor_with_all_explicit_params(self, mock_get_client, mock_reconcile_account):
         mock_reconcile_account.return_value = {"status": "success"}
 
@@ -238,9 +238,9 @@ class TestReconcileVendor(unittest.TestCase):
         mock_get_client.assert_not_called()
 
     @patch("workflows.vendor_ledger_reconciliation._reconciler.reconcile_vendor_account")
-    @patch("workflows.core.auth.get_books_client")
+    @patch("workflows.runtime.auth.get_books_client")
     def test_reconcile_vendor_auto_detect_polycab(self, mock_get_client, mock_reconcile_account):
-        from workflows.core.config import Config
+        from workflows.runtime.config import Config
         mock_reconcile_account.return_value = {"status": "success"}
         mock_get_client.return_value = self.books_client
 
@@ -259,9 +259,9 @@ class TestReconcileVendor(unittest.TestCase):
         self.assertEqual(res, {"status": "success"})
 
     @patch("workflows.vendor_ledger_reconciliation._reconciler.reconcile_vendor_account")
-    @patch("workflows.core.auth.get_books_client")
+    @patch("workflows.runtime.auth.get_books_client")
     def test_reconcile_vendor_auto_detect_zeiss(self, mock_get_client, mock_reconcile_account):
-        from workflows.core.config import Config
+        from workflows.runtime.config import Config
         mock_reconcile_account.return_value = {"status": "success"}
         mock_get_client.return_value = self.books_client
 

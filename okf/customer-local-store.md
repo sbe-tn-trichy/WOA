@@ -6,7 +6,7 @@ description: Local Books customer SQLite mirror, modification-time reconciliatio
 # Local customer store
 
 `apps/customer_local_store.py` owns the local Books customer cleanup workflow;
-`workflows.customer_local_store` contains persistence and reconciliation. It never
+`workflows.customer_management.local_store` contains persistence and reconciliation. It never
 writes to Books. The default database is `output/customer_cleanup/customers.sqlite3`.
 Organization identity is pinned in database metadata; another organization is rejected.
 
@@ -14,8 +14,8 @@ Organization identity is pinned in database metadata; another organization is re
 
 Use `apps/sync_analytics_customers.py` for repeatable local uniformity cleanup from the
 three Analytics Books tables: Customers, Customer Addresses and Customer Contact
-Persons. `workflows.customer_analytics_sync` owns synchronization and
-`workflows.customer_normalization` owns source export/normalization. Both use
+Persons. `workflows.customer_management.analytics_sync` owns synchronization and
+`workflows.customer_management.normalization` owns source export/normalization. Both use
 `AnalyticsCatalog` cached metadata, and never refreshes metadata or writes to Zoho.
 It creates `output/customer_cleanup/normalized_customers.sqlite3` separately from
 the older Books reconciliation store described below. Exactly four tables are used:
@@ -120,7 +120,7 @@ Nested objects/arrays remain valid JSON in their same-named columns (for example
 `billing_address` and `contact_persons`); they are not flattened into ambiguous names.
 Columns have no SQLite type affinity so string identifiers and mixed string/number
 fields retain their values. `customer_record_shapes` records per-customer key presence
-and value types, allowing `workflows.customer_table.customer_json` to reconstruct
+and value types, allowing `workflows.customer_management.table.customer_json` to reconstruct
 booleans, nulls, absent keys, objects and arrays without loss. New non-null column values
 are included in reconstructed JSON. Keep nested JSON structurally valid.
 
@@ -174,7 +174,7 @@ API module names were confirmed using Books `GET /settings/modules`.
 ```
 
 Columns retain exact JSON field names. Nested values remain JSON in their columns;
-`workflows.books_custom_module_store.module_record_json` reconstructs the record
+`workflows.books_statements.custom_module_store.module_record_json` reconstructs the record
 using the raw snapshot's types/key presence. IDs and modification times are retained.
 `module_snapshots` preserves original records and `metadata` pins organization and
 successful sync times. Both modules must finish fetching before local replacement.

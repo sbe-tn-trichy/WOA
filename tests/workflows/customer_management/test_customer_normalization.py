@@ -6,9 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from workflows.customer_normalization import (
-    SOURCE_NAMES, build_normalized_customers, download_customer_normalization_sources,
-)
+from workflows.customer_management.normalization import SOURCE_NAMES, build_normalized_customers, download_customer_normalization_sources
 
 
 def sources(tmp_path: Path, *, customers=None, addresses=None, persons=None) -> Path:

@@ -4,7 +4,7 @@ from unittest.mock import Mock
 from types import SimpleNamespace
 
 import pytest
-from workflows.books_custom_module_store import download_books_custom_modules, module_record_json
+from workflows.books_statements.custom_module_store import download_books_custom_modules, module_record_json
 
 
 def record(module, rid='001'):
@@ -40,7 +40,7 @@ def test_download_roundtrip_and_protect_local_edits(tmp_path):
 
 
 def test_pagination_and_empty_module(tmp_path, monkeypatch):
-    monkeypatch.setattr('workflows.books_custom_module_store.time.sleep', lambda _: None)
+    monkeypatch.setattr('workflows.books_statements.custom_module_store.time.sleep', lambda _: None)
     b = api(page([record('cm_user')], True), page([record('cm_user', '002')], number=2), page([]))
     result = download_books_custom_modules(b, database=tmp_path / 'm.db')
     assert result['counts'] == {'sales_persons': 2, 'beats': 0}
@@ -64,7 +64,7 @@ def test_organization_guard(tmp_path):
 
 
 def test_local_beat_creation(tmp_path):
-    from workflows.books_custom_module_store import stage_new_beat
+    from workflows.books_statements.custom_module_store import stage_new_beat
     path = tmp_path / 'm.db'
     download_books_custom_modules(api(page([]), page([record('cm_beat')])), database=path)
     row = stage_new_beat(path, name='Recovery - Abu')

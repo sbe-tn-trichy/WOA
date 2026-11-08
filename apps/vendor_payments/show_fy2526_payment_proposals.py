@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from utils import json
+from utils.file_utils import json
 from collections import Counter
 from datetime import datetime, date
 from pathlib import Path
@@ -12,8 +12,8 @@ try:
 except ImportError:
     import _bootstrap  # type: ignore[no-redef]  # noqa: F401
 
-from workflows.core.auth import get_books_client
-from workflows.inter_location_payment_updates import plan_customer_payment_moves
+from workflows.runtime.auth import get_books_client
+from workflows.inter_location.payment_updates import plan_customer_payment_moves
 
 
 SOURCE = Path("output/inter_location_payment_proposals.json")

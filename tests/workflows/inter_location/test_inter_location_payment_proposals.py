@@ -1,9 +1,6 @@
 import pytest
 
-from workflows.inter_location_payment_proposals import (
-    allocation_summary_query, expected_payment_prefix, filter_payment_rows_for_year,
-    propose_payment_locations,
-)
+from workflows.inter_location.payment_proposals import allocation_summary_query, expected_payment_prefix, filter_payment_rows_for_year, propose_payment_locations
 
 
 def test_filters_current_fiscal_year_out_of_last_year_proposal():

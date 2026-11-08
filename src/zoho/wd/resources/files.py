@@ -4,8 +4,8 @@ from ..base import BaseResource
 import logging
 import os
 import re
-from zoho.security import resolve_output_path, sanitize_filename
-from utils.http import write_response_to_file
+from zoho.core_sdk.security import resolve_output_path, sanitize_filename
+from utils.http_utils.http import write_response_to_file
 
 # Logger setup
 

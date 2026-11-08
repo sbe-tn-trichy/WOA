@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from workflows.core.matching import parse_date, references_intersect
-from zoho.helpers.references import parse_reference_lines
+from helpers.formatting.references import parse_reference_lines
 from .models import CreditMemoEvidence, RmaCreditPolicy
 
 

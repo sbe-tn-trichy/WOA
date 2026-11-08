@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from workflows.inter_location_vendor_payment_proposals import propose_vendor_payment_moves
+from workflows.inter_location.vendor_payment_proposals import propose_vendor_payment_moves
 
 
 def proposal():

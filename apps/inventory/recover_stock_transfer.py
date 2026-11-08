@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import asdict
 from decimal import Decimal
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 import sys
 
@@ -14,7 +14,7 @@ try:
 except ImportError:
     import _bootstrap  # noqa: F401
 
-from workflows.core.auth import get_books_client, get_inventory_client
+from workflows.runtime.auth import get_books_client, get_inventory_client
 from workflows.stock_transfer import TransferRecoveryPolicy, recover_stock_transfer
 
 

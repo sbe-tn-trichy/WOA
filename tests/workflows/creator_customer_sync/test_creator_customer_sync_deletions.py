@@ -5,7 +5,7 @@ import pytest
 
 
 
-from workflows.core.exceptions import ReconciliationError
+from workflows.runtime.exceptions import ReconciliationError
 from workflows.creator_customer_sync import (
     CreatorCustomerSyncConfig,
     CreatorCustomerSyncer,

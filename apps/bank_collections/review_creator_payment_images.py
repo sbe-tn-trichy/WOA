@@ -9,8 +9,8 @@ try:
 except ImportError:
     import _bootstrap  # noqa: F401
 
-from workflows.core.auth import get_creator_client
-from workflows.creator_payment_ocr import PaymentOCRSource, review_creator_payment_images
+from workflows.runtime.auth import get_creator_client
+from workflows.creator_payments.ocr import PaymentOCRSource, review_creator_payment_images
 
 
 def main(argv: list[str] | None = None) -> int:

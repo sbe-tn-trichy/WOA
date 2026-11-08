@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 
 try:
@@ -11,10 +11,10 @@ try:
 except ImportError:
     import _bootstrap  # noqa: F401
 
-from workflows.core.auth import get_books_client
-from workflows.core.config import Config, get_config
+from workflows.runtime.auth import get_books_client
+from workflows.runtime.config import Config, get_config
 from workflows.polycab_credit_memos import CreditImportPolicy, import_credit_pdf
-from zoho.security import resolve_output_path
+from zoho.core_sdk.security import resolve_output_path
 
 
 def main() -> int:

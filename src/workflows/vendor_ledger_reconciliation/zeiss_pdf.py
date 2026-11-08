@@ -4,7 +4,7 @@ import csv
 import logging
 from datetime import datetime
 from typing import Any
-from utils.pdf import read_pdf_pages
+from utils.file_utils.pdf import read_pdf_pages
 
 logger = logging.getLogger(__name__)
 

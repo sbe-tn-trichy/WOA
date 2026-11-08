@@ -17,7 +17,7 @@ from google_sheets import (
     SpreadsheetNotFoundError,
     create_credentials,
 )
-from workflows.core.auth import get_google_sheets_client
+from workflows.runtime.auth import get_google_sheets_client
 
 
 def test_create_credentials_with_access_token():

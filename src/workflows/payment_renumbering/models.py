@@ -4,11 +4,8 @@ from datetime import datetime
 from typing import Literal, TypedDict
 
 from workflows.core.matching import parse_date, to_finite_decimal
-from zoho.validation import require_record, require_records, require_text
-from zoho.identifiers import (
-    PaymentId as PaymentId, InvoiceId as InvoiceId, CustomerId as CustomerId,
-    AccountId as AccountId, LocationId as LocationId,
-)
+from zoho.core_sdk.validation import require_record, require_records, require_text
+from zoho.core_sdk.identifiers import PaymentId as PaymentId, InvoiceId as InvoiceId, CustomerId as CustomerId, AccountId as AccountId, LocationId as LocationId
 RenumberStatus = Literal["planned", "submitted", "verified", "failed"]
 
 

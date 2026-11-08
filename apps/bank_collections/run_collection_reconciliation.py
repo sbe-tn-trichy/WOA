@@ -10,7 +10,7 @@ Outputs are written under `output/collection_reconciliation/`.
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 import logging
 import sys
 from datetime import datetime, timezone
@@ -27,12 +27,8 @@ from workflows.collection_reconciliation import (
     CollectionReconciler,
     CollectionReconciliationConfig,
 )
-from workflows.core.auth import (
-    get_analytics_client,
-    get_books_client,
-    get_creator_client,
-)
-from workflows.core.config import Config
+from workflows.runtime.auth import get_analytics_client, get_books_client, get_creator_client
+from workflows.runtime.config import Config
 from zoho import ZohoAnalyticsAPI, ZohoBooksAPI, ZohoCreatorAPI
 
 logger = logging.getLogger("run_collection_reconciliation")

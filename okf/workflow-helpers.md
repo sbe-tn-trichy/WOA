@@ -7,18 +7,18 @@ description: Payment inspection and renumbering, customer validation and invoice
 
 ## Shared workflow mechanics
 
-`zoho.helpers.records.get_verified_record(resource, identifier, key, id_key)`
+`helpers.operations.records.get_verified_record(resource, identifier, key, id_key)`
 fetches a resource detail, requires a dictionary under the explicit response
 key, and verifies the explicit ID field against the requested string ID.
 Numeric response IDs are compared as strings; missing IDs, malformed responses,
 and mismatched identities raise `ValueError`. Resource request errors propagate.
-It is also exported from `zoho.helpers`. Polycab credit review and correction
+It is also exported from `helpers`. Polycab credit review and correction
 use this helper for credits, journals, payments and invoices; their financial
 and mutation policies remain in the workflow. The former internal
 `polycab_credit_review.evidence.read_record` function was removed.
 
 ```python
-from zoho.helpers import get_verified_record
+from helpers import get_verified_record
 
 bill = get_verified_record(
     books.bills, identifier=bill_id, key="bill", id_key="bill_id",
@@ -29,7 +29,7 @@ Supported helpers are exported from `workflows.core`; their implementations stay
 in small modules rather than a single generic workflow engine.
 
 Generic Books document streaming and ordered labeled references are exported from
-`zoho.helpers`. `format_reference_lines`, `parse_reference_lines` and
+`helpers`. `format_reference_lines`, `parse_reference_lines` and
 `update_reference_lines` retain repeated document labels and preserve unrelated
 human notes while replacing managed lines idempotently. Polycab-specific PDF
 interpretation, accounting eligibility, correction payloads and mutation guards
@@ -69,7 +69,7 @@ Atomic replacement gives concurrent writers last-replacement-wins semantics,
 not a read-modify-write transaction. Financial mutation and snapshot policies
 remain in their domain workflows. Compatibility entry points are retained.
 
-Generic document-number parsing lives in `zoho.helpers.sequences.parse_doc_number`.
+Generic document-number parsing lives in `helpers.formatting.sequences.parse_doc_number`.
 It returns `(prefix, trailing_integer, observed_width)`; width zero means no
 numeric suffix. The old Books GST import remains a lower-layer re-export.
 `workflows.core.sequences.analyze_number_series` consumes supplied records only,
@@ -107,7 +107,7 @@ across attempts and can exceed wall time when requests overlap.
 Payment renumbering now exports nominal IDs, `PaymentSnapshot`,
 `AllocationSnapshot`, typed client protocols, `RenumberStatus`, and the
 `parse_renumber_plan`/`parse_renumber_results` validators. IDs are defined in
-`zoho.identifiers` and re-exported for workflow users; they do not validate tenant
+`zoho.core_sdk.identifiers` and re-exported for workflow users; they do not validate tenant
 scope. Discovery/payment envelopes, allocation rows, amounts, dates and loaded
 audit records are validated before use. Malformed values raise `RenumberingError`
 instead of leaking arbitrary dictionaries into execution. Schema-1 JSON shapes,
@@ -116,7 +116,7 @@ The CLI rejects invalid recovery structures before constructing a client or
 overwriting the audit. Strict checking coverage is tracked in the
 [type-safety plan](type-safety-plan.md).
 
-`workflows.payment_inspection` accepts an Analytics client and workspace ID,
+`workflows.customer_payments.inspection` accepts an Analytics client and workspace ID,
 fetches customer-payment records, filters calendar dates, and builds the existing
 CLI summary fields with additive gap/duplicate/width metadata. Maximum observed
 width in the legacy `digit_padding` field is not a guaranteed numbering policy.

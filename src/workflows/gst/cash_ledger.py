@@ -63,7 +63,7 @@ def check_gst_cash_ledger(report: Mapping[str, Any], *, tolerance: Decimal = Dec
 
 def fetch_gst_cash_ledger_report(books: Any, *, from_date: str, to_date: str, firm: str | None = None) -> Mapping[str, Any]:
     from workflows.audited_financials.reports import _firm_rule
-    from utils import json
+    from utils.file_utils import json
     if date.fromisoformat(from_date) > date.fromisoformat(to_date):
         raise ValueError('Start date must not follow end date')
     rule = _firm_rule(firm, None)

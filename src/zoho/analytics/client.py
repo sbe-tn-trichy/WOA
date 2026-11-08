@@ -1,14 +1,14 @@
 from typing import Any
 
-from zoho.auth import HttpTokenProvider
-from zoho.base_client import BaseZohoClient
+from zoho.core_sdk.auth import HttpTokenProvider
+from zoho.core_sdk.base_client import BaseZohoClient
 
-from .metadata import Metadata
-from .resources import Queries, Views
+from .custom import Metadata, Queries, Views
+from .openapi import AnalyticsResources
 
 
 class ZohoAnalyticsAPI(BaseZohoClient):
-    """Client for Zoho Analytics Data and Bulk Export APIs."""
+    """Client for Zoho Analytics v2 and its export and metadata helpers."""
 
     def __init__(
         self,
@@ -31,6 +31,7 @@ class ZohoAnalyticsAPI(BaseZohoClient):
         self.views = Views(self)
         self.metadata = Metadata(self)
         self.queries = Queries(self)
+        self.openapi = AnalyticsResources(self)
 
     @classmethod
     def from_token_provider(

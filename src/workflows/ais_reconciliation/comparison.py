@@ -1,7 +1,7 @@
 """AIS source comparison with explicit bases and unresolved identities."""
 from __future__ import annotations
 import csv
-from utils import json
+from utils.file_utils import json
 import re
 from collections import defaultdict, Counter
 from decimal import Decimal

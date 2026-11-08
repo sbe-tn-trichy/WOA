@@ -1,6 +1,6 @@
 from decimal import Decimal
 import pytest
-from workflows.gst_cash_ledger import check_gst_cash_ledger
+from workflows.gst.cash_ledger import check_gst_cash_ledger
 
 
 def report():

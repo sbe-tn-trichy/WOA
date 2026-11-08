@@ -9,26 +9,26 @@ Complete reference for the Zoho Inventory client, item catalogs, item groups, in
   - [Class `ZohoInventoryAPI`](#zoho-inventory-client-zohoinventoryapi)
 - [`zoho.inventory.base`](#zoho-inventory-base)
   - [Class `BaseResource`](#zoho-inventory-base-baseresource)
-- [`zoho.inventory.resources.items`](#zoho-inventory-resources-items)
-  - [Class `Items`](#zoho-inventory-resources-items-items)
-- [`zoho.inventory.resources.item_groups`](#zoho-inventory-resources-item_groups)
-  - [Class `ItemGroups`](#zoho-inventory-resources-item_groups-itemgroups)
-- [`zoho.inventory.resources.inventory_adjustments`](#zoho-inventory-resources-inventory_adjustments)
-  - [Class `InventoryAdjustments`](#zoho-inventory-resources-inventory_adjustments-inventoryadjustments)
-- [`zoho.inventory.resources.move_orders`](#zoho-inventory-resources-move_orders)
-  - [Class `MoveOrders`](#zoho-inventory-resources-move_orders-moveorders)
-- [`zoho.inventory.resources.transfer_orders`](#zoho-inventory-resources-transfer_orders)
-  - [Class `TransferOrders`](#zoho-inventory-resources-transfer_orders-transferorders)
-- [`zoho.inventory.resources.packages`](#zoho-inventory-resources-packages)
-  - [Class `Packages`](#zoho-inventory-resources-packages-packages)
-- [`zoho.inventory.resources.shipments`](#zoho-inventory-resources-shipments)
-  - [Class `Shipments`](#zoho-inventory-resources-shipments-shipments)
-- [`zoho.inventory.resources.picklists`](#zoho-inventory-resources-picklists)
-  - [Class `Picklists`](#zoho-inventory-resources-picklists-picklists)
-- [`zoho.inventory.resources.bins`](#zoho-inventory-resources-bins)
-  - [Class `Bins`](#zoho-inventory-resources-bins-bins)
-- [`zoho.inventory.resources.batches`](#zoho-inventory-resources-batches)
-  - [Class `Batches`](#zoho-inventory-resources-batches-batches)
+- [`zoho.inventory.resources.catalog.items`](#zoho-inventory-resources-catalog-items)
+  - [Class `Items`](#zoho-inventory-resources-catalog-items-items)
+- [`zoho.inventory.resources.catalog.item_groups`](#zoho-inventory-resources-catalog-item_groups)
+  - [Class `ItemGroups`](#zoho-inventory-resources-catalog-item_groups-itemgroups)
+- [`zoho.inventory.resources.movements.inventory_adjustments`](#zoho-inventory-resources-movements-inventory_adjustments)
+  - [Class `InventoryAdjustments`](#zoho-inventory-resources-movements-inventory_adjustments-inventoryadjustments)
+- [`zoho.inventory.resources.movements.move_orders`](#zoho-inventory-resources-movements-move_orders)
+  - [Class `MoveOrders`](#zoho-inventory-resources-movements-move_orders-moveorders)
+- [`zoho.inventory.resources.movements.transfer_orders`](#zoho-inventory-resources-movements-transfer_orders)
+  - [Class `TransferOrders`](#zoho-inventory-resources-movements-transfer_orders-transferorders)
+- [`zoho.inventory.resources.fulfillment.packages`](#zoho-inventory-resources-fulfillment-packages)
+  - [Class `Packages`](#zoho-inventory-resources-fulfillment-packages-packages)
+- [`zoho.inventory.resources.fulfillment.shipments`](#zoho-inventory-resources-fulfillment-shipments)
+  - [Class `Shipments`](#zoho-inventory-resources-fulfillment-shipments-shipments)
+- [`zoho.inventory.resources.fulfillment.picklists`](#zoho-inventory-resources-fulfillment-picklists)
+  - [Class `Picklists`](#zoho-inventory-resources-fulfillment-picklists-picklists)
+- [`zoho.inventory.resources.catalog.bins`](#zoho-inventory-resources-catalog-bins)
+  - [Class `Bins`](#zoho-inventory-resources-catalog-bins-bins)
+- [`zoho.inventory.resources.catalog.batches`](#zoho-inventory-resources-catalog-batches)
+  - [Class `Batches`](#zoho-inventory-resources-catalog-batches-batches)
 
 ---
 
@@ -79,9 +79,9 @@ Base class for Zoho Inventory modules providing standard CRUD operations.
 
 ---
 
-## Module `zoho.inventory.resources.items`
+## Module `zoho.inventory.resources.catalog.items`
 
-**Source:** [`src/zoho/inventory/resources/items.py`](src/zoho/inventory/resources/items.py)
+**Source:** [`src/zoho/inventory/resources/catalog/items.py`](src/zoho/inventory/resources/catalog/items.py)
 
 ### Class `Items`
 
@@ -170,9 +170,9 @@ def mark_inactive_bulk(self, item_ids: list[str], batch_size: int = 200) -> list
 
 ---
 
-## Module `zoho.inventory.resources.item_groups`
+## Module `zoho.inventory.resources.catalog.item_groups`
 
-**Source:** [`src/zoho/inventory/resources/item_groups.py`](src/zoho/inventory/resources/item_groups.py)
+**Source:** [`src/zoho/inventory/resources/catalog/item_groups.py`](src/zoho/inventory/resources/catalog/item_groups.py)
 
 ### Class `ItemGroups`
 
@@ -219,9 +219,9 @@ Mark an item group status as inactive.
 
 ---
 
-## Module `zoho.inventory.resources.inventory_adjustments`
+## Module `zoho.inventory.resources.movements.inventory_adjustments`
 
-**Source:** [`src/zoho/inventory/resources/inventory_adjustments.py`](src/zoho/inventory/resources/inventory_adjustments.py)
+**Source:** [`src/zoho/inventory/resources/movements/inventory_adjustments.py`](src/zoho/inventory/resources/movements/inventory_adjustments.py)
 
 ### Class `InventoryAdjustments`
 
@@ -252,9 +252,9 @@ def __init__(self, client: Any)
 
 ---
 
-## Module `zoho.inventory.resources.move_orders`
+## Module `zoho.inventory.resources.movements.move_orders`
 
-**Source:** [`src/zoho/inventory/resources/move_orders.py`](src/zoho/inventory/resources/move_orders.py)
+**Source:** [`src/zoho/inventory/resources/movements/move_orders.py`](src/zoho/inventory/resources/movements/move_orders.py)
 
 ### Class `MoveOrders`
 
@@ -309,9 +309,9 @@ Mark a move order status as completed.
 
 ---
 
-## Module `zoho.inventory.resources.transfer_orders`
+## Module `zoho.inventory.resources.movements.transfer_orders`
 
-**Source:** [`src/zoho/inventory/resources/transfer_orders.py`](src/zoho/inventory/resources/transfer_orders.py)
+**Source:** [`src/zoho/inventory/resources/movements/transfer_orders.py`](src/zoho/inventory/resources/movements/transfer_orders.py)
 
 ### Class `TransferOrders`
 
@@ -382,9 +382,9 @@ Reject a transfer order.
 
 ---
 
-## Module `zoho.inventory.resources.packages`
+## Module `zoho.inventory.resources.fulfillment.packages`
 
-**Source:** [`src/zoho/inventory/resources/packages.py`](src/zoho/inventory/resources/packages.py)
+**Source:** [`src/zoho/inventory/resources/fulfillment/packages.py`](src/zoho/inventory/resources/fulfillment/packages.py)
 
 ### Class `Packages`
 
@@ -415,9 +415,9 @@ def __init__(self, client: Any)
 
 ---
 
-## Module `zoho.inventory.resources.shipments`
+## Module `zoho.inventory.resources.fulfillment.shipments`
 
-**Source:** [`src/zoho/inventory/resources/shipments.py`](src/zoho/inventory/resources/shipments.py)
+**Source:** [`src/zoho/inventory/resources/fulfillment/shipments.py`](src/zoho/inventory/resources/fulfillment/shipments.py)
 
 ### Class `Shipments`
 
@@ -456,9 +456,9 @@ Mark a shipment order status as delivered.
 
 ---
 
-## Module `zoho.inventory.resources.picklists`
+## Module `zoho.inventory.resources.fulfillment.picklists`
 
-**Source:** [`src/zoho/inventory/resources/picklists.py`](src/zoho/inventory/resources/picklists.py)
+**Source:** [`src/zoho/inventory/resources/fulfillment/picklists.py`](src/zoho/inventory/resources/fulfillment/picklists.py)
 
 ### Class `Picklists`
 
@@ -497,9 +497,9 @@ Update the status of a picklist.
 
 ---
 
-## Module `zoho.inventory.resources.bins`
+## Module `zoho.inventory.resources.catalog.bins`
 
-**Source:** [`src/zoho/inventory/resources/bins.py`](src/zoho/inventory/resources/bins.py)
+**Source:** [`src/zoho/inventory/resources/catalog/bins.py`](src/zoho/inventory/resources/catalog/bins.py)
 
 ### Class `Bins`
 
@@ -530,9 +530,9 @@ def __init__(self, client: Any)
 
 ---
 
-## Module `zoho.inventory.resources.batches`
+## Module `zoho.inventory.resources.catalog.batches`
 
-**Source:** [`src/zoho/inventory/resources/batches.py`](src/zoho/inventory/resources/batches.py)
+**Source:** [`src/zoho/inventory/resources/catalog/batches.py`](src/zoho/inventory/resources/catalog/batches.py)
 
 ### Class `Batches`
 

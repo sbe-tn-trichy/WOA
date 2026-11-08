@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from .config import Config
+from workflows.runtime.config import Config
 
 logger = logging.getLogger(__name__)
 

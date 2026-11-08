@@ -22,6 +22,40 @@ scope/exclusions, platform, commands/results, and unresolved limitations here.
 Use `--since` with an explicitly selected commit until an original review commit
 is established. An inspection report does not advance the substantive review baseline.
 
+## 2026-11-08 ERP module-split verification
+
+Reviewed base `caf389ee2863ab4c40caf0f12d8467e6c67ed377` plus the pre-existing
+local changes and approved ERP split. Scope: all 81 class ASTs/signatures/docs,
+899 operation routes, manifest/provenance bytes, registry/import/pickle identity,
+generator staging/rollback/cleanup, documentation sources and directory limits.
+Regeneration from the supplied definitions was byte-identical. macOS arm64 /
+workspace CPython 3.14.10: full suite passed (3,857 tests and four subtests);
+Ruff, ty and offline architecture/API verification passed with zero diagnostics
+or errors. No finding status changes, environment changes or live ERP calls.
+Windows and hosted CI remain unverified. See the
+[implementation entry](CHANGELOG.md#split-generated-erp-resources-into-business-modules).
+
+## 2026-11-08 capability package verification
+
+ERP split preparation additionally reviewed the current OpenAPI monolith,
+generator, public exports, manifest and AST documentation reader against the
+same local base and changes. All 913 ERP tests passed; the proposed domain map
+covers 81 resources/899 operations without exceeding directory limits. No source
+split or finding-status change is claimed. Implementation follows user review of
+the [proposal](okf/zoho-erp.md#resource-module-split-proposal).
+
+Reviewed base `caf389ee2863ab4c40caf0f12d8467e6c67ed377` plus the pre-existing
+local utility/SDK changes and capability-package reorganization. Scope: import
+migration, public exports and legacy module identity, optional-dependency laziness,
+developer-tool command adapters, checker/generator paths, navigation and source
+directory organization. macOS arm64 / workspace CPython 3.14.10: 3,762 tests and
+four subtests passed; Ruff, ty and offline analysis/API verification passed with
+zero diagnostics/errors. Source directories meet the ten-file limit; app/workflow
+implementations meet the configured depth of one. No finding status is changed.
+This structural verification does not certify financial behavior against live
+services, output-directory policy, Windows or hosted CI. See the
+[project entry](CHANGELOG.md#apply-capability-packages-across-the-project).
+
 ## 2026-11-07 pyqwest migration verification
 
 Reviewed `d84be7ecc7ae4e1be742a874440df992c460ca41` plus pre-existing local
@@ -53,7 +87,7 @@ No live Analytics metadata was analyzed; its sync timestamp was not inspected.
 ### SDK-003 — URL query secrets bypass request-log redaction
 
 - **Priority / status:** Medium / Open; confirmed with a mocked HTTP session.
-- **Evidence:** `src/zoho/base_client.py:202` logs the complete URL while only
+- **Evidence:** `src/zoho/core_sdk/base_client.py:202` logs the complete URL while only
   sanitizing the separate `params` dictionary. An approved-host override URL
   containing `?access_token=REVIEW_SENTINEL` leaves that sentinel in the INFO log.
   Analytics export downloads accept server-supplied download URLs. No actual
@@ -204,7 +238,7 @@ previous verified status; SDK-002/APPS-002 retain their outstanding verification
 | Category | Scope | Responsibility |
 |---|---|---|
 | SDK | `src/zoho/` clients, transport, resources; `src/google_sheets/` | API contracts, authentication, request execution, pagination, service errors |
-| Helper | `src/zoho/helpers/`, `src/workflows/core/`, domain packages in `src/workflows/` | Reusable API compositions, financial rules, planning, matching, checkpoints and recovery |
+| Helper | `src/helpers/`, `src/workflows/core/`, domain packages in `src/workflows/` | Reusable API compositions, financial rules, planning, matching, checkpoints and recovery |
 | Apps | `apps/`, `apps/static/`, developer setup and CI | Command selection, inputs, previews, confirmation, local UI boundaries and execution reporting |
 
 These are review categories, not a proposal to move packages. Generic helpers
@@ -222,7 +256,7 @@ that every neighboring failure path is covered.
 ### SDK-001 — File uploads are not safely replayed
 
 - **Priority / status:** High / Fixed, awaiting verification; supported by static code inspection.
-- **Original evidence (before the 2026-11-06 correction):** [transport](src/zoho/base_client.py) reuses request arguments for
+- **Original evidence (before the 2026-11-06 correction):** [transport](src/zoho/core_sdk/base_client.py) reuses request arguments for
   401 and rate-limit retries without restoring file positions.
   [WorkDrive upload](src/zoho/wd/resources/files.py) supplies an open binary file.
   Multipart preparation consumes that file before the retry.
@@ -238,7 +272,7 @@ that every neighboring failure path is covered.
 - **Priority / status:** Medium / Fixed, awaiting verification; committed in
   `d0e00672976c6bfd3ae5b2c5db450f2fcbfbaf2e`, verified locally on Windows x64
   and macOS 26.6.2 arm64; hosted CI evidence pending.
-- **Evidence:** [BaseResource.list_iter](src/zoho/base_resource.py) defaults a
+- **Evidence:** [BaseResource.list_iter](src/zoho/core_sdk/base_resource.py) defaults a
   missing resource key to `[]` and exits before checking pagination when records
   are empty. It does not validate record or pagination field types.
 - **Impact:** A malformed response or incorrect resource key can be reported as
@@ -400,7 +434,7 @@ Documentation changes do not close APPS-002 or prove platform compatibility.
 ### HELPER-002 — Tenant-specific configuration defaults
 
 - **Priority / status:** Medium / Fixed, awaiting verification.
-- **Original evidence (before the 2026-11-06 correction):** [Config](src/workflows/core/config.py) includes deployment-specific
+- **Original evidence (before the 2026-11-06 correction):** [Config](src/workflows/runtime/config.py) includes deployment-specific
   defaults for Analytics organization, payment accounts and a stock-count worksheet.
   A fresh machine can inherit these when settings are omitted.
 - **Close when:** Affected workflows require explicit deployment values and fail

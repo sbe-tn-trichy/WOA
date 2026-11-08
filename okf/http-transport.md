@@ -5,7 +5,7 @@ title: HTTP transport
 
 # HTTP transport
 
-Project-owned HTTP calls use `utils.http_transport` backed by pinned
+Project-owned HTTP calls use `utils.http_utils.http_transport` backed by pinned
 `pyqwest==0.13.0`. Zoho clients retain their existing request arguments and
 domain-specific error/retry policies; the token broker and direct Sheets REST
 callers use the same transport. Google SDK internals still use their own

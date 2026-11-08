@@ -1,5 +1,33 @@
 # Knowledge Change Log
 
+## 2026-11-08
+
+- Removed the physical root ERP generated-file adapter [src/zoho/erp/generated.py](zoho-erp.md#root-generated-file-removal-and-lazy-alias) and replaced it with an explicit lazy module alias in `zoho/erp/__init__.py` and `zoho/__init__.py`; see [project entry](../CHANGELOG.md#remove-root-erp-generated-adapter-in-favor-of-lazy-module-alias).
+
+- Documented the [Analytics SDK layout and regeneration](zoho-analytics.md) and linked the existing snapshot contract. See the [project entry](../CHANGELOG.md#restructure-the-analytics-sdk-around-zoho-openapi).
+
+- Prepared [removal of the root ERP generated-file adapter](zoho-erp.md#root-generated-file-removal-and-lazy-alias), preserving the old import through an existing lazy-alias mechanism; see [project entry](../CHANGELOG.md#prepare-removal-of-the-root-erp-generated-adapter).
+
+- Recorded the [local implementation plan convention](../AGENTS.md#task-scope-and-acceptance) in the repository agent guidance. See the [project entry](../CHANGELOG.md#standardize-the-local-implementation-plan-location).
+
+- Implemented the approved [ERP resource layout and generation recovery contracts](zoho-erp.md#resource-module-split-proposal), with canonical resource source links in the generated catalog; see [project entry](../CHANGELOG.md#split-generated-erp-resources-into-business-modules).
+
+- Prepared the [ERP resource-module split proposal](zoho-erp.md#resource-module-split-proposal), with an exhaustive domain map, generator/compatibility requirements and acceptance checks; see [project entry](../CHANGELOG.md#prepare-the-erp-resource-module-split-for-review).
+
+- Documented [generated Books resource modules and limits](zoho-books.md#openapi-operation-coverage). See the [project entry](../CHANGELOG.md#split-generated-books-resources-by-domain).
+
+- Documented the cross-project [capability package map and compatibility contracts](project-organization.md#capability-packages), updated SDK navigation and architecture, and mirrored test ownership; see [project entry](../CHANGELOG.md#apply-capability-packages-across-the-project).
+
+- Documented the [ERP OpenAPI package layout](zoho-erp.md) and regeneration paths. See the [project entry](../CHANGELOG.md#align-the-erp-openapi-package-with-books).
+
+- Documented the organized [utilities layer subpackages](architecture.md#layer-boundaries) (`http_utils`, `file_utils`, `general_utils`) and backward-compatible alias redirection in [architecture](architecture.md); see [project entry](../CHANGELOG.md#organize-utility-modules-into-dedicated-subpackages).
+
+- Linked the repository-wide [file organization and refactoring policy](../AGENTS.md#file-organization-and-refactoring) from [project organization](project-organization.md); see [project entry](../CHANGELOG.md#require-responsibility-based-file-organization).
+
+- Documented [authentication exception categories and security ownership](architecture.md#authentication-and-failure-ownership); see [project entry](../CHANGELOG.md#clarify-sdk-authentication-failures-and-preserve-token-state).
+
+- Moved composite API operations into `src/helpers/` and documented SDK/helper import boundaries in [architecture](architecture.md); see [project entry](../CHANGELOG.md#move-composite-helpers-out-of-the-core-sdk).
+
 ## 2026-11-07
 
 - Added the canonical [JSON codec reference](json-codec.md) for RapidJSON precision, recovery serializers and legacy hash compatibility; linked architecture, HTTP transport, workflow persistence and metadata documentation. See [project entry](../CHANGELOG.md#adopt-python-rapidjson-for-project-json-handling).

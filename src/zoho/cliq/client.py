@@ -1,6 +1,6 @@
 import logging
 from typing import Any
-from zoho.base_client import BaseZohoClient
+from zoho.core_sdk.base_client import BaseZohoClient
 
 logger = logging.getLogger("zoho_cliq")
 
@@ -28,7 +28,7 @@ class ZohoCliqAPI(BaseZohoClient):
         if not self.access_token:
             logger.warning("Cliq Access Token not provided. Skipping notification.")
             if raise_on_error:
-                from zoho.exceptions import ZohoCliqError
+                from zoho.core_sdk.exceptions import ZohoCliqError
                 raise ZohoCliqError("Cliq Access Token not provided.")
             return None
         

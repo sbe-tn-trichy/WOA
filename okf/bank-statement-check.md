@@ -5,7 +5,7 @@ description: Read-only HDFC CSV completeness comparison with the Analytics Books
 
 # HDFC statement completeness helper
 
-[bank_statement_check.py](../src/workflows/bank_statement_check.py) parses an HDFC
+[bank_statement_check.py](../src/workflows/bank_statements/checker.py) parses an HDFC
 seven-column CSV and compares it with Bank Statements (Zoho Books) through an
 injected Analytics client. Run the helper with:
 

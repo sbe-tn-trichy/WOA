@@ -2,8 +2,8 @@ from ..base import BaseResource
 from typing import Any
 import os
 from pathlib import Path
-from utils.http import write_response_to_file
-from zoho.security import sanitize_filename, resolve_output_path
+from utils.http_utils.http import write_response_to_file
+from zoho.core_sdk.security import sanitize_filename, resolve_output_path
 
 class Messages(BaseResource):
     def __init__(self, client, account_id: str):

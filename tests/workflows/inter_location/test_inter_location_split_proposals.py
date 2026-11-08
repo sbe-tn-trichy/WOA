@@ -1,6 +1,6 @@
 import pytest
 
-from workflows.inter_location_split_proposals import propose_split
+from workflows.inter_location.split_proposals import propose_split
 
 
 def candidate():

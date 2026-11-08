@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import Any
-from zoho.base_client import BaseZohoClient
+from zoho.core_sdk.base_client import BaseZohoClient
 from .custom.contacts import Vendors
 from .custom.sales import SalesReturns
 from .custom.gst import GST

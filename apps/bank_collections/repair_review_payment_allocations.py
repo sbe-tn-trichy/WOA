@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -20,7 +20,7 @@ from workflows.collection_reconciliation.repair import (
     _write_checkpoint,
     repair_payment_allocations,
 )
-from workflows.core.auth import get_books_client
+from workflows.runtime.auth import get_books_client
 
 # Backward compatibility alias
 run = repair_payment_allocations

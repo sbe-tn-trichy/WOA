@@ -9,7 +9,7 @@ from pathlib import Path
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from zoho.security import resolve_output_path
+from zoho.core_sdk.security import resolve_output_path
 from zoho.sheet import ZohoSheetAPI
 from .processor import (
     FlatStockSnapshot,

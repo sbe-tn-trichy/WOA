@@ -1,11 +1,11 @@
 """Verify GSTR-1 readiness using Analytics, or live Books on force refresh."""
 
 import argparse
-from utils import json
+from utils.file_utils import json
 from pathlib import Path
 
-from workflows.core.auth import get_analytics_client, get_books_client
-from workflows.core.config import Config
+from workflows.runtime.auth import get_analytics_client, get_books_client
+from workflows.runtime.config import Config
 from workflows.gstr1_verification import GSTR1VerificationConfig, verify_gstr1, render_markdown_report
 
 

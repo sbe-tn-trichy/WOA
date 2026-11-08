@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from datetime import date
-from utils import json
+from utils.file_utils import json
 from collections.abc import Iterator, Mapping, Sequence
 from typing import Any
 
-from zoho.base_resource import BaseResource
+from zoho.core_sdk.base_resource import BaseResource
 
 
 class Reports(BaseResource):

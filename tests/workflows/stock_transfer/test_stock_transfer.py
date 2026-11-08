@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from zoho.inventory.resources.items import Items
+from zoho.inventory.resources.catalog.items import Items
 from workflows.stock_transfer import (
     build_plan, build_payloads, line_total, split_plan, transaction_dates,
     invoice_numbers, validate_series_start_date, validate_stock,

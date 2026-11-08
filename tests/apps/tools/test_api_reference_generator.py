@@ -15,10 +15,10 @@ import ast
 
 
 def test_parse_module_auth() -> None:
-    auth_file = ROOT / "src/zoho/auth.py"
+    auth_file = ROOT / "src/zoho/core_sdk/auth.py"
     mod_doc = parse_module(auth_file)
 
-    assert mod_doc.module_path == "zoho.auth"
+    assert mod_doc.module_path == "zoho.core_sdk.auth"
     class_names = [c.name for c in mod_doc.classes]
     assert "HttpTokenProvider" in class_names
     assert "ZohoOAuth2Manager" in class_names
@@ -63,7 +63,7 @@ def test_parse_module_purchases_attributes_and_mixins() -> None:
 
 
 def test_parse_module_security_functions() -> None:
-    security_file = ROOT / "src/zoho/security.py"
+    security_file = ROOT / "src/zoho/core_sdk/security.py"
     mod_doc = parse_module(security_file)
 
     fn_names = [f.name for f in mod_doc.functions]

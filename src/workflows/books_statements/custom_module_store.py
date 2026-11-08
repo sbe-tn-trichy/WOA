@@ -1,14 +1,14 @@
 """Download the Books Sales Person and Beat custom modules into editable SQLite tables."""
 from __future__ import annotations
 
-from utils import json
+from utils.file_utils import json
 import sqlite3
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, TypedDict
 
-from zoho.base_resource import BaseResource
+from zoho.core_sdk.base_resource import BaseResource
 
 MODULES = {'sales_persons': 'cm_user', 'beats': 'cm_beat'}
 

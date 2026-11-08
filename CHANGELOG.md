@@ -7,6 +7,99 @@ available; never invent a commit or claim checks that were not run.
 This file keeps the current year's entries; older years are archived under
 `changelog/YYYY.md` and linked here when created. Check rollover with each change.
 
+## 2026-11-08
+
+### Remove root ERP generated adapter in favor of lazy module alias
+
+- **Why:** Eliminate the physical root adapter `src/zoho/erp/generated.py` from the ERP package root while preserving 100% backward compatibility for legacy module imports, class lookups, and pickle deserialization.
+- **What:** Removed `src/zoho/erp/generated.py`. Registered `zoho.erp.generated` as an explicit lazy alias for `zoho.erp.openapi.generated` in `src/zoho/erp/__init__.py` and `src/zoho/__init__.py` using `utils.general_utils.module_aliases.register_module_aliases`. Added regression contract in `tests/zoho/erp/test_generation.py` ensuring the root file is absent, module identity is preserved, and class imports and pickle paths keep full identity. Updated `okf/zoho-erp.md`, `okf/log.md`, `CHECKLIST.md`, and `IMPLEMENTATION.md`.
+- **Verification:** macOS arm64 / workspace CPython 3.14.10: 1,008 ERP tests passed (`pytest tests/zoho/erp/ -q`), 93 architecture tests passed (`pytest tests/contracts/architecture/test_project_structure.py -q`), `ty check` passed with 0 diagnostics, and Ruff checks passed on `src/zoho/erp/`. Annual rollover checked: root entries remain in 2026. No live API mutations or dependency changes.
+
+
+### Restructure the Analytics SDK around Zoho OpenAPI
+
+- **Why:** Give Analytics the same generated/custom package split as Books and make Zoho's v2 operations discoverable through the SDK.
+- **What:** Added ten domain resources under `client.openapi` covering the 203 operations in the pinned Zoho specifications. Moved export, query, metadata and SQLite support under `custom/`, preserving client attributes and legacy module identity. Added the offline generator, operation manifest and API reference.
+- **Verification:** Verified all 203 routes against the pinned upstream specs and reproduced generated files byte for byte. On macOS arm64 / CPython 3.14.10, 4,069 tests and four subtests passed in the full suite, plus 13 separately collected metadata tests. Ruff, ty, offline architecture and API reference checks passed. Annual rollover checked. Live endpoints were not exercised.
+
+### Refine and synchronize the checklist implementation plan
+
+- **Why:** Align `IMPLEMENTATION.md` and `CHECKLIST.md` with the current capability-package layout, exact `ty` diagnostics in `core_sdk`, and all 28 domain workflow packages backing Phase 5 applications.
+- **What:** Updated `IMPLEMENTATION.md` and `CHECKLIST.md` to record `"src/utils"` package promotion, `Files.list_files` query-parameter redaction alongside `SDK-003`, `CatalystAuth` class attribute annotations, `BaseZohoClient` upload-position sequence types, dependency-ordered `src/helpers/` subpackage migration, complete module lists for `src/workflows/runtime/` and `src/workflows/core/`, all remaining workflow owners in Phase 4, and the prepared ERP root adapter removal slice.
+- **Verification:** Verified `ty check` diagnostics against `src/utils` (0 diagnostics) and Phase 1 `core_sdk` targets; ran `apps/analyze_project.py` with zero errors or diagnostics. Annual rollover checked: root entries remain in 2026. No runtime, environment or live API changes.
+
+### Prepare removal of the root ERP generated adapter
+
+- **Why:** Remove a redundant root re-export file while keeping generated code under OpenAPI ownership.
+- **What:** Reviewed runtime, generator, documentation and compatibility-test references; recorded the removal plan and local checklist item. Proposed retaining the old module path through the existing lazy-alias mechanism. The file remains in place pending review.
+- **Verification:** macOS arm64 / workspace CPython 3.14.10: 1,007 ERP tests passed. The isolated alias trial preserved all 81 class imports, wildcard exports and old pickle lookups; offline documentation/link analysis and whitespace checks passed. Annual rollover checked: root entries remain in 2026. No runtime, environment or live API changes.
+
+### Standardize the local implementation plan location
+
+- **Why:** Give agents one consistent location for implementation plans requested by the user.
+- **What:** Added a Git-ignored root `IMPLEMENTATION.md` alongside the local checklist and documented the convention in `AGENTS.md`.
+- **Verification:** Verified the root plan matches the reviewed plan with repository-relative links, the ignore rule applies, and the agent guidance is present. Annual rollover checked.
+
+### Split generated ERP resources into business modules
+
+- **Why:** Give each ERP operation a findable resource file while preserving generated SDK behavior and reproducibility.
+- **What:** Replaced the monolith with 81 resource modules in 13 approved domain packages, a typed registry and compatibility facade. Updated deterministic generation with explicit mapping, staged publication, rollback and generated-only cleanup; retained all class ASTs and manifest bytes. The API catalog now follows registry imports and links canonical sources. Added compatibility, provenance and generation-failure regressions.
+- **Verification:** macOS arm64 / workspace CPython 3.14.10: full suite passed (3,857 tests plus four subtests); Ruff, ty, API synchronization, whitespace and offline analysis passed. Regeneration from the supplied definitions was byte-identical; all 81 resource ASTs and manifest bytes match the baseline. Compatibility, cleanup, interruption/recovery and ten-file directory contracts passed. Windows, hosted CI and live ERP remain unverified. Annual rollover checked: root entries remain in 2026. No dependency, environment or live API changes.
+
+### Prepare the ERP resource-module split for review
+
+- **Why:** Make generated ERP operations easier to locate and debug while preserving deterministic regeneration and public imports.
+- **What:** Reviewed the 7,525-line generated file, generator, registry, documentation reader and tests; documented a complete 81-resource map across 13 business folders, compatibility requirements and staged generation/verification steps. Source splitting awaits the requested user review.
+- **Verification:** All 81 manifest resources mapped exactly once, with at most ten files per proposed domain; all 913 existing ERP tests passed on macOS arm64 / CPython 3.14.10. Documentation/link and whitespace checks passed. Annual rollover checked: root entries remain in 2026. No generated source, live API or environment changes.
+
+### Split generated Books resources by domain
+
+- **Why:** Keep generated operation code readable within the 400-line file limit.
+- **What:** The Books generator emits domain modules and splits large resources into operation groups. The original module re-exports the resource classes and registry.
+- **Verification:** All 651 generated function ASTs and the 854-operation manifest match the baseline. The largest generated module has 381 lines. Full suite passed on macOS with CPython 3.14.10 (3,763 tests and 4 subtests). ty passed. Annual rollover checked. No live API calls.
+
+### Apply capability packages across the project
+
+- **Why:** Extend the utility layout across the SDK, helpers, workflows and tests so responsibilities are easier to locate and debug.
+- **What:** Grouped shared SDK code, Inventory resource families, helper capabilities, workflow runtime and collection/Creator/customer payment operations; consolidated 21 workflow redirect files into lazy aliases and retained developer-tool CLI adapters. Migrated imports, mirrored tests, checker/generator targets and navigation, preserving utility and ERP editor changes. Added alias identity/laziness, command and directory-size contracts.
+- **Verification:** macOS arm64 / workspace CPython 3.14.10: full suite passed (3,762 tests plus four subtests); Ruff, ty, API synchronization, whitespace and offline analysis passed with zero diagnostics/errors. Canonical/legacy module identity, lazy optional dependencies, direct CLI adapters, source-directory file limits and configured app/workflow depth checks passed. Windows and hosted CI were not run. Annual rollover checked: root entries remain in 2026. No environment or live API changes.
+
+### Align the ERP OpenAPI package with Books
+
+- **Why:** Give the ERP client and its generated OpenAPI artifacts the same separation used by Books.
+- **What:** Moved the generated resources, operation base and packaged manifest under `zoho.erp.openapi`. Preserved existing ERP imports and refreshed eight source hashes from the supplied bundle.
+- **Verification:** Full suite passed on macOS with CPython 3.14.10 (3759 tests and 4 subtests). Regeneration produced identical Python and operation metadata for 81 resources and 899 operations. Annual rollover checked. No live ERP calls.
+
+### Organize utility modules into dedicated subpackages
+
+- **Why:** Group individual utility scripts in `src/utils/` into clean, domain-specific directories (`http_utils`, `file_utils`, `general_utils`) to eliminate directory clutter while preserving import backward compatibility and zero regressions.
+- **What:** Moved `http.py` and `http_transport.py` into `src/utils/http_utils/`; moved `json.py`, `yaml.py`, and `pdf.py` into `src/utils/file_utils/`; moved `encoding.py` and `sequences.py` into `src/utils/general_utils/`. Added package `__init__.py` files exporting public symbols and submodules. Implemented transparent meta-path redirection and root attribute aliases in `src/utils/__init__.py` supporting both snake_case (`http_utils`, `file_utils`, `general_utils`) and PascalCase (`HttpUtils`, `FileUtils`, `GeneralUtils`) imports as well as legacy submodule paths (`from utils.http import ...`, `import utils.json`, etc.). Updated `pyproject.toml` type checking targets, regenerated API reference docs, updated `okf/architecture.md`, and added regression tests in `tests/utils/test_utils_structure.py`.
+- **Verification:** macOS arm64 CPython 3.14.10: all 74 tests in `tests/utils` and all 7 tests in `tests/apps/tools/test_api_reference_generator.py` passed; `apps/analyze_project.py` passed with zero errors or diagnostics; API reference generated and synchronized cleanly. Annual rollover checked: root entries remain in 2026.
+
+### Require responsibility-based file organization
+
+- **Why:** Future work should keep core SDK and other packages focused instead of accumulating unrelated files at package roots.
+- **What:** Added a general AGENTS policy for inspecting ownership before placement, grouping related implementations, deciding splits/merges by responsibility, correcting touched directories, and verifying imports, compatibility, tests and file counts after moves. Linked the policy from project organization.
+- **Verification:** Documentation links, policy consistency and whitespace checked; no runtime changes, so tests were not run. Annual rollover checked: root entries remain in 2026.
+
+### Clarify SDK authentication failures and preserve token state
+
+- **Why:** OAuth/broker failures escaped as inconsistent built-in/transport errors, and invalid expiry could replace a cached token before validation.
+- **What:** Added typed configuration, token-response and token-service exceptions with root exports, retained service exception metadata and compatible ValueError catches, validated broker tokens/expiry before caching, serialized refresh, and sanitized token failure tracebacks. Kept security/path/redaction utilities separate from authentication and documented ownership and the keyring ImportError migration.
+- **Verification:** macOS arm64 / workspace CPython 3.14.10: 3,658 tests plus four subtests passed outside sandbox localhost restrictions; ty and offline architecture/API verification passed with zero diagnostics/errors. Regression coverage includes malformed tokens/expiry, cache preservation, keyring failures, concurrency, redaction and exception compatibility. Annual rollover checked: root entries remain in 2026. No environment or live API changes.
+
+### Move composite helpers out of the core SDK
+
+- **Why:** Keep `src/zoho/` focused on the core SDK and expose composite operations alongside it.
+- **What:** Moved helpers to `src/helpers/`, grouped catalog/report implementations within directory file limits, migrated callers and tests, and updated checker targets, API generation, navigation and architecture rules. SDK document-number parsing now uses `utils.sequences`, re-exported by helpers. The old `zoho.helpers` imports are removed.
+- **Verification:** macOS arm64 / workspace CPython 3.14.10: full suite passed (3,629 tests plus four subtests) outside sandbox localhost restrictions; ty and offline analysis/API checks passed with zero diagnostics/errors. No live services or environment changes. Annual rollover checked: root entries remain in 2026.
+
+### Rename the local work items checklist
+
+- **Why:** Use one checklist for all project work items.
+- **What:** Renamed `TYPE_SAFETY_CHECKLIST.md` to `CHECKLIST.md`, generalized its title and introduction, and updated its ignore rule while preserving existing tasks.
+- **Verification:** Confirmed the rename, retained task content and Git ignore behavior; whitespace check passed. Documentation-only change; runtime tests not needed. Annual rollover checked: root entries remain in 2026.
+
 ## 2026-11-07
 
 ### Remediate Ruff Core SDK linting and exception chaining diagnostics
