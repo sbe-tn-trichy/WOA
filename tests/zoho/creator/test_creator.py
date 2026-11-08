@@ -10,15 +10,24 @@ class TestZohoCreatorAPI(unittest.TestCase):
         self.client = ZohoCreatorAPI(
             access_token=self.access_token,
             account_owner_name=self.owner,
-            domain="com"
+            domain="in"
         )
 
     def test_init(self):
         self.assertEqual(self.client.access_token, self.access_token)
         self.assertEqual(self.client.account_owner_name, self.owner)
-        self.assertEqual(self.client.domain, "com")
+        self.assertEqual(self.client.domain, "in")
         self.assertEqual(self.client.environment, "production")
-        self.assertEqual(self.client.base_url, "https://www.zohoapis.com/creator/v2.1")
+        self.assertEqual(self.client.base_url, "https://www.zohoapis.in/creator/v2.1")
+
+    def test_init_rejects_non_india_domain(self):
+        from zoho.core_sdk.exceptions import ZohoConfigurationError
+        with self.assertRaises(ZohoConfigurationError):
+            ZohoCreatorAPI(
+                access_token=self.access_token,
+                account_owner_name=self.owner,
+                domain="com"
+            )
 
     @patch("utils.http_utils.http_transport.Session.request")
     def test_environment_header_can_be_disabled(self, mock_request):
@@ -44,7 +53,7 @@ class TestZohoCreatorAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "ok"})
         mock_request.assert_called_once_with(
             method="GET",
-            url="https://www.zohoapis.com/creator/v2.1/meta/john_owner/applications",
+            url="https://www.zohoapis.in/creator/v2.1/meta/john_owner/applications",
             headers={
                 "Authorization": "Zoho-oauthtoken fake_creator_token",
                 "environment": "production"
@@ -94,7 +103,7 @@ class TestCreatorNativeAPIs(unittest.TestCase):
     def setUp(self):
         self.client = MagicMock()
         self.client.account_owner_name = "owner123"
-        self.client.domain = "com"
+        self.client.domain = "in"
         self.client.environment = "production"
 
     def test_list_applications(self):

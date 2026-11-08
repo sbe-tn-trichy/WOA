@@ -170,7 +170,7 @@ def test_example_config_covers_public_config_keys():
     example = yaml.safe_load(
         (project_root / "config" / "config.example.yaml").read_text(encoding="utf-8")
     )
-    assert example["project_structure"] == {"max_nested_folder_depth": 1}
+    assert example["project_structure"] == {"max_nested_folder_depth": 2}
     profile = example["profiles"][example["active_profile"]]
     flattened = _flatten_profile(profile)
     example_keys = {key.upper() for key in flattened}

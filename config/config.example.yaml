@@ -11,7 +11,7 @@ active_profile: production
 # Depth: apps/, src/workflows/, output/ = 0; their direct child folders = 1.
 # This guides file organization; it does not move files or enforce depth at runtime.
 project_structure:
-  max_nested_folder_depth: 1
+  max_nested_folder_depth: 2
 
 # 3. Runtime settings. Only the selected profile is loaded.
 profiles:

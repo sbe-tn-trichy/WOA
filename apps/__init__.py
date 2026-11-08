@@ -8,6 +8,7 @@ import types
 
 from . import _bootstrap  # noqa: F401
 
+# Map legacy imports directly to their canonical modules, including nested targets.
 _REDIRECT_MAP: dict[str, str] = {
     "apps.analyze_project": "apps.tools.analyze_project",
     "apps.cleanup_project": "apps.tools.cleanup_project",

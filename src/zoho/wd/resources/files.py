@@ -4,7 +4,7 @@ from ..base import BaseResource
 import logging
 import os
 import re
-from zoho.core_sdk.security import resolve_output_path, sanitize_filename
+from zoho.core_sdk.security import resolve_output_path, sanitize_filename, sanitize_log_params
 from utils.http_utils.http import write_response_to_file
 
 # Logger setup
@@ -21,7 +21,7 @@ class Files(BaseResource):
 
     def list_files(self, folder_id: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """List files and folders within a specific folder."""
-        app_logger.info(f"Listing files in folder: {folder_id} with params: {params}")
+        app_logger.info(f"Listing files in folder: {folder_id} with params: {sanitize_log_params(params)}")
         endpoint = f"files/{folder_id}/files"
         return self.client.request('GET', endpoint, params=params)
 

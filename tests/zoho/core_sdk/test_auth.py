@@ -84,7 +84,7 @@ class TestZohoOAuth2Manager(unittest.TestCase):
         self.client_id = "test_client_id"
         self.client_secret = "test_client_secret"
         self.refresh_token = "test_refresh_token"
-        self.domain = "com"
+        self.domain = "in"
         self.manager = ZohoOAuth2Manager(
             client_id=self.client_id,
             client_secret=self.client_secret,
@@ -96,15 +96,15 @@ class TestZohoOAuth2Manager(unittest.TestCase):
         self.assertEqual(self.manager.client_id, self.client_id)
         self.assertEqual(self.manager.client_secret, self.client_secret)
         self.assertEqual(self.manager.refresh_token, self.refresh_token)
-        self.assertEqual(self.manager.domain, self.domain)
+        self.assertEqual(self.manager.domain, "in")
         self.assertIsNone(self.manager._access_token)
         self.assertEqual(self.manager._expires_at, 0.0)
 
     def test_get_token_url(self):
-        self.assertEqual(self.manager.get_token_url(), "https://accounts.zoho.com/oauth/v2/token")
+        self.assertEqual(self.manager.get_token_url(), "https://accounts.zoho.in/oauth/v2/token")
         
-        manager_in = ZohoOAuth2Manager("cid", "sec", "ref", domain="in")
-        self.assertEqual(manager_in.get_token_url(), "https://accounts.zoho.in/oauth/v2/token")
+        manager_default = ZohoOAuth2Manager("cid", "sec", "ref")
+        self.assertEqual(manager_default.get_token_url(), "https://accounts.zoho.in/oauth/v2/token")
 
     @patch("utils.http_utils.http_transport.post")
     def test_refresh_access_token_success(self, mock_post):
@@ -122,7 +122,7 @@ class TestZohoOAuth2Manager(unittest.TestCase):
         self.assertTrue(self.manager._expires_at > time.time())
         
         mock_post.assert_called_once_with(
-            "https://accounts.zoho.com/oauth/v2/token",
+            "https://accounts.zoho.in/oauth/v2/token",
             data={
                 "refresh_token": self.refresh_token,
                 "client_id": self.client_id,
@@ -325,3 +325,17 @@ def test_keyring_backend_failure_is_configuration_error():
 def test_invalid_broker_configuration(url, timeout):
     with pytest.raises(ZohoConfigurationError):
         HttpTokenProvider(url, timeout=timeout)
+
+
+@pytest.mark.parametrize("invalid_domain", ["com", "eu", "example.com", "in/evil", "", "us", "com.au"])
+def test_oauth_manager_rejects_non_india_domains(invalid_domain):
+    with pytest.raises(ZohoConfigurationError, match="Only Zoho India"):
+        ZohoOAuth2Manager("client", "secret", "refresh", domain=invalid_domain)
+
+
+@pytest.mark.parametrize("invalid_domain", ["com", "eu", "example.com", "in/evil", "", "us"])
+def test_base_client_rejects_non_india_domains(invalid_domain):
+    from zoho.core_sdk.base_client import BaseZohoClient
+    with pytest.raises(ZohoConfigurationError, match="Only Zoho India"):
+        BaseZohoClient("token", domain=invalid_domain, base_url="https://api.zoho.in", service_name="test")
+

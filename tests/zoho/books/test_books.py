@@ -17,16 +17,21 @@ class TestZohoBooksAPI(unittest.TestCase):
     def setUp(self):
         self.access_token = "fake_access_token"
         self.org_id = "org123"
-        self.client = ZohoBooksAPI(access_token=self.access_token, organization_id=self.org_id, domain="com")
+        self.client = ZohoBooksAPI(access_token=self.access_token, organization_id=self.org_id, domain="in")
 
     def test_init_success(self):
         self.assertEqual(self.client.access_token, self.access_token)
         self.assertEqual(self.client.organization_id, self.org_id)
-        self.assertEqual(self.client.base_url, "https://www.zohoapis.com/books/v3")
+        self.assertEqual(self.client.base_url, "https://www.zohoapis.in/books/v3")
 
     def test_init_missing_org(self):
         with self.assertRaises(ValueError):
             ZohoBooksAPI(access_token=self.access_token, organization_id="")
+
+    def test_init_rejects_non_india_domain(self):
+        from zoho.core_sdk.exceptions import ZohoConfigurationError
+        with self.assertRaises(ZohoConfigurationError):
+            ZohoBooksAPI(access_token=self.access_token, organization_id=self.org_id, domain="com")
 
     @patch("utils.http_utils.http_transport.Session.request")
     def test_request_success(self, mock_request):
@@ -41,7 +46,7 @@ class TestZohoBooksAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "ok"})
         mock_request.assert_called_once_with(
             method="GET",
-            url="https://www.zohoapis.com/books/v3/invoices",
+            url="https://www.zohoapis.in/books/v3/invoices",
             headers={
                 "Authorization": "Zoho-oauthtoken fake_access_token",
                 "Content-Type": "application/json"
@@ -67,7 +72,7 @@ class TestZohoBooksAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "ok"})
         mock_request.assert_called_once_with(
             method="PUT",
-            url="https://www.zohoapis.com/books/v3/contacts",
+            url="https://www.zohoapis.in/books/v3/contacts",
             headers={"Authorization": "Zoho-oauthtoken fake_access_token"},
             params={"organization_id": "org123"},
             json=None,
@@ -483,7 +488,7 @@ class TestSalesOrders(unittest.TestCase):
     @patch("utils.http_utils.http_transport.Session.request")
     def test_create_from_yaml(self, mock_request):
         from zoho.books.custom.sales import SalesOrders
-        client = ZohoBooksAPI(access_token="tok", organization_id="org123", domain="com")
+        client = ZohoBooksAPI(access_token="tok", organization_id="org123", domain="in")
         sales_orders = SalesOrders(client)
 
         yaml_content = """

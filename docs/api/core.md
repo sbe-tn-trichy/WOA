@@ -79,6 +79,7 @@ Shared HTTP transport, authentication managers, base resource abstractions, exce
   - [Class `ZohoSheetError`](#zoho-core_sdk-exceptions-zohosheeterror)
 - [`zoho.core_sdk.security`](#zoho-core_sdk-security)
   - [Function `mask_sensitive_value`](#zoho-core_sdk-security-mask_sensitive_value)
+  - [Function `sanitize_log_url`](#zoho-core_sdk-security-sanitize_log_url)
   - [Function `sanitize_log_params`](#zoho-core_sdk-security-sanitize_log_params)
   - [Function `sanitize_filename`](#zoho-core_sdk-security-sanitize_filename)
   - [Function `resolve_output_path`](#zoho-core_sdk-security-resolve_output_path)
@@ -642,7 +643,7 @@ Caches a Zoho OAuth 2.0 access token and refreshes it when expired.
 ##### `ZohoOAuth2Manager.__init__`
 
 ```python
-def __init__(self, client_id: str, client_secret: str, refresh_token: str | None = None, domain: str = 'com', access_token: str | None = None, expires_at: float | None = None, keyring_service: str | None = None, keyring_username: str | None = None)
+def __init__(self, client_id: str, client_secret: str, refresh_token: str | None = None, domain: str = 'in', access_token: str | None = None, expires_at: float | None = None, keyring_service: str | None = None, keyring_username: str | None = None)
 ```
 
 ##### `ZohoOAuth2Manager.refresh_token`
@@ -683,6 +684,15 @@ Return a valid access token, refreshing if missing or expired.
 Dynamic authentication wrapper that behaves like a string.
 Allows explicit request mutation token switching via get_token_for_request(is_mutation).
 
+#### Class Attributes
+
+| Attribute | Type | Default Value | Notes |
+|---|---|---|---|
+| `direct_token` | `str` | - | - |
+| `catalyst_token_url` | `str` | - | - |
+| `service_key` | `str` | - | - |
+| `allow_direct_token_fallback` | `bool` | - | - |
+
 #### Methods
 
 ##### `CatalystAuth.get_token_for_request`
@@ -721,7 +731,7 @@ domain resolution, and unified automatic 401 token refresh retries.
 ##### `BaseZohoClient.__init__`
 
 ```python
-def __init__(self, access_token: Any, domain: str, base_url: str, service_name: str, token_refresh_callback: Any | None = None, on_request_completed: Any | None = None, default_timeout: int = 30)
+def __init__(self, access_token: Any, domain: str = 'in', base_url: str = '', service_name: str = '', token_refresh_callback: Any | None = None, on_request_completed: Any | None = None, default_timeout: int = 30)
 ```
 
 ##### `BaseZohoClient.close`
@@ -953,16 +963,24 @@ Custom exception for Zoho Sheet API errors.
 ### Function `mask_sensitive_value`
 
 ```python
-def mask_sensitive_value(val: Any) -> str
+def mask_sensitive_value(val: object) -> str
 ```
 
 Mask a sensitive string while preserving the last 4 characters for identification.
 Values with 4 or fewer characters are masked as '****'.
 
+### Function `sanitize_log_url`
+
+```python
+def sanitize_log_url(url: str) -> str
+```
+
+Redact sensitive query values in a copy used only for logs.
+
 ### Function `sanitize_log_params`
 
 ```python
-def sanitize_log_params(params: dict[str, Any] | None) -> dict[str, Any] | None
+def sanitize_log_params(params: Mapping[str, object] | None) -> Mapping[str, object] | None
 ```
 
 Recursively sanitize query parameters or payload dictionaries for logging.

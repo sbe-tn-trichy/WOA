@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import argparse
 import ast
+from collections import Counter
 from datetime import datetime, timezone
-from utils.file_utils import json
+from utils.file_utils import json, yaml
 from pathlib import Path
 import re
 import subprocess
@@ -130,6 +131,57 @@ def markdown_headings(path: Path, cache: dict[Path, set[str]]) -> set[str]:
     return cache[resolved]
 
 
+def structure_diagnostics(root: Path, candidates: set[str]) -> list[Diagnostic]:
+    """Check existing tracked and nonignored source files against organization policy."""
+    config_path = root / "config/config.yaml"
+    default_depth = 2
+    depth = default_depth
+    if config_path.exists():
+        try:
+            config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+            if config is None:
+                config = {}
+            policy = config.get("project_structure", {}) if isinstance(config, dict) else None
+            depth = policy.get("max_nested_folder_depth", default_depth) if isinstance(policy, dict) else None
+        except (OSError, UnicodeError, yaml.YAMLError):
+            depth = None
+        if type(depth) is not int or depth < 0:
+            return [{
+                "file": "config/config.yaml",
+                "rule": "structure-config",
+                "message": "project_structure.max_nested_folder_depth must be a non-negative integer",
+            }]
+
+    suffixes = {".py", ".json", ".html", ".js", ".css", ".yaml", ".yml"}
+    caches = {"__pycache__", ".pytest_cache", "build"}
+    counts: Counter[Path] = Counter()
+    nested: set[Path] = set()
+    for candidate in candidates:
+        path = Path(candidate)
+        if not path.parts or path.parts[0] not in {"apps", "src", "tests"}:
+            continue
+        if path.suffix not in suffixes or caches.intersection(path.parts) or not (root / path).is_file():
+            continue
+        directory = path.parent
+        counts[directory] += 1
+        for depth_root in (Path("apps"), Path("src/workflows")):
+            if directory.is_relative_to(depth_root) and not directory.is_relative_to(Path("apps/static")):
+                if len(directory.relative_to(depth_root).parts) > depth:
+                    nested.add(directory)
+
+    diagnostics: list[Diagnostic] = [
+        {"file": directory.as_posix(), "rule": "structure-file-count",
+         "message": f"{count} source files exceed the directory limit of 10"}
+        for directory, count in sorted(counts.items()) if count > 10
+    ]
+    diagnostics.extend(
+        {"file": directory.as_posix(), "rule": "structure-depth",
+         "message": f"Source directory exceeds configured nesting depth {depth}"}
+        for directory in sorted(nested)
+    )
+    return diagnostics
+
+
 def inspect(root: Path, since: str | None = None) -> Snapshot:
     revision = git(root, "rev-parse", "HEAD")
     changes: dict[str, list[ChangeRecord]] = {
@@ -144,7 +196,7 @@ def inspect(root: Path, since: str | None = None) -> Snapshot:
     tracked = git(root, "ls-files", "-z").split("\0")
     candidates = set(tracked) | {r["path"] for r in changes["untracked"]}
     files = sorted(p for p in candidates if p.endswith(".py") and p.startswith(("src/", "apps/", "tests/")) and (root / p).is_file())
-    diagnostics: list[Diagnostic] = []
+    diagnostics = structure_diagnostics(root, candidates)
     errors: list[Diagnostic] = []
     graph: dict[str, list[str]] = {}
     for path in files:

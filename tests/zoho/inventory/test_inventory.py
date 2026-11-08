@@ -8,17 +8,22 @@ class TestZohoInventoryAPI(unittest.TestCase):
     def setUp(self):
         self.access_token = "fake_access_token"
         self.org_id = "org123"
-        self.client = ZohoInventoryAPI(access_token=self.access_token, organization_id=self.org_id, domain="com")
+        self.client = ZohoInventoryAPI(access_token=self.access_token, organization_id=self.org_id, domain="in")
 
     def test_init_success(self):
         self.assertEqual(self.client.access_token, self.access_token)
         self.assertEqual(self.client.organization_id, self.org_id)
-        self.assertEqual(self.client.base_url, "https://www.zohoapis.com/inventory/v1")
+        self.assertEqual(self.client.base_url, "https://www.zohoapis.in/inventory/v1")
         self.assertIsNotNone(self.client.item_groups)
 
     def test_init_missing_org(self):
         with self.assertRaises(ValueError):
             ZohoInventoryAPI(access_token=self.access_token, organization_id="")
+
+    def test_init_rejects_non_india_domain(self):
+        from zoho.core_sdk.exceptions import ZohoConfigurationError
+        with self.assertRaises(ZohoConfigurationError):
+            ZohoInventoryAPI(access_token=self.access_token, organization_id=self.org_id, domain="com")
 
     @patch("utils.http_utils.http_transport.Session.request")
     def test_request_success(self, mock_request):
@@ -32,7 +37,7 @@ class TestZohoInventoryAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "ok"})
         mock_request.assert_called_once_with(
             method="GET",
-            url="https://www.zohoapis.com/inventory/v1/items",
+            url="https://www.zohoapis.in/inventory/v1/items",
             headers={
                 "Authorization": "Zoho-oauthtoken fake_access_token",
                 "Content-Type": "application/json"

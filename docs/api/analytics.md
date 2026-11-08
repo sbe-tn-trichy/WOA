@@ -35,14 +35,14 @@ Client for Zoho Analytics v2 and its export and metadata helpers.
 ##### `ZohoAnalyticsAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, organization_id: str, domain: str = 'com', token_refresh_callback: Any | None = None)
+def __init__(self, access_token: str, organization_id: str, domain: str = 'in', token_refresh_callback: Any | None = None)
 ```
 
 ##### `ZohoAnalyticsAPI.from_token_provider`
 
 ```python
 @classmethod
-def from_token_provider(cls, token_url: str = 'http://localhost:3000/server/new/tokens', organization_id: str | None = None, domain: str = 'com', token_service_key: str = 'zoho_analytics_conn', token_refresh_callback: Any | None = None) -> 'ZohoAnalyticsAPI'
+def from_token_provider(cls, token_url: str = 'http://localhost:3000/server/new/tokens', organization_id: str | None = None, domain: str = 'in', token_service_key: str = 'zoho_analytics_conn', token_refresh_callback: Any | None = None) -> 'ZohoAnalyticsAPI'
 ```
 
 Create a client using an access token from an HTTP token broker.

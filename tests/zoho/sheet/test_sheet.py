@@ -6,12 +6,17 @@ from zoho.sheet import ZohoSheetAPI
 class TestZohoSheetAPI(unittest.TestCase):
     def setUp(self):
         self.access_token = "fake_access_token"
-        self.client = ZohoSheetAPI(access_token=self.access_token, domain="com")
+        self.client = ZohoSheetAPI(access_token=self.access_token, domain="in")
 
     def test_init(self):
         self.assertEqual(self.client.access_token, self.access_token)
-        self.assertEqual(self.client.domain, "com")
-        self.assertEqual(self.client.base_url, "https://sheet.zoho.com/api/v2")
+        self.assertEqual(self.client.domain, "in")
+        self.assertEqual(self.client.base_url, "https://sheet.zoho.in/api/v2")
+
+    def test_init_rejects_non_india_domain(self):
+        from zoho.core_sdk.exceptions import ZohoConfigurationError
+        with self.assertRaises(ZohoConfigurationError):
+            ZohoSheetAPI(access_token=self.access_token, domain="com")
 
     def test_init_accepts_token_refresh_callback(self):
         refresh = MagicMock(return_value="refreshed")
@@ -33,7 +38,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         self.assertEqual(res, [{"id": "wb1", "name": "Workbook 1"}])
         mock_request.assert_called_once_with(
             method="GET",
-            url="https://sheet.zoho.com/api/v2/workbooks",
+            url="https://sheet.zoho.in/api/v2/workbooks",
             headers=self.client._get_headers(),
             params={"method": "workbook.list"},
             timeout=30,
@@ -51,7 +56,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         self.assertIsInstance(res[0], str)
         mock_request.assert_called_once_with(
             method="POST",
-            url="https://sheet.zoho.com/api/v2/wb1",
+            url="https://sheet.zoho.in/api/v2/wb1",
             headers=self.client._get_headers(),
             params={"method": "worksheet.list"},
             timeout=30,
@@ -109,7 +114,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         self.assertEqual(res, [{"col1": "val1"}])
         mock_request.assert_called_once_with(
             method="GET",
-            url="https://sheet.zoho.com/api/v2/wb1",
+            url="https://sheet.zoho.in/api/v2/wb1",
             headers=self.client._get_headers(),
             params={
                 "method": "worksheet.records.fetch",
@@ -141,7 +146,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "success"})
         mock_request.assert_called_once_with(
             method="POST",
-            url="https://sheet.zoho.com/api/v2/wb1",
+            url="https://sheet.zoho.in/api/v2/wb1",
             headers=self.client._get_headers(),
             params={"method": "worksheet.content.set"},
             data={
@@ -163,7 +168,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "success"})
         mock_request.assert_called_once_with(
             method="POST",
-            url="https://sheet.zoho.com/api/v2/wb1",
+            url="https://sheet.zoho.in/api/v2/wb1",
             headers=self.client._get_headers(),
             params={"method": "cell.content.set"},
             data={
@@ -186,7 +191,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "success"})
         mock_request.assert_called_once_with(
             method="POST",
-            url="https://sheet.zoho.com/api/v2/wb1",
+            url="https://sheet.zoho.in/api/v2/wb1",
             headers=self.client._get_headers(),
             params={"method": "worksheet.insert"},
             data={
@@ -207,7 +212,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "success"})
         mock_request.assert_called_once_with(
             method="POST",
-            url="https://sheet.zoho.com/api/v2/wb1",
+            url="https://sheet.zoho.in/api/v2/wb1",
             headers=self.client._get_headers(),
             params={"method": "worksheet.records.add"},
             data={
@@ -230,7 +235,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "success"})
         mock_request.assert_called_once_with(
             method="POST",
-            url="https://sheet.zoho.com/api/v2/wb1",
+            url="https://sheet.zoho.in/api/v2/wb1",
             headers=self.client._get_headers(),
             params={"method": "worksheet.records.update"},
             data={
@@ -252,7 +257,7 @@ class TestZohoSheetAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "success"})
         mock_request.assert_called_once_with(
             method="POST",
-            url="https://sheet.zoho.com/api/v2/wb1",
+            url="https://sheet.zoho.in/api/v2/wb1",
             headers=self.client._get_headers(),
             params={"method": "worksheet.records.delete"},
             data={

@@ -27,7 +27,7 @@ Docs: https://www.zoho.com/creator/help/api/v2.1/
 ##### `ZohoCreatorAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, account_owner_name: str, domain: str = 'com', environment: str = 'production', send_environment_header: bool = True, token_refresh_callback: Any | None = None)
+def __init__(self, access_token: str, account_owner_name: str, domain: str = 'in', environment: str = 'production', send_environment_header: bool = True, token_refresh_callback: Any | None = None)
 ```
 
 ##### `ZohoCreatorAPI.request`

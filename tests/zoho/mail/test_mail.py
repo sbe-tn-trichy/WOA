@@ -8,11 +8,16 @@ from zoho.mail import ZohoMailAPI, ZohoMailError
 class TestZohoMailAPI(unittest.TestCase):
     def setUp(self):
         self.access_token = "fake_access_token"
-        self.client = ZohoMailAPI(access_token=self.access_token, domain="com")
+        self.client = ZohoMailAPI(access_token=self.access_token, domain="in")
 
     def test_init(self):
         self.assertEqual(self.client.access_token, self.access_token)
-        self.assertEqual(self.client.base_url, "https://mail.zoho.com/api")
+        self.assertEqual(self.client.base_url, "https://mail.zoho.in/api")
+
+    def test_init_rejects_non_india_domain(self):
+        from zoho.core_sdk.exceptions import ZohoConfigurationError
+        with self.assertRaises(ZohoConfigurationError):
+            ZohoMailAPI(access_token=self.access_token, domain="com")
 
     @patch("utils.http_utils.http_transport.Session.request")
     def test_request_success(self, mock_request):
@@ -26,7 +31,7 @@ class TestZohoMailAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "success"})
         mock_request.assert_called_once_with(
             method="GET",
-            url="https://mail.zoho.com/api/test_endpoint",
+            url="https://mail.zoho.in/api/test_endpoint",
             headers={
                 "Authorization": "Zoho-oauthtoken fake_access_token",
                 "Content-Type": "application/json"
@@ -285,7 +290,7 @@ class TestMailCatalystAuth(unittest.TestCase):
         )
         client = ZohoMailAPI(
             access_token=auth,
-            domain="com"
+            domain="in"
         )
 
         # GET request should not use Catalyst

@@ -34,7 +34,7 @@ Main Zoho Mail API Client.
 ##### `ZohoMailAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, domain: str = 'com', token_refresh_callback: Any | None = None)
+def __init__(self, access_token: str, domain: str = 'in', token_refresh_callback: Any | None = None)
 ```
 
 Initialize the Zoho Mail API client.

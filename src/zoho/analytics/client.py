@@ -14,7 +14,7 @@ class ZohoAnalyticsAPI(BaseZohoClient):
         self,
         access_token: str,
         organization_id: str,
-        domain: str = "com",
+        domain: str = "in",
         token_refresh_callback: Any | None = None,
     ):
         if not organization_id:
@@ -38,7 +38,7 @@ class ZohoAnalyticsAPI(BaseZohoClient):
         cls,
         token_url: str = "http://localhost:3000/server/new/tokens",
         organization_id: str | None = None,
-        domain: str = "com",
+        domain: str = "in",
         token_service_key: str = "zoho_analytics_conn",
         token_refresh_callback: Any | None = None,
     ) -> "ZohoAnalyticsAPI":

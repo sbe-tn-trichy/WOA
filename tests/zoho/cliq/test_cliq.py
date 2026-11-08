@@ -6,14 +6,19 @@ class TestZohoCliqAPI(unittest.TestCase):
     def setUp(self):
         self.access_token = "fake_access_token"
         self.bot_name = "testbot"
-        self.domain = "com"
+        self.domain = "in"
         self.client = ZohoCliqAPI(access_token=self.access_token, bot_name=self.bot_name, domain=self.domain)
 
     def test_init(self):
         self.assertEqual(self.client.access_token, self.access_token)
         self.assertEqual(self.client.bot_name, self.bot_name)
-        self.assertEqual(self.client.domain, self.domain)
-        self.assertEqual(self.client.base_url, "https://cliq.zoho.com/api/v2")
+        self.assertEqual(self.client.domain, "in")
+        self.assertEqual(self.client.base_url, "https://cliq.zoho.in/api/v2")
+
+    def test_init_rejects_non_india_domain(self):
+        from zoho.core_sdk.exceptions import ZohoConfigurationError
+        with self.assertRaises(ZohoConfigurationError):
+            ZohoCliqAPI(access_token=self.access_token, bot_name=self.bot_name, domain="com")
 
     def test_init_defaults(self):
         client = ZohoCliqAPI(access_token=self.access_token)
@@ -40,7 +45,7 @@ class TestZohoCliqAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "success"})
         mock_request.assert_called_once_with(
             method="POST",
-            url="https://cliq.zoho.com/api/v2/bots/testbot/message",
+            url="https://cliq.zoho.in/api/v2/bots/testbot/message",
             headers={
                 "Authorization": "Zoho-oauthtoken fake_access_token",
                 "Content-Type": "application/json"
@@ -61,7 +66,7 @@ class TestZohoCliqAPI(unittest.TestCase):
         self.assertEqual(res, {"status": "success"})
         mock_request.assert_called_once_with(
             method="POST",
-            url="https://cliq.zoho.com/api/v2/channels/general/message",
+            url="https://cliq.zoho.in/api/v2/channels/general/message",
             headers={
                 "Authorization": "Zoho-oauthtoken fake_access_token",
                 "Content-Type": "application/json"

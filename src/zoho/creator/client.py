@@ -13,15 +13,15 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         access_token: str,
         account_owner_name: str,
-        domain: str = "com",
+        domain: str = "in",
         environment: str = "production",
         send_environment_header: bool = True,
         token_refresh_callback: Any | None = None
     ):
-        base_url = f"https://www.zohoapis.{domain or 'com'}/creator/v2.1"
+        base_url = f"https://www.zohoapis.{domain or 'in'}/creator/v2.1"
         super().__init__(
             access_token=access_token,
-            domain=domain or "com",
+            domain=domain or "in",
             base_url=base_url,
             service_name="creator",
             token_refresh_callback=token_refresh_callback,

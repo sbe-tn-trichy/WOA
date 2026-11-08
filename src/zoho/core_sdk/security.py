@@ -1,7 +1,8 @@
 import os
 import re
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from urllib.parse import unquote_plus
 
 _UNSAFE_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
@@ -20,6 +21,13 @@ SENSITIVE_PARAM_KEYS: set[str] = {
     "api_key",
     "apikey",
     "code",
+    "signature",
+    "sig",
+    "x-amz-credential",
+    "x-amz-signature",
+    "x-goog-credential",
+    "x-goog-signature",
+    "key-pair-id",
     # Tax & Statutory Identifiers
     "gst_no",
     "gstin",
@@ -59,7 +67,7 @@ SENSITIVE_PARAM_KEYS: set[str] = {
 }
 
 
-def mask_sensitive_value(val: Any) -> str:
+def mask_sensitive_value(val: object) -> str:
     """
     Mask a sensitive string while preserving the last 4 characters for identification.
     Values with 4 or fewer characters are masked as '****'.
@@ -74,24 +82,43 @@ def mask_sensitive_value(val: Any) -> str:
     return f"***{s[-4:]}"
 
 
-def sanitize_log_params(params: dict[str, Any] | None) -> dict[str, Any] | None:
+def _sensitive_parameter(name: str) -> bool:
+    normalized = name.lower().strip()
+    return normalized in SENSITIVE_PARAM_KEYS or any(
+        part in normalized for part in ("token", "secret", "password", "gstin", "pan_no", "account_no")
+    )
+
+
+def sanitize_log_url(url: str) -> str:
+    """Redact sensitive query values in a copy used only for logs."""
+    address, fragment_marker, fragment = url.partition("#")
+    path, query_marker, query = address.partition("?")
+    fields = []
+    for field in query.split("&"):
+        key, separator, value = field.partition("=")
+        if separator and _sensitive_parameter(unquote_plus(key)):
+            value = "[REDACTED]"
+        fields.append(key + separator + value)
+    return path + query_marker + "&".join(fields) + fragment_marker + fragment
+
+
+def sanitize_log_params(params: Mapping[str, object] | None) -> Mapping[str, object] | None:
     """
     Recursively sanitize query parameters or payload dictionaries for logging.
     Sensitive keys are masked showing only their last 4 characters.
     """
-    if not params or not isinstance(params, dict):
+    if not params or not isinstance(params, Mapping):
         return params
 
     sanitized = {}
     for k, v in params.items():
-        k_lower = str(k).lower().strip()
-        if k_lower in SENSITIVE_PARAM_KEYS or any(sens in k_lower for sens in ("token", "secret", "password", "gstin", "pan_no", "account_no")):
+        if _sensitive_parameter(str(k)):
             sanitized[k] = mask_sensitive_value(v)
-        elif isinstance(v, dict):
+        elif isinstance(v, Mapping):
             sanitized[k] = sanitize_log_params(v)
         elif isinstance(v, list):
             sanitized[k] = [
-                sanitize_log_params(item) if isinstance(item, dict) else item
+                sanitize_log_params(item) if isinstance(item, Mapping) else item
                 for item in v
             ]
         else:

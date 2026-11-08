@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -88,28 +89,72 @@ def test_developer_tool_entry_points_keep_working(name: str) -> None:
     assert "usage:" in result.stdout.lower()
 
 
-def test_python_package_directories_stay_within_file_limit() -> None:
-    violations = []
-    for root in (ROOT / "src", ROOT / "apps", ROOT / "tests"):
-        for directory in [root, *(p for p in root.rglob("*") if p.is_dir())]:
-            if "__pycache__" in directory.parts or not any(directory.glob("*.py")):
-                continue
-            # Count source-controlled source/data files, excluding runtime output.
-            files = [
-                p
-                for p in directory.iterdir()
-                if p.is_file()
-                and p.suffix
-                in {
-                    ".py",
-                    ".json",
-                    ".html",
-                    ".js",
-                    ".css",
-                    ".yaml",
-                    ".yml",
-                }
-            ]
-            if len(files) > 10:
-                violations.append((str(directory.relative_to(ROOT)), len(files)))
-    assert not violations, violations
+def test_source_directory_limits():
+    from apps.tools.analyze_project import git, structure_diagnostics
+
+    paths = git(ROOT, "ls-files", "--cached", "--others", "--exclude-standard", "-z")
+    assert not structure_diagnostics(ROOT, set(paths.split("\0")) - {""})
+
+
+@pytest.mark.parametrize("subdirectory", ["apps", "apps/group", "apps/group/domain"])
+def test_direct_bootstrap_resolves_checkout(tmp_path, subdirectory: str) -> None:
+    checkout = tmp_path / "checkout"
+    entry_dir = checkout / subdirectory
+    entry_dir.mkdir(parents=True)
+    (checkout / "pyproject.toml").touch()
+    src = checkout / "src"
+    src.mkdir()
+    (src / "checkout_marker.py").touch()
+    shutil.copyfile(ROOT / "apps/_bootstrap.py", entry_dir / "_bootstrap.py")
+    entry = entry_dir / "entry.py"
+    entry.write_text(
+        "import _bootstrap\n"
+        "import checkout_marker\n"
+        "print(_bootstrap._ROOT)\n",
+        encoding="utf-8",
+    )
+    # A direct script needs its own directory on sys.path. Skip site packages
+    # so the editable installation cannot supply any checkout imports.
+    args = [sys.executable, "-E", "-S", str(entry)]
+    result = subprocess.run(args, cwd=tmp_path, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert Path(result.stdout.strip()) == checkout.resolve()
+
+    (checkout / "pyproject.toml").unlink()
+    result = subprocess.run(args, cwd=tmp_path, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "Could not find pyproject.toml above" in result.stderr
+
+
+def test_nested_app_preserves_legacy_import_and_finds_template(tmp_path) -> None:
+    checkout = tmp_path / "checkout"
+    apps = checkout / "apps"
+    nested = apps / "group/domain"
+    nested.mkdir(parents=True)
+    (checkout / "pyproject.toml").touch()
+    (apps / "static").mkdir()
+    (apps / "static/payment_review.html").write_text("nested template", encoding="utf-8")
+    shutil.copyfile(ROOT / "apps/_bootstrap.py", apps / "_bootstrap.py")
+    shutil.copyfile(ROOT / "apps/bank_collections/_bootstrap.py", nested / "_bootstrap.py")
+    source = (ROOT / "apps/__init__.py").read_text(encoding="utf-8")
+    (apps / "__init__.py").write_text(
+        source.replace('"apps.bank_collections.payment_review"', '"apps.group.domain.payment_review"'),
+        encoding="utf-8",
+    )
+    shutil.copyfile(ROOT / "apps/bank_collections/payment_review.py", nested / "payment_review.py")
+    script = (
+        "import sys\n"
+        "sys.path[:0] = sys.argv[1:]\n"
+        "import apps.payment_review as legacy\n"
+        "from apps.group.domain import payment_review\n"
+        "assert legacy is payment_review\n"
+        "assert payment_review.__spec__.name == 'apps.group.domain.payment_review'\n"
+        "assert payment_review.HTML == 'nested template'\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", script, str(checkout), str(ROOT / "src")],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr

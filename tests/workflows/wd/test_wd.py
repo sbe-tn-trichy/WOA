@@ -292,6 +292,42 @@ class TestWorkdriveCatalystAuth(unittest.TestCase):
         mock_post.assert_called_once()
         self.assertEqual(mock_request.call_args[1]["headers"]["Authorization"], "Zoho-oauthtoken catalyst_wd_token")
 
+    @patch("utils.http_utils.http_transport.Session.request")
+    def test_request_positional_compatibility_and_warnings(self, mock_request):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"status": "ok"}
+        mock_request.return_value = mock_resp
+
+        client = ZohoWorkdriveAPI(access_token="tok", domain="in")
+
+        # 1. Keyword call
+        client.request("GET", "files", stream=True, override_url="https://download.zoho.in/test")
+        self.assertTrue(mock_request.call_args.kwargs.get("stream"))
+        self.assertEqual(mock_request.call_args.kwargs.get("url"), "https://download.zoho.in/test")
+
+        # 2. Canonical positional call: (method, endpoint, json, data, params, headers, files, stream, override_url)
+        mock_request.reset_mock()
+        client.request("GET", "files", None, None, None, None, None, True, "https://download.zoho.in/test")
+        self.assertTrue(mock_request.call_args.kwargs.get("stream"))
+        self.assertEqual(mock_request.call_args.kwargs.get("url"), "https://download.zoho.in/test")
+
+        # 3. Legacy positional call: (method, endpoint, json, data, params, headers, stream, override_url)
+        mock_request.reset_mock()
+        import warnings
+        with warnings.catch_warnings(record=True) as recorded:
+            warnings.simplefilter("always")
+            client.request("GET", "", None, None, None, None, True, "https://download.zoho.in/v1/workdrive/download/file123")
+            self.assertEqual(len(recorded), 1)
+            self.assertTrue(issubclass(recorded[0].category, DeprecationWarning))
+            self.assertIn("Positional arguments (stream, override_url, files)", str(recorded[0].message))
+
+        self.assertTrue(mock_request.call_args.kwargs.get("stream"))
+        self.assertEqual(
+            mock_request.call_args.kwargs.get("url"),
+            "https://download.zoho.in/v1/workdrive/download/file123"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -84,12 +84,7 @@ The four root developer-tool scripts remain direct-execution adapters, preservin
 existing commands such as `apps/analyze_project.py`. Their implementations and
 static-check target live under `apps/tools/`. Tests mirror the capability packages;
 architecture contracts verify import identity, optional-dependency laziness,
-command adapters and the ten-file source-directory limit. The offline analyzer
-continues to validate import layers and documentation links; it does not enforce
-all directory-depth/output policies.
-
-Workflow runtime and collection-payment code use sibling packages so their
-implementations stay within the configured depth of one beneath `src/workflows/`.
+command adapters and the source-directory limits shared with the offline analyzer.
 Shared domain rules stay with the domain that owns them.
 
 ## Directory structure and file limits
@@ -105,15 +100,16 @@ organization and configuration rather than a fixed layout for future packages.
 
 ```yaml
 project_structure:
-  max_nested_folder_depth: 1
+  max_nested_folder_depth: 2
 ```
 
-Measure depth relative to each organization root (`apps/`, `src/workflows/`,
-`output/`): the root is 0, a direct child is 1, and its child is 2.
+Measure depth under `apps/` and `src/workflows/`. The root is 0, a direct child
+is 1, and its child is 2. The optional, Git-ignored `output/` directory holds
+generated artifacts and is exempt from the depth rule.
 The value must be a non-negative integer, excluding booleans. If the local file
-or key is absent, use 1. This setting guides repository organization; no runtime
-checker or automatic file movement is introduced. Existing deeper structures
-require review before reorganization. `config/config.yaml` remains Git-ignored local
+or key is absent, use 2. App and workflow domains can organize related code in
+cohesive subpackages at depth 2. The offline analyzer and architecture tests
+check this policy. `config/config.yaml` remains Git-ignored local
 configuration; this documented default applies to fresh checkouts.
 
 Maintain nesting within the configured depth and $\le 10$ files per directory
@@ -127,8 +123,11 @@ to keep navigation discoverable and project inspection clean:
 - **Unified entry points**: Multi-command domains provide a root dispatcher
   (`apps/inter_location.py`, `apps/neoseal.py`, `apps/verify_gst.py`) offering
   discoverable subcommands and help screens.
-- **Transparent backward compatibility**: Legacy command references and test imports
-  continue to resolve via the PEP 451 `_AppsRedirectFinder` in `apps/__init__.py`.
+- **Direct execution**: App bootstraps find the checkout by walking up to
+  `pyproject.toml`. Web runners resolve assets under `apps/static/` from that root.
+- **Transparent backward compatibility**: Register legacy imports in
+  `apps/__init__.py` with their fully qualified canonical module names, including
+  nested targets. Keep direct-script adapters where an existing command needs one.
 - **Output hygiene**: Keep $\le 10$ files per directory in `output/` by compacting
   historical runs and intermediate artifacts into `.tar.gz` archives with manifests,
   leaving only active canonical reports at the root.
@@ -186,9 +185,11 @@ GEMINI, CHANGELOG and `okf/*.md`, plus OKF frontmatter rules (`type:` required
 on concept files; no frontmatter on `okf/log.md`). It reports explicit ty target
 coverage separately from transitive checking. Syntax/read failures are incomplete
 inspections. In-page anchors, full CommonMark parsing, dynamic imports and
-financial safety are outside these checks. Directory file-count/depth policy is also
-not enforced by this analyzer; see APPS-006 in the
-[finding register](../PROJECT_ANALYSIS.md).
+financial safety are outside these checks. The analyzer and architecture tests
+share directory policy checks. They count tracked and nonignored source and
+asset files under `src/`, `apps/`, and `tests/`, including compatibility files.
+They check source depth beneath `apps/` and `src/workflows/`, excluding
+`apps/static/` from depth checks. Generated caches and `output/` are excluded.
 
 `--since COMMIT` compares the resolved commit with HEAD and separately lists staged,
 unstaged and untracked changes, including renamed/deleted paths. Review candidates

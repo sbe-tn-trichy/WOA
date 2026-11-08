@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-from utils.file_utils import json
 import logging
 import secrets
 import sys
@@ -14,11 +13,12 @@ from collections.abc import Sequence
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:  # Direct script execution.
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    import _bootstrap  # type: ignore[no-redef]
 
+from utils.file_utils import json
 from workflows.collection_reconciliation import (
     OnlinePaymentReviewConfig,
     OnlinePaymentReviewService,
@@ -27,7 +27,7 @@ from workflows.runtime.auth import get_analytics_client, get_books_client, get_c
 from workflows.runtime.config import Config
 from workflows.core import RequestMetrics
 
-_TEMPLATE_PATH = Path(__file__).resolve().parents[1] / "static" / "payment_review.html"
+_TEMPLATE_PATH = _bootstrap._ROOT / "apps" / "static" / "payment_review.html"
 HTML = _TEMPLATE_PATH.read_text(encoding="utf-8")
 
 

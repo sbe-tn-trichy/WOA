@@ -54,15 +54,32 @@ class ZohoWorkdriveAPI(BaseZohoClient):
         data: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         headers: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
         stream: bool = False,
         override_url: str | None = None,
-        files: dict[str, Any] | None = None,
         is_mutation: bool | None = None,
         timeout: int | None = None,
     ) -> Any:
         """
         Internal HTTP request handler.
         """
+        if isinstance(files, bool):
+            import warnings
+            from collections.abc import Mapping
+
+            warnings.warn(
+                "Positional arguments (stream, override_url, files) to ZohoWorkdriveAPI.request "
+                "are deprecated; use keyword arguments or canonical BaseZohoClient order (files, stream, override_url).",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            legacy_stream = files
+            legacy_override_url = stream if isinstance(stream, str) else None
+            legacy_files = override_url if isinstance(override_url, Mapping) else None
+            stream = legacy_stream
+            override_url = legacy_override_url
+            files = legacy_files
+
         return super().request(
             method=method,
             endpoint=endpoint,
@@ -70,9 +87,9 @@ class ZohoWorkdriveAPI(BaseZohoClient):
             data=data,
             params=params,
             headers=headers,
+            files=files,
             stream=stream,
             override_url=override_url,
-            files=files,
             is_mutation=is_mutation,
             timeout=timeout,
         )

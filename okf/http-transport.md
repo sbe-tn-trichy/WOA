@@ -14,6 +14,10 @@ legacy test fixtures; project source does not call it directly.
 
 ## Request and response contracts
 
+Request logging redacts sensitive query values, including signatures and encoded
+or repeated credential keys, in the logged URL. Transport receives the original
+URL. The WorkDrive listing log also sanitizes its separate query parameters.
+
 The adapter translates `params`, `json`, form `data`, and `files` into native
 pyqwest requests. Query/form fields omit `None` and expand list values. JSON
 uses the shared [RapidJSON codec](json-codec.md), emitting Decimal numbers without

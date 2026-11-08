@@ -69,13 +69,14 @@ def test_parse_module_security_functions() -> None:
     fn_names = [f.name for f in mod_doc.functions]
     assert "mask_sensitive_value" in fn_names
     assert "sanitize_log_params" in fn_names
+    assert "sanitize_log_url" in fn_names
     assert "sanitize_filename" in fn_names
     assert "resolve_output_path" in fn_names
 
     mask_fn = next(f for f in mod_doc.functions if f.name == "mask_sensitive_value")
     assert mask_fn.docstring is not None
     assert "last 4 characters" in mask_fn.docstring
-    assert "val: Any" in mask_fn.signature
+    assert "val: object" in mask_fn.signature
     assert "-> str" in mask_fn.signature
 
 

@@ -2,6 +2,14 @@
 
 ## 2026-11-08
 
+- Documented India-only Zoho routing and shared HTTP transport contracts across SDK clients in [architecture](architecture.md#layer-boundaries). See the [project entry](../CHANGELOG.md#enforce-india-only-zoho-routing-and-shared-http-contracts-for-mail-workdrive-and-analytics).
+
+- Documented depth-two subpackages, checkout discovery and nested aliases in [project organization](project-organization.md#directory-structure-and-file-limits). See the [project entry](../CHANGELOG.md#support-depth-two-app-and-workflow-packages).
+
+- Documented shared [directory policy checks](project-organization.md#repeatable-project-analysis) and [URL and query-parameter redaction](http-transport.md#request-and-response-contracts). See the [project entries](../CHANGELOG.md#enforce-shared-source-directory-limits) and [request logging changes](../CHANGELOG.md#redact-request-log-queries-and-type-security-helpers).
+
+- Clarified the [directory depth policy](project-organization.md#directory-structure-and-file-limits) for optional generated output. See the [project entry](../CHANGELOG.md#exempt-generated-output-from-the-folder-depth-rule).
+
 - Removed the physical root ERP generated-file adapter [src/zoho/erp/generated.py](zoho-erp.md#root-generated-file-removal-and-lazy-alias) and replaced it with an explicit lazy module alias in `zoho/erp/__init__.py` and `zoho/__init__.py`; see [project entry](../CHANGELOG.md#remove-root-erp-generated-adapter-in-favor-of-lazy-module-alias).
 
 - Documented the [Analytics SDK layout and regeneration](zoho-analytics.md) and linked the existing snapshot contract. See the [project entry](../CHANGELOG.md#restructure-the-analytics-sdk-around-zoho-openapi).

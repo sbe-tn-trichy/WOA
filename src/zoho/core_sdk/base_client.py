@@ -1,13 +1,27 @@
 import contextlib
 import threading
 import time
+from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urlsplit
 
 from utils.http_utils import http, http_transport
-from zoho.core_sdk.exceptions import ZohoAnalyticsError, ZohoBooksError, ZohoCliqError, ZohoCreatorError, ZohoERPError, ZohoError, ZohoInventoryError, ZohoMailError, ZohoSheetError, ZohoTokenResponseError, ZohoWorkdriveError
+from zoho.core_sdk.exceptions import (
+    ZohoAnalyticsError,
+    ZohoBooksError,
+    ZohoCliqError,
+    ZohoConfigurationError,
+    ZohoCreatorError,
+    ZohoERPError,
+    ZohoError,
+    ZohoInventoryError,
+    ZohoMailError,
+    ZohoSheetError,
+    ZohoTokenResponseError,
+    ZohoWorkdriveError,
+)
 from zoho.core_sdk.logging import configure_service_logger
-from zoho.core_sdk.security import sanitize_log_params
+from zoho.core_sdk.security import sanitize_log_params, sanitize_log_url
 
 _ERROR_MAP = {
     "erp": ZohoERPError,
@@ -38,15 +52,20 @@ class BaseZohoClient:
     def __init__(
         self,
         access_token: Any,
-        domain: str,
-        base_url: str,
-        service_name: str,
+        domain: str = "in",
+        base_url: str = "",
+        service_name: str = "",
         token_refresh_callback: Any | None = None,
         on_request_completed: Any | None = None,
         default_timeout: int = 30
     ):
+        resolved_domain = (domain or "").strip().lower()
+        if resolved_domain != "in":
+            raise ZohoConfigurationError(
+                f"Only Zoho India ('in') domain is supported; got {domain!r}."
+            )
         self.access_token = access_token
-        self.domain = domain or "com"
+        self.domain = "in"
         self.base_url = base_url
         self.service_name = service_name
         self.token_refresh_callback = token_refresh_callback
@@ -219,7 +238,7 @@ class BaseZohoClient:
         req_headers: dict[str, Any],
         failed_token: str,
         actual_is_mutation: bool,
-        upload_positions: dict[Any, int],
+        upload_positions: Sequence[tuple[http.SeekableStream, int]],
     ) -> http_transport.Response:
         if response.status_code != 401 or not self.token_refresh_callback:
             return response
@@ -253,7 +272,7 @@ class BaseZohoClient:
         method: str,
         endpoint: str,
         req_kwargs: dict[str, Any],
-        upload_positions: dict[Any, int],
+        upload_positions: Sequence[tuple[http.SeekableStream, int]],
         max_attempts: int = 3,
     ) -> http_transport.Response:
         current_response = response
@@ -319,7 +338,7 @@ class BaseZohoClient:
         )
 
         logged_params = sanitize_log_params(params) if params else {}
-        self.logger.info(f"Request: {method} {url} | Params: {logged_params}")
+        self.logger.info(f"Request: {method} {sanitize_log_url(url)} | Params: {logged_params}")
 
         req_kwargs: dict[str, Any] = {
             "method": method,

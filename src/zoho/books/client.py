@@ -17,7 +17,7 @@ class ZohoBooksAPI(BaseZohoClient, BooksResources):
         self,
         access_token: str,
         organization_id: str,
-        domain: str = "com",
+        domain: str = "in",
         on_request_completed: Any | None = None,
         token_refresh_callback: Any | None = None
     ):

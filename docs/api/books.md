@@ -68,7 +68,7 @@ Main Zoho Books API Client linking all modules together.
 ##### `ZohoBooksAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, organization_id: str, domain: str = 'com', on_request_completed: Any | None = None, token_refresh_callback: Any | None = None)
+def __init__(self, access_token: str, organization_id: str, domain: str = 'in', on_request_completed: Any | None = None, token_refresh_callback: Any | None = None)
 ```
 
 Initialize the Zoho Books API client.

@@ -4,24 +4,23 @@
 from __future__ import annotations
 
 import argparse
-from utils.file_utils import json
 import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 from typing import Any
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    import _bootstrap  # type: ignore[no-redef]
 
+from utils.file_utils import json
 from workflows.runtime.auth import get_books_client, get_creator_client
 from workflows.runtime.config import Config
 from workflows.runtime.exceptions import ReconciliationError
 from workflows.customer_management.creator_beat_allocation import CreatorBeatAllocationService
 
 
-HTML_PATH = Path(__file__).parent / "static" / "customer_beat_allocation.html"
+HTML_PATH = _bootstrap._ROOT / "apps" / "static" / "customer_beat_allocation.html"
 
 
 def make_handler(service: CreatorBeatAllocationService, token: str) -> type[BaseHTTPRequestHandler]:

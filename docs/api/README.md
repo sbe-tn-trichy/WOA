@@ -15,7 +15,7 @@ and security sanitizers.
 
 | Section | Target File | Description | Primary Classes / Symbols |
 |---|---|---|---|
-| **Core SDK & Transport Architecture** | [core.md](core.md) | Shared HTTP transport, authentication managers, base resource abstractions, exception hierarchies, security path sanitizers, validators, custom identifiers, and file download utilities. | `SeekableStream`, `TransportError`, `HTTPError`, `RequestOptions` (+58 more) |
+| **Core SDK & Transport Architecture** | [core.md](core.md) | Shared HTTP transport, authentication managers, base resource abstractions, exception hierarchies, security path sanitizers, validators, custom identifiers, and file download utilities. | `SeekableStream`, `TransportError`, `HTTPError`, `RequestOptions` (+59 more) |
 | **Zoho Books API Reference** | [books.md](books.md) | Complete reference for the Zoho Books client, CRUD resources, status and approval mixins, contacts, banking, sales, purchases, GST outward reporting, time tracking, custom fields, and financial statements. | `ZohoBooksAPI`, `BaseResource`, `ActiveInactiveMixin`, `StatusMixin` (+30 more) |
 | **Zoho Inventory API Reference** | [inventory.md](inventory.md) | Complete reference for the Zoho Inventory client, item catalogs, item groups, inventory adjustments, move orders, transfer orders, packages, shipments, picklists, bins, and batches. | `ZohoInventoryAPI`, `BaseResource`, `Items`, `ItemGroups` (+8 more) |
 | **Zoho Analytics API Reference** | [analytics.md](analytics.md) | Zoho Analytics v2 OpenAPI resources, dynamic SQL queries, view exports, and resumable metadata snapshots. | `ZohoAnalyticsAPI`, `Views`, `Queries`, `Metadata` (+2 more) |

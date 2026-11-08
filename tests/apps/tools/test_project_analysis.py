@@ -196,3 +196,54 @@ def test_helpers_may_depend_on_sdk_and_utilities(repo):
     report = audit.inspect(root)
     assert not report["errors"]
     assert not report["diagnostics"]
+
+
+def test_structure_reports_untracked_source_and_excludes_generated_output(repo):
+    root, _ = repo
+    for relative in (
+        "apps/nested/domain/action.py",
+        "apps/nested/domain/too_deep/action.py",
+        "src/workflows/nested/domain/action.py",
+        "src/workflows/nested/domain/too_deep/action.py",
+        "apps/static/deep/theme/theme.css",
+        "output/deep/nested/report.json",
+        "src/workflows/core/__pycache__/ignored.py",
+        *(f"apps/group/domain/{index}.py" for index in range(11)),
+        *(f"tests/fixtures/{index}.json" for index in range(11)),
+    ):
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+
+    findings = audit.inspect(root)["diagnostics"]
+    assert {(item["file"], item["rule"]) for item in findings} == {
+        ("apps/group/domain", "structure-file-count"),
+        ("apps/nested/domain/too_deep", "structure-depth"),
+        ("src/workflows/nested/domain/too_deep", "structure-depth"),
+        ("tests/fixtures", "structure-file-count"),
+    }
+
+
+@pytest.mark.parametrize("setting", ["true", "-1", "1.5", "'2'"])
+def test_structure_rejects_invalid_depth(repo, setting):
+    root, _ = repo
+    config = root / "config/config.yaml"
+    config.parent.mkdir()
+    config.write_text(f"project_structure:\n  max_nested_folder_depth: {setting}\n", encoding="utf-8")
+    assert [item["rule"] for item in audit.inspect(root)["diagnostics"]] == ["structure-config"]
+
+
+@pytest.mark.parametrize(("settings", "expected"), [
+    ("{}", []),
+    ("project_structure: {}", []),
+    ("project_structure:\n  max_nested_folder_depth: 1", ["structure-depth"]),
+])
+def test_structure_applies_configured_depth(repo, settings, expected):
+    root, _ = repo
+    config = root / "config/config.yaml"
+    config.parent.mkdir()
+    config.write_text(settings, encoding="utf-8")
+    path = root / "apps/group/nested/action.py"
+    path.parent.mkdir(parents=True)
+    path.touch()
+    assert [item["rule"] for item in audit.inspect(root)["diagnostics"]] == expected

@@ -9,6 +9,66 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-08
 
+### Enforce India-only Zoho routing and shared HTTP contracts for Mail, WorkDrive, and Analytics
+
+- **Why:** Deliver CHK-1.3 and CHK-1.4 by enforcing the India data center (`in`) routing policy across all Zoho SDK clients, typing authentication boundaries and request retry parameters, and establishing shared HTTP transport contracts with runtime backward-compatibility for WorkDrive.
+- **What:**
+  - Added class-level attribute annotations to `CatalystAuth` (`direct_token`, `catalyst_token_url`, `service_key`, `allow_direct_token_fallback`) resolving all 11 attribute diagnostics in `src/zoho/core_sdk/auth.py`.
+  - Enforced India data center (`in`) policy across `ZohoOAuth2Manager`, `BaseZohoClient`, and service client constructors (`books`, `inventory`, `creator`, `mail`, `analytics`, `cliq`, `sheet`, `wd`); non-`"in"` domains explicitly reject with `ZohoConfigurationError`.
+  - Fixed `upload_positions` in `BaseZohoClient._retry_after_auth_failure` and `_retry_rate_limited` to `Sequence[tuple[http.SeekableStream, int]]`.
+  - Added a runtime positional compatibility shim in `ZohoWorkdriveAPI.request` detecting legacy `(stream, override_url, files)` calls with `DeprecationWarning` and unit tests in `tests/workflows/wd/test_wd.py`.
+  - Promoted `"src/zoho/core_sdk"` and added `"src/zoho/__init__.py"` to `[tool.ty.src].include` in `pyproject.toml`.
+- **Verification:** On macOS arm64 / CPython 3.14.10: `ty check` passed with zero diagnostics across all 45 covered source files; 2,222 tests in `tests/zoho/`, 22 tests in `tests/workflows/wd/`, and 239 architecture tests in `tests/contracts/architecture/` passed; `apps/analyze_project.py` reported zero diagnostics and zero errors. Annual rollover checked: root entries remain in 2026. No live API mutations.
+
+
+### Support depth-two app and workflow packages
+
+- **Why:** Allow cohesive subpackages within app and workflow domains while retaining the ten-file source directory cap (APPS-006).
+- **What:** Set the configured and default depth to two. Resolve app bootstraps from the checkout marker and anchor web templates under `apps/static/`. Cover depth-two targets with the existing legacy import mechanism.
+- **Verification:** The focused suites passed 190 tests on macOS arm64 with CPython 3.14.10, and all three web runners accepted `--help` from outside the checkout. The offline analyzer reported zero diagnostics. The full run with localhost access passed 4,067 tests and four subtests and reported 37 failures in SDK, request metrics, and generated API reference checks while other SDK changes were in progress. Annual rollover checked.
+
+### Redact request-log queries and type security helpers
+
+- **Why:** SDK-003 allowed secrets from query strings into SDK request logs.
+- **What:** Mask sensitive query values in logged URLs and sanitize WorkDrive list parameters. Preserve the transport inputs. Promote security and logging modules into the type gate (CHK-1.1 and CHK-1.2).
+- **Verification:** Three mocked log regressions and 13 explicit Analytics metadata tests passed. The initial execution batch passed 4,080 tests and four subtests on macOS arm64 with CPython 3.14.10. Configured ty, Ruff, offline analysis and API documentation checks passed. Annual rollover checked. No live API requests.
+
+### Enforce shared source directory limits
+
+- **Why:** APPS-006 required matching organization policy and tooling.
+- **What:** The analyzer and architecture tests share source file-count and configurable depth checks, excluding generated output. Removed eleven obsolete bytecode-only test directories (CHK-0.2).
+- **Verification:** Analyzer and architecture suites passed 119 tests on macOS arm64 with CPython 3.14.10. Annual rollover checked.
+
+### Isolate cleanup test Git discovery
+
+- **Why:** APPS-007 reproduced when pytest used a workspace-local temporary directory.
+- **What:** Set a Git discovery ceiling in the failure fixture (CHK-0.3).
+- **Verification:** All 11 cleanup tests passed with workspace-local `--basetemp` on macOS arm64 with CPython 3.14.10. Annual rollover checked.
+
+### Expand type checking to the utilities package
+
+- **Why:** Check utility modules and compatibility imports together.
+- **What:** Fixed package-level alias imports and promoted the full utilities package into the configured type gate (CHK-1.0).
+- **Verification:** Configured ty passed on macOS arm64 with CPython 3.14.10. Annual rollover checked.
+
+### Exempt generated output from the folder depth rule
+
+- **Why:** The optional, Git-ignored output directory holds generated artifacts.
+- **What:** Aligned repository guidance, the organization concept, and CHK-0.2 to limit depth checks to apps and workflow source.
+- **Verification:** Checked documentation alignment, Git ignore status, and whitespace. Annual rollover checked. Documentation change only.
+
+### Record India-only Zoho routing and shared HTTP requirements
+
+- **Why:** Set the deployment and transport requirements before implementing the SDK typing slices.
+- **What:** Updated the local implementation plan and checklist to require Zoho India hosts and shared HTTP utilities for Mail, WorkDrive and Analytics.
+- **Verification:** Checked both documents for matching requirements and checked annual rollover. Planning change only, with no runtime tests.
+
+### Add tiered project-analysis skills for isolated collection and deep analysis
+
+- **Why:** Enable running the two-stage review protocol either end-to-end or independently as isolated phases (Phase 1 context extraction on Gemini 3.8 Flash, Phase 2 deep architectural reasoning on Gemini 4 Argon) without burning routine context token budget.
+- **What:** Created `.agents/skills/project-analysis-collect/SKILL.md` (slash command `/project-analysis-collect`, outputting to `output/project-analysis/structural_digest.json`) and `.agents/skills/project-analysis-deep/SKILL.md` (slash command `/project-analysis-deep`, reading strictly from the structural digest). Updated `.agents/skills/project-analysis/SKILL.md` as the unified orchestrator linking both standalone workflows.
+- **Verification:** Verified skill discovery paths and YAML frontmatter format across `.agents/skills/`. Ran offline project analysis (`apps/analyze_project.py`) with zero diagnostics or errors. Annual rollover checked: root entries remain in 2026. No runtime, environment or live API changes.
+
 ### Remove root ERP generated adapter in favor of lazy module alias
 
 - **Why:** Eliminate the physical root adapter `src/zoho/erp/generated.py` from the ERP package root while preserving 100% backward compatibility for legacy module imports, class lookups, and pickle deserialization.
@@ -22,11 +82,11 @@ This file keeps the current year's entries; older years are archived under
 - **What:** Added ten domain resources under `client.openapi` covering the 203 operations in the pinned Zoho specifications. Moved export, query, metadata and SQLite support under `custom/`, preserving client attributes and legacy module identity. Added the offline generator, operation manifest and API reference.
 - **Verification:** Verified all 203 routes against the pinned upstream specs and reproduced generated files byte for byte. On macOS arm64 / CPython 3.14.10, 4,069 tests and four subtests passed in the full suite, plus 13 separately collected metadata tests. Ruff, ty, offline architecture and API reference checks passed. Annual rollover checked. Live endpoints were not exercised.
 
-### Refine and synchronize the checklist implementation plan
+### Refine and synchronize the checklist implementation plan with whole-project analysis
 
-- **Why:** Align `IMPLEMENTATION.md` and `CHECKLIST.md` with the current capability-package layout, exact `ty` diagnostics in `core_sdk`, and all 28 domain workflow packages backing Phase 5 applications.
-- **What:** Updated `IMPLEMENTATION.md` and `CHECKLIST.md` to record `"src/utils"` package promotion, `Files.list_files` query-parameter redaction alongside `SDK-003`, `CatalystAuth` class attribute annotations, `BaseZohoClient` upload-position sequence types, dependency-ordered `src/helpers/` subpackage migration, complete module lists for `src/workflows/runtime/` and `src/workflows/core/`, all remaining workflow owners in Phase 4, and the prepared ERP root adapter removal slice.
-- **Verification:** Verified `ty check` diagnostics against `src/utils` (0 diagnostics) and Phase 1 `core_sdk` targets; ran `apps/analyze_project.py` with zero errors or diagnostics. Annual rollover checked: root entries remain in 2026. No runtime, environment or live API changes.
+- **Why:** Ground `CHECKLIST.md` and `IMPLEMENTATION.md` in a complete empirical whole-project analysis across all 702 Python files with shared `CHK-*` identifiers, and resolve open review decisions on trusted OAuth hosts, positional override compatibility, OpenAPI generator typing scope, and structure/metadata verification gates.
+- **What:** Assigned 1-to-1 `CHK-*` identifiers (`CHK-0.1`–`CHK-0.3`, `CHK-1.0`–`CHK-5.3`) across `CHECKLIST.md` and `IMPLEMENTATION.md`, recorded the 521-diagnostic broad `ty` scan and explicit `Any` counts per phase/step, added Phase 0 items for `APPS-006` (`CHK-0.2`), `APPS-007` (`CHK-0.3`), and completed `CHK-0.1`, added `CHK-5.0` for standardizing the 61 `_bootstrap`/sibling CLI imports across `apps/`, and mapped all 28 domain workflow packages and the restructured Analytics OpenAPI/custom SDK packages. Resolved the three design decisions and three corrections: (1) required an explicit mapping of trusted Zoho OAuth account hosts in `CHK-1.3` instead of an open-ended regex, (2) specified runtime/overload positional compatibility adapters and regression tests for `ZohoWorkdriveAPI.request`, `Messages.list`, and `Folders.create` in `CHK-1.4`/`CHK-2.4` plus `builtins.list` for Mail annotations, (3) aligned `CHK-2.5` across `generate_books_sdk.py`, `apps/sdk_tools/generate_analytics_sdk.py`, and `generate_erp_sdk.py` with explicit contracts for raw JSON (`object`), binary downloads, and `stream=True` (`Response`), and (4) aligned `CHK-0.2` structure policy (`project_structure.max_nested_folder_depth`) and the acceptance gate's explicit `tests/zoho/analytics/test_analytics_metadata.py` run.
+- **Verification:** macOS arm64 / workspace CPython 3.14.10: `apps/analyze_project.py --verify` passed (702 Python files, 34 explicit `ty` targets with 0 diagnostics, API reference in sync); `ruff check src apps tests` passed with 0 diagnostics; broad `ty check -c 'src.include = ["src", "apps"]'` inventoried 521 diagnostics across 132 files; directory file-count and depth audit verified $\le 10$ files per directory across `src/`, `apps/`, and `tests/`. Annual rollover checked: root entries remain in 2026. No runtime, environment or live API changes.
 
 ### Prepare removal of the root ERP generated adapter
 

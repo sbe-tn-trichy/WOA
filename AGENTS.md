@@ -51,10 +51,12 @@ correctness and data safety:
   `src/zoho/` (core SDK), `src/helpers/` (composite API operations), and `src/workflows/` (domain workflows);
   permanent entry points live in `apps/`.
 - Read `project_structure.max_nested_folder_depth` from `config/config.yaml` for
-  the maximum directory depth beneath `apps/`, `src/workflows/`, and `output/`
-  (root depth 0; a direct child is depth 1). Use 1 if the local file or key is
-  absent; values must be non-negative integers (not booleans). This is an
-  organization policy, not automatic runtime enforcement.
+  the maximum directory depth beneath `apps/` and `src/workflows/`
+  (root depth 0; a direct child is depth 1). Use 2 if the local file or key is
+  absent. Depth 2 supports cohesive subpackages within an app or workflow domain.
+  Values must be non-negative integers, excluding booleans. The offline analyzer
+  and architecture tests check this policy. The optional,
+  Git-ignored `output/` directory is exempt from the depth rule.
 - Maintain nesting within that configured depth and a strict limit of $\le 10$ files per directory across
   `apps/`, domain packages, and output locations to prevent clutter and preserve
   maintainability.

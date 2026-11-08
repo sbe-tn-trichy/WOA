@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-from utils.file_utils import json
 import os
 import secrets
 import subprocess
@@ -19,10 +18,16 @@ from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urlparse
 
+if __package__:
+    from . import _bootstrap
+else:
+    import _bootstrap
+
+from utils.file_utils import json
 from workflows.runtime.config import Config
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = _bootstrap._ROOT
 MAX_LOG_LINES = 400
 
 
@@ -424,7 +429,7 @@ class WorkflowRunner:
         return {"workflows": self.list_workflows(), "runs": runs}
 
 
-_TEMPLATE_PATH = Path(__file__).resolve().parent / "static" / "dashboard.html"
+_TEMPLATE_PATH = PROJECT_ROOT / "apps" / "static" / "dashboard.html"
 HTML = _TEMPLATE_PATH.read_text(encoding="utf-8")
 
 

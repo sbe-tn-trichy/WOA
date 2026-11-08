@@ -82,7 +82,8 @@ def test_invalid_retention(repo, days):
         plan_cleanup(repo, days)
 
 
-def test_git_failure_is_not_empty_tracking(tmp_path):
+def test_git_failure_is_not_empty_tracking(tmp_path, monkeypatch):
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent.resolve()))
     with pytest.raises(subprocess.CalledProcessError):
         plan_cleanup(tmp_path, 7)
 

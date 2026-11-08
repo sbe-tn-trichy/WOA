@@ -16,7 +16,7 @@ from zoho.core_sdk.base_client import BaseZohoClient
 @pytest.mark.parametrize("status", [401, 429])
 @pytest.mark.parametrize("wrapped", [False, True])
 def test_upload_retry_preserves_multipart_content(monkeypatch, status, wrapped):
-    client = BaseZohoClient("old", "com", "https://www.zohoapis.com", "books",
+    client = BaseZohoClient("old", "in", "https://www.zohoapis.in", "books",
                             token_refresh_callback=lambda: "new")
     source = io.BytesIO(b"ignored:actual attachment bytes")
     source.seek(8)
@@ -45,7 +45,7 @@ def test_nonseekable_upload_fails_before_network():
     class Stream:
         def read(self):
             return b"payload"
-    client = BaseZohoClient("token", "com", "https://www.zohoapis.com", "books")
+    client = BaseZohoClient("token", "in", "https://www.zohoapis.in", "books")
     client.session.request = MagicMock()
     with pytest.raises(ValueError, match="seekable"):
         client.request("POST", "upload", files={"file": Stream()})
@@ -127,3 +127,41 @@ def test_host_guard_rejects_missing_duplicate_and_malformed_authorities(module, 
     handler.do_GET()
     handler._json.assert_called_once_with({'error': 'Invalid Host header'}, 403)
     assert not service.mock_calls
+
+
+@pytest.mark.parametrize("override", [False, True])
+def test_request_log_redacts_url_without_changing_transport(monkeypatch, caplog, override):
+    import logging
+
+    base_url = "https://www.zohoapis.in"
+    client = BaseZohoClient("token", "in", base_url, "analytics")
+    query = "page=2&%61ccess_token=FIRST_SENTINEL&access_token=SECOND_SENTINEL&sig=SIGNED_SENTINEL"
+    endpoint = f"files?{query}"
+    override_url = f"https://download.zoho.in/{endpoint}" if override else None
+    response = requests.Response()
+    response.status_code = 204
+    response._content = b""
+    transport = MagicMock(return_value=response)
+    monkeypatch.setattr(client.session, "request", transport)
+
+    with caplog.at_level(logging.INFO, logger="zoho.analytics"):
+        client.request("GET", endpoint, override_url=override_url)
+
+    assert "page=2" in caplog.text
+    assert "SENTINEL" not in caplog.text
+    assert transport.call_args.kwargs["url"] == (override_url or f"{base_url}/{endpoint}")
+
+
+def test_workdrive_list_log_redacts_params_without_changing_request(caplog):
+    import logging
+
+    from zoho.wd.resources.files import Files
+
+    client = MagicMock()
+    params = {"limit": 50, "token": "LIST_SECRET_1234"}
+    with caplog.at_level(logging.INFO, logger="zoho_wd.app"):
+        Files(client).list_files("folder", params)
+
+    assert "50" in caplog.text
+    assert "LIST_SECRET" not in caplog.text
+    client.request.assert_called_once_with("GET", "files/folder/files", params=params)

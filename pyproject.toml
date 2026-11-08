@@ -53,11 +53,9 @@ extra-paths = ["src"]
 
 [tool.ty.src]
 include = [
-    "src/utils/http_utils/http.py",
-    "src/utils/file_utils/json.py",
-    "src/utils/http_utils/http_transport.py",
-    "src/utils/file_utils/yaml.py",
-    "src/utils/file_utils/pdf.py",
+    "src/utils",
+    "src/zoho/core_sdk",
+    "src/zoho/__init__.py",
     "src/workflows/core/sequences.py",
     "src/workflows/core/dates.py",
     "src/workflows/core/checkpoint.py",
@@ -68,13 +66,7 @@ include = [
     "src/workflows/collection_payments/transaction_index.py",
     "src/workflows/stock_transfer",
     "src/helpers/formatting/sequences.py",
-    "src/utils/general_utils/sequences.py",
-    "src/utils/general_utils/module_aliases.py",
     "src/helpers/formatting/dates.py",
-    "src/zoho/core_sdk/validation.py",
-    "src/zoho/core_sdk/exceptions.py",
-    "src/zoho/core_sdk/identifiers.py",
-    "src/zoho/core_sdk/base_resource.py",
     "src/workflows/payment_renumbering",
     "src/workflows/vendor_customer_offset/__init__.py",
     "src/workflows/vendor_customer_offset/contracts.py",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import sys
+import types
 from typing import TYPE_CHECKING
 
 from . import file_utils, general_utils, http_utils
@@ -161,8 +162,6 @@ for _alias, _target_module in [
 
 def __getattr__(name: str) -> object:
     if name in ("pdf", "read_pdf_pages"):
-        import importlib
-
         pdf_module = importlib.import_module(".file_utils.pdf", __package__)
         globals()["pdf"] = pdf_module
         if name == "read_pdf_pages":

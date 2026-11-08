@@ -73,7 +73,7 @@ def test_preview_cache_avoids_real_sdk_export_requests(tmp_path):
     from zoho.analytics.resources import Queries
     from workflows.collection_reconciliation import OnlinePaymentReviewConfig, OnlinePaymentReviewService
 
-    client = BaseZohoClient("test-token", "com", "https://analyticsapi.zoho.com/restapi/v2", "analytics")
+    client = BaseZohoClient("test-token", "in", "https://analyticsapi.zoho.in/restapi/v2", "analytics")
     payloads = [
         {"data": {"jobId": "job"}},
         {"data": {"jobStatus": "JOB COMPLETED"}},

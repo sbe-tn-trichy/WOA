@@ -14,7 +14,7 @@ from zoho.core_sdk.exceptions import ZohoBooksError
 
 class TestBaseClientPerformance(unittest.TestCase):
     def test_http_attempt_observer_counts_failed_and_successful_transport(self):
-        client = BaseZohoClient("token", "com", "https://example.invalid", "books")
+        client = BaseZohoClient("token", "in", "https://example.invalid", "books")
         observed = []
         started = []
         client.on_http_attempt_started = lambda *args: started.append(args)
@@ -33,8 +33,8 @@ class TestBaseClientPerformance(unittest.TestCase):
     def test_session_instantiation_and_close(self):
         client = BaseZohoClient(
             access_token="test_token",
-            domain="com",
-            base_url="https://books.zoho.com/api/v3",
+            domain="in",
+            base_url="https://books.zoho.in/api/v3",
             service_name="books"
         )
         self.assertIsNotNone(client.session)
@@ -47,8 +47,8 @@ class TestBaseClientPerformance(unittest.TestCase):
         for service in ["books", "wd", "mail", "creator", "sheet", "cliq", "analytics"]:
             client = BaseZohoClient(
                 access_token="test_token",
-                domain="com",
-                base_url="https://api.zoho.com",
+                domain="in",
+                base_url="https://api.zoho.in",
                 service_name=service,
                 default_timeout=45
             )
@@ -65,7 +65,7 @@ class TestBaseClientPerformance(unittest.TestCase):
         )
         client.session.request.assert_called_once_with(
             method="GET",
-            url="https://www.zohoapis.com/books/v3/reports/test",
+            url="https://www.zohoapis.in/books/v3/reports/test",
             headers={
                 "Authorization": "Zoho-oauthtoken token",
                 "Content-Type": "application/json",
@@ -81,7 +81,7 @@ class TestBaseClientPerformance(unittest.TestCase):
         callback = MagicMock()
         client = BaseZohoClient(
             access_token="token",
-            domain="com",
+            domain="in",
             base_url="https://example.invalid",
             service_name="books",
             on_request_completed=callback,

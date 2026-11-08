@@ -86,21 +86,21 @@ No live Analytics metadata was analyzed; its sync timestamp was not inspected.
 
 ### SDK-003 — URL query secrets bypass request-log redaction
 
-- **Priority / status:** Medium / Open; confirmed with a mocked HTTP session.
+- **Priority / status:** Medium / Closed. Mocked HTTP regressions passed on macOS arm64.
 - **Evidence:** `src/zoho/core_sdk/base_client.py:202` logs the complete URL while only
   sanitizing the separate `params` dictionary. An approved-host override URL
   containing `?access_token=REVIEW_SENTINEL` leaves that sentinel in the INFO log.
   Analytics export downloads accept server-supplied download URLs. No actual
   credential disclosure was inspected or asserted.
 - **Correction:** Redact sensitive URL query values before logging, including
-  signed download credentials; retain the original URL only for transport.
+  signed download credentials. The logger uses the sanitized copy while transport receives the original URL. WorkDrive listing logs sanitize separate request parameters.
 - **Close when:** Tests cover endpoint/override query credentials and ordinary
   parameters, with no secret in emitted logs and unchanged outgoing requests.
 
 ### APPS-006 — Folder policy and actual layout disagree
 
-- **Priority / status:** Low / Open.
-- **Evidence:** Local `config/config.yaml` is absent, so maximum depth is 1.
+- **Priority / status:** Low / Closed. Analyzer and architecture checks share the source policy.
+- **Evidence:** At the time of the finding, local `config/config.yaml` is absent, so maximum depth is 1.
   Tracked files total 31 at `src/workflows/`, 15 in `collection_reconciliation/`
   and 13 in `core/`, exceeding the ten-file limit. Eleven domain `tests/`
   directories are at depth 2. Tracked `apps/` layout meets these limits.
@@ -116,18 +116,19 @@ No live Analytics metadata was analyzed; its sync timestamp was not inspected.
 removing the eleven nested source test directories. Collection retains 2,876
 default cases and 13 explicit metadata cases. Default suite: 2,874 passed,
 2 skipped, 4 subtests passed; explicit metadata: 13 passed. APPS-006 remains
-open for source file counts and policy/tooling alignment. See
+open at that stage for source file counts and policy/tooling alignment.
+
+**2026-11-08 closure:** The analyzer and architecture gate share directory checks. Fixture tests detect excess files, excessive depth and invalid configuration while excluding output depth. Eleven obsolete bytecode-only directories were removed. See
 [test ownership](okf/project-organization.md#test-ownership).
 
 ### APPS-007 — Cleanup test assumes temporary directories are outside Git
 
-- **Priority / status:** Low / Open; test portability issue.
+- **Priority / status:** Low / Closed. All 11 cleanup tests passed with workspace-local `--basetemp`.
 - **Evidence:** `tests/test_project_cleanup.py:85` expects Git failure in a plain
   `tmp_path`. With the documented workspace-local basetemp, Git discovers the
   enclosing repository and the expected exception is not raised. Reproduced
   alone; passes with normal host temporary directories.
-- **Correction:** Mock the subprocess failure for this contract or explicitly
-  isolate Git discovery in the fixture. Preserve production fail-closed behavior.
+- **Correction:** The test sets a Git discovery ceiling at the temporary directory's parent. Production fail-closed behavior is unchanged.
 
 ### Readability, framework use and performance assessment
 
@@ -182,9 +183,9 @@ closure criteria. No findings are closed by adding inspection tooling alone.
 
 | ID | Priority | Correction owner | Implementation | Verification |
 |---|---|---|---|---|
-| SDK-003 | Medium | SDK request logging | Open | Mocked URL-secret disclosure reproduced |
-| APPS-006 | Low | Structure policy/tooling | Open | Tracked file/depth inventory |
-| APPS-007 | Low | Cleanup tests | Open | Workspace basetemp reproduces fixture assumption |
+| SDK-003 | Medium | SDK request logging | Closed | Endpoint and override URL redaction plus WorkDrive parameter regression tests |
+| APPS-006 | Low | Structure policy/tooling | Closed | Shared analyzer/architecture checks and fixture regressions |
+| APPS-007 | Low | Cleanup tests | Closed | Cleanup suite passed with workspace-local basetemp |
 | SDK-001 | High | SDK transport | Fixed, awaiting verification | Multipart replay regression coverage passes; commit/hosted verification pending |
 | SDK-002 | Medium | SDK pagination | Committed (`d0e0067`) | Verified on Windows x64 and macOS arm64; hosted CI evidence pending |
 | HELPER-001 | High | Vendor/customer offset | Fixed, awaiting verification | Durable intent, no automatic compensation, read-back recovery tests pass; live behavior unverified |

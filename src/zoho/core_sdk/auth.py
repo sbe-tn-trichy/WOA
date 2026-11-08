@@ -77,7 +77,7 @@ class ZohoOAuth2Manager:
         client_id: str,
         client_secret: str,
         refresh_token: str | None = None,
-        domain: str = "com",
+        domain: str = "in",
         access_token: str | None = None,
         expires_at: float | None = None,
         keyring_service: str | None = None,
@@ -85,9 +85,14 @@ class ZohoOAuth2Manager:
     ):
         if not client_id or not client_secret:
             raise ZohoConfigurationError("OAuth client_id and client_secret are required.")
+        resolved_domain = (domain or "").strip().lower()
+        if resolved_domain != "in":
+            raise ZohoConfigurationError(
+                f"Only Zoho India ('in') domain is supported; got {domain!r}."
+            )
         self.client_id = client_id
         self.client_secret = client_secret
-        self.domain = domain
+        self.domain = "in"
         self.keyring_service = keyring_service
         self.keyring_username = keyring_username
         self._refresh_token = refresh_token
@@ -197,6 +202,11 @@ class CatalystAuth(str):
     Dynamic authentication wrapper that behaves like a string.
     Allows explicit request mutation token switching via get_token_for_request(is_mutation).
     """
+    direct_token: str
+    catalyst_token_url: str
+    service_key: str
+    allow_direct_token_fallback: bool
+
     def __new__(
         cls,
         direct_token: str,
