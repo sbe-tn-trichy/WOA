@@ -4,8 +4,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from pathlib import Path
 import re
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Callable, Mapping
 from urllib.parse import parse_qs, urlsplit
 
 from zoho.creator import ZohoCreatorAPI
@@ -53,10 +52,10 @@ def extract_payment_details(text: str) -> OCRDetails:
                       tuple(dict.fromkeys(dates)))
 
 
-def cross_check_payment(row: dict[str, Any], source: PaymentOCRSource,
+def cross_check_payment(row: Mapping[str, object], source: PaymentOCRSource,
                         details: OCRDetails) -> dict[str, str]:
     """Require one distinct extracted value for each check; ambiguity stays reviewable."""
-    checks = {}
+    checks: dict[str, str] = {}
     for name, field, values, convert in (
         ("amount", source.amount_field, details.amounts,
          lambda v: to_finite_decimal(v, allow_commas=True)),
@@ -97,33 +96,30 @@ def tesseract_image(path: Path) -> str:
         if prepared.width < 1200:
             prepared = prepared.resize((prepared.width * 2, prepared.height * 2),
                                        Image.Resampling.LANCZOS)
-        return pytesseract.image_to_string(prepared, timeout=60)
+        return str(pytesseract.image_to_string(prepared, timeout=60))
 
 
-def _filepaths(value: Any) -> list[str | None]:
+def _filepaths(value: object) -> list[str | None]:
     if not value:
         return []
     values = value if isinstance(value, list) else [value]
-    result = []
+    result: list[str | None] = []
     for item in values:
         if isinstance(item, dict):
             item = item.get("filepath") or item.get("file_path")
             if not item:
                 raise ValueError("Attachment object has no filepath.")
         if not isinstance(item, str):
-            raise ValueError("Unsupported attachment field value.")
+            raise ValueError("Unsupported attachment path representation.")
         query = parse_qs(urlsplit(item).query)
-        if query.get("filepath"):
+        if "filepath" in query and query["filepath"]:
             result.append(query["filepath"][0])
-        elif item.startswith(("http:", "https:")) or "<" in item:
-            raise ValueError("Attachment URL has no filepath; use API field values.")
         else:
             result.append(item)
     return result
 
 
-
-def _markdown_cell(value: Any) -> str:
+def _markdown_cell(value: object) -> str:
     from html import escape
     text = escape(str(value if value is not None else ""))
     for character in ("\\", "`", "*", "_", "[", "]"):
@@ -131,7 +127,7 @@ def _markdown_cell(value: Any) -> str:
     return text.replace("|", "&#124;").replace("\r", "").replace("\n", "<br>")
 
 
-def render_payment_ocr_markdown(result: dict[str, Any]) -> str:
+def render_payment_ocr_markdown(result: Mapping[str, object]) -> str:
     """Show problems only, one compact table row per affected image or record."""
     from urllib.parse import quote
 
@@ -142,13 +138,19 @@ def render_payment_ocr_markdown(result: dict[str, Any]) -> str:
              "| Report | Record ID | Problem | Creator | OCR | Image |",
              "| --- | --- | --- | --- | --- | --- |"]
     count = 0
-    for entry in result["entries"]:
-        base = [_markdown_cell(entry["report"]), _markdown_cell(entry.get("record_id") or "Unavailable")]
-        creator = entry.get("creator", {})
-        fields = entry.get("comparison_fields", {
+    raw_entries = result.get("entries")
+    entries = raw_entries if isinstance(raw_entries, list) else []
+    for entry in entries:
+        if not isinstance(entry, Mapping):
+            continue
+        base = [_markdown_cell(entry.get("report")), _markdown_cell(entry.get("record_id") or "Unavailable")]
+        raw_creator = entry.get("creator")
+        creator = raw_creator if isinstance(raw_creator, Mapping) else {}
+        raw_fields = entry.get("comparison_fields")
+        fields: Mapping[str, str] = raw_fields if isinstance(raw_fields, Mapping) else {
             "amount": "Payment_Amount", "reference": "Reference",
             "date": "Cheque_Date" if "Cheque_Date" in creator else "Payment_Date",
-        })
+        }
 
         def add_row(problems: list[str], expected: list[str], observed: list[str], link: str = "—") -> None:
             nonlocal count
@@ -157,22 +159,31 @@ def render_payment_ocr_markdown(result: dict[str, Any]) -> str:
             lines.append("| " + " | ".join(cells) + " |")
             count += 1
 
-        if entry.get("error") or entry["status"] == "missing_image":
-            add_row([entry.get("error") or "Missing image"],
+        if entry.get("error") or entry.get("status") == "missing_image":
+            add_row([str(entry.get("error") or "Missing image")],
                     [f"{name.title()}: {creator.get(field) or 'Missing'}" for name, field in fields.items()] if creator else [], [])
-        for image in entry.get("images", []):
-            link = f"[View](<{quote(str(image['path']), safe='/ :').replace(' ', '%20')}>)" if image.get("path") else "—"
+        raw_images = entry.get("images")
+        images = raw_images if isinstance(raw_images, list) else []
+        for image in images:
+            if not isinstance(image, Mapping):
+                continue
+            link = f"[View](<{quote(str(image.get('path', '')), safe='/ :').replace(' ', '%20')}>)" if image.get("path") else "—"
             if image.get("error"):
-                add_row([image["error"]], [], [], link)
+                add_row([str(image["error"])], [], [], link)
                 continue
             problems, expected, observed = [], [], []
-            for field, status in image.get("checks", {}).items():
+            raw_checks = image.get("checks")
+            checks = raw_checks if isinstance(raw_checks, Mapping) else {}
+            for field, status in checks.items():
                 if status == "match":
                     continue
-                problems.append(f"{field.title()}: {labels.get(status, status)}")
-                expected.append(f"{field.title()}: {creator.get(fields[field]) or 'Missing'}")
-                candidates = image.get("extracted", {}).get({"amount": "amounts", "reference": "references", "date": "dates"}[field], [])
-                observed.append(f"{field.title()}: {', '.join(candidates) or 'Not extracted'}")
+                problems.append(f"{field.title()}: {labels.get(str(status), str(status))}")
+                expected.append(f"{field.title()}: {creator.get(fields.get(field, '')) or 'Missing'}")
+                raw_extracted = image.get("extracted")
+                extracted = raw_extracted if isinstance(raw_extracted, Mapping) else {}
+                candidates = extracted.get({"amount": "amounts", "reference": "references", "date": "dates"}.get(field, ""), [])
+                cand_list = candidates if isinstance(candidates, list) else []
+                observed.append(f"{field.title()}: {', '.join(str(c) for c in cand_list) or 'Not extracted'}")
             if problems:
                 add_row(problems, expected, observed, link)
             elif image.get("status") == "error":
@@ -188,7 +199,7 @@ def review_creator_payment_images(
     output_dir: Path = Path("output/creator_payment_ocr"),
     criteria: str | None = None, limit: int | None = None,
     ocr: Callable[[Path], str] = tesseract_image,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Download evidence and checkpoint each image; never write to Creator or Books.
 
     Absolute output directories are supported. Remote names never become local paths.
@@ -198,43 +209,63 @@ def review_creator_payment_images(
         raise ValueError("limit must be positive")
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    result: dict[str, Any] = {"app": app, "entries": [], "summary": {}}
+    result: dict[str, object] = {"app": app, "entries": [], "summary": {}}
 
     def checkpoint() -> None:
         summary: dict[str, int] = {}
-        for entry in result["entries"]:
-            summary[entry["status"]] = summary.get(entry["status"], 0) + 1
+        raw_entries = result.get("entries")
+        entries = raw_entries if isinstance(raw_entries, list) else []
+        for entry in entries:
+            if isinstance(entry, Mapping):
+                st = str(entry.get("status", ""))
+                summary[st] = summary.get(st, 0) + 1
         result["summary"] = summary
         with atomic_text_writer(output_dir / "review.md") as report:
             report.write(render_payment_ocr_markdown(result))
 
+    entries: list[dict[str, object]] = []
     for source in sources:
         try:
             rows = creator.get_all_records(app, source.report, criteria=criteria, field_config="all")
         except Exception as exc:
-            result["entries"].append({"report": source.report, "status": "error", "error": str(exc)})
+            entries.append({"report": source.report, "status": "error", "error": str(exc)})
+            result["entries"] = entries
             checkpoint()
             continue
         for row in rows[:limit]:
-            entry = {"report": source.report, "record_id": str(row.get("ID") or ""),
-                     "comparison_fields": {"amount": source.amount_field, "reference": source.reference_field, "date": source.date_field},
-                     "creator": {field: row.get(field) for field in
-                                 (source.amount_field, source.reference_field, source.date_field)},
-                     "images": [], "status": "needs_review"}
-            result["entries"].append(entry)
+            entry: dict[str, object] = {
+                "report": source.report,
+                "record_id": str(row.get("ID") or ""),
+                "comparison_fields": {
+                    "amount": source.amount_field,
+                    "reference": source.reference_field,
+                    "date": source.date_field,
+                },
+                "creator": {
+                    field: row.get(field)
+                    for field in (source.amount_field, source.reference_field, source.date_field)
+                },
+                "images": [],
+                "status": "needs_review",
+            }
+            entries.append(entry)
+            result["entries"] = entries
             try:
-                if not entry["record_id"]:
+                rec_id = str(entry.get("record_id") or "")
+                if not rec_id:
                     raise ValueError("Creator record is missing ID.")
                 paths = _filepaths(row.get(source.image_field))
                 if not paths:
                     entry["status"] = "missing_image"
+                images: list[dict[str, object]] = []
                 for filepath in paths:
-                    image = {"status": "error"}
-                    entry["images"].append(image)
+                    image: dict[str, object] = {"status": "error"}
+                    images.append(image)
+                    entry["images"] = images
                     # Numbered paths prevent path traversal and collisions between sources.
-                    path = output_dir / "images" / f'{len(result["entries"]):06d}_{len(entry["images"]):02d}.image'
+                    path = output_dir / "images" / f"{len(entries):06d}_{len(images):02d}.image"
                     try:
-                        creator.download_file(app, source.report, entry["record_id"],
+                        creator.download_file(app, source.report, rec_id,
                                               source.image_field, str(path), filepath=filepath)
                         image["path"] = str(path)
                         text = ocr(path)
@@ -246,7 +277,7 @@ def review_creator_payment_images(
                         image["error"] = str(exc)
                     checkpoint()
                 if paths:
-                    states = [image["status"] for image in entry["images"]]
+                    states = [str(img.get("status")) for img in images]
                     entry["status"] = "error" if "error" in states else "match" if all(s == "match" for s in states) else "needs_review"
             except Exception as exc:
                 entry.update(status="error", error=str(exc))

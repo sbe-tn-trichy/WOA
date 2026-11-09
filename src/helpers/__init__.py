@@ -6,15 +6,15 @@ _MODULE_ALIASES = {
     "helpers.dates": "helpers.formatting.dates",
     "helpers.gst": "helpers.formatting.gst",
     "helpers.references": "helpers.formatting.references",
-    "helpers.sequences": "helpers.formatting.sequences",
+    "helpers.sequences": "utils.general_utils.sequences",
     "helpers.files": "helpers.operations.files",
     "helpers.records": "helpers.operations.records",
     "helpers.transactions": "helpers.operations.transactions",
 }
 register_module_aliases(_MODULE_ALIASES)
 
-from helpers.formatting.sequences import parse_doc_number
-from helpers.operations.records import get_verified_record
+from utils.general_utils.sequences import parse_doc_number
+from helpers.operations.records import AmbiguousMatchError, get_verified_record
 from helpers.formatting.references import (
     format_reference_lines,
     parse_reference_lines,
@@ -25,16 +25,18 @@ from .reports.accounts import (
     extract_bank_withdrawals,
     fetch_bank_accounts_map,
     find_bank_account_by_name,
+    resolve_bank_account_by_name,
 )
 from .catalog.bins import (
     get_bins_by_item_map,
     get_bins_for_items,
-    getBinsForItems,
 )
 from .catalog.contacts import (
     fetch_active_customers_map,
     find_contact_by_gstin,
     find_contact_by_name,
+    CustomerSearchResult,
+    search_customers,
 )
 from .catalog.custom_fields import (
     ensure_books_custom_fields,
@@ -72,6 +74,8 @@ from .catalog.items import (
     fetch_items_lookup,
     find_item_by_sku_or_name,
     find_item_by_exact_sku,
+    resolve_inventory_item_by_sku_or_name,
+    resolve_inventory_sku,
 )
 from helpers.operations.transactions import (
     CLOSED_DOCUMENT_STATUSES,
@@ -79,12 +83,15 @@ from helpers.operations.transactions import (
     fetch_open_bills,
     fetch_open_invoices,
     find_bill_by_number,
+    resolve_bill_by_number,
+    resolve_transaction_by_number,
     find_transaction_by_number,
     normalize_cheque_number,
     unwrap_record,
 )
 
 __all__ = [
+    "AmbiguousMatchError",
     "get_verified_record",
     "download_books_document",
     "format_reference_lines",
@@ -105,14 +112,17 @@ __all__ = [
     # Contacts
     "find_contact_by_gstin",
     "find_contact_by_name",
+    "CustomerSearchResult",
+    "search_customers",
     "fetch_active_customers_map",
     # Items and Bins
     "fetch_items_lookup",
     "fetch_items_by_purchase_account",
     "find_item_by_sku_or_name",
     "find_item_by_exact_sku",
+    "resolve_inventory_item_by_sku_or_name",
+    "resolve_inventory_sku",
     "get_bins_for_items",
-    "getBinsForItems",
     "get_bins_by_item_map",
     # Files
     "workdrive_upload_file",
@@ -130,6 +140,7 @@ __all__ = [
     "get_financial_year_range",
     # Bank accounts
     "find_bank_account_by_name",
+    "resolve_bank_account_by_name",
     "fetch_bank_accounts_map",
     "extract_bank_withdrawals",
     "extract_bank_deposits",
@@ -137,6 +148,8 @@ __all__ = [
     "CLOSED_DOCUMENT_STATUSES",
     "find_transaction_by_number",
     "find_bill_by_number",
+    "resolve_bill_by_number",
+    "resolve_transaction_by_number",
     "fetch_open_invoices",
     "fetch_open_bills",
     "normalize_cheque_number",

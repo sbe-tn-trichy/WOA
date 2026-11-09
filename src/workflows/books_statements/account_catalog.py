@@ -7,19 +7,29 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from collections.abc import Mapping, MutableMapping, Sequence
-from typing import Any
+from typing import Protocol
 
 from workflows.core.checkpoint import atomic_text_writer, write_atomic_json
 
 
+class ChartOfAccountsResourceProtocol(Protocol):
+    def list_all(self, *, params: dict[str, object] | None = None) -> Sequence[Mapping[str, object]]: ...
+
+
+class BooksAccountCatalogClient(Protocol):
+    @property
+    def chart_of_accounts(self) -> ChartOfAccountsResourceProtocol: ...
+    def request(self, method: str, endpoint: str, *, params: Mapping[str, object] | None = None) -> object: ...
+
+
 def sync_account_catalog(
-    books: Any,
+    books: BooksAccountCatalogClient,
     database_path: Path,
-    report_params: Mapping[str, Any] | None = None,
+    report_params: Mapping[str, object] | None = None,
     reports: Sequence[str] = (),
 ) -> dict[str, str]:
     """Snapshot chart and report-only accounts, then return names by ID."""
-    accounts = []
+    accounts: list[Mapping[str, object]] = []
     for account_filter in ("AccountType.Active", "AccountType.Inactive"):
         accounts.extend(
             books.chart_of_accounts.list_all(params={"filter_by": account_filter})
@@ -29,7 +39,7 @@ def sync_account_catalog(
         "profitandloss": "profit_and_loss",
     }
 
-    def collect_report_accounts(nodes: Any) -> None:
+    def collect_report_accounts(nodes: object) -> None:
         if not isinstance(nodes, list):
             return
         for node in nodes:
@@ -109,7 +119,7 @@ def sync_account_catalog(
 
 
 def refresh_mapping_account_names(
-    config: MutableMapping[str, Any], account_names: Mapping[str, str]
+    config: MutableMapping[str, object], account_names: Mapping[str, str]
 ) -> bool:
     """Refresh ordered account_names arrays for every account-ID mapping."""
     mappings = config.get("mappings")
@@ -137,13 +147,13 @@ def refresh_mapping_account_names(
     return changed
 
 
-def write_mapping_config(path: Path, config: Mapping[str, Any]) -> None:
+def write_mapping_config(path: Path, config: Mapping[str, object]) -> None:
     """Atomically write refreshed mapping metadata."""
     if path.suffix.lower() in {".yaml", ".yml"}:
         from utils.file_utils import yaml
 
         text = yaml.safe_dump(dict(config), allow_unicode=True, sort_keys=False)
         with atomic_text_writer(path) as staged:
-            staged.write(text)
+            staged.write(str(text))
     else:
         write_atomic_json(path, config, ensure_ascii=False, default=None)

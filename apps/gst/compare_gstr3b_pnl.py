@@ -2,6 +2,7 @@
 """Compare a full-year GSTR-3B JSON with Zoho Books Sales and P&L COGS."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
@@ -11,10 +12,10 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from collections.abc import Sequence
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
 from workflows.runtime.config import Config
@@ -26,9 +27,9 @@ from workflows.gstr3b_pnl_comparison import (
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("json_file", type=Path, help="Combined GSTR-3B JSON with 12 filed returns")
-    parser.add_argument("--sales-account-id", default="1094368000000000486",
+    parser.add_argument("--sales-account-id", default=Config.SALES_ACCOUNT_ID,
                         help="Root Sales account ID; includes every descendant account")
-    parser.add_argument("--exclude-location-id", default="1094368000044509446",
+    parser.add_argument("--exclude-location-id", default=Config.EXCLUDED_LOCATION_ID,
                         help="Books branch/location ID excluded from the P&L")
     parser.add_argument("--org-id", default=Config.ORG_ID, help="Zoho Books organization ID")
     parser.add_argument("--domain", default=Config.DOMAIN, help="Zoho data-center domain")

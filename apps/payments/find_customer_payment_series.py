@@ -1,5 +1,6 @@
 """Find and analyze unique transaction number series for customer payments in Zoho Books using Zoho Analytics with FY filtering."""
 
+import importlib
 import argparse
 from utils.file_utils import json
 import os
@@ -7,19 +8,24 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-try:
+if __package__:
     from . import _bootstrap
-except ImportError:
-    import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_analytics_client
+from workflows.runtime.config import Config
 from workflows.core.dates import get_fy_date_range
-from workflows.customer_payments.inspection import fetch_customer_payments, extract_series_info
+from workflows.customer_payments.inspection import (
+    PaymentSeriesSummary,
+    extract_series_info,
+    fetch_customer_payments,
+)
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
-def display_results(series_list: list[dict[str, Any]], total_records: int, filter_title: str):
+def display_results(series_list: list[PaymentSeriesSummary], total_records: int, filter_title: str) -> None:
     """Print results formatted as a table."""
     print("=" * 115)
     print(f" ZOHO BOOKS CUSTOMER PAYMENTS - {filter_title.upper()}")
@@ -51,7 +57,7 @@ def main():
     )
     parser.add_argument(
         "--workspace-id",
-        default=os.environ.get("ZOHO_ANALYTICS_WORKSPACE_ID", "264324000000002043"),
+        default=Config.ANALYTICS_WORKSPACE_ID,
         help="Zoho Analytics workspace ID",
     )
     parser.add_argument(

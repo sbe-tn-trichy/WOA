@@ -1,18 +1,18 @@
 """Validated Analytics baselines with bounded live-resource change overlays."""
-
 from __future__ import annotations
 
-from utils.file_utils import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, Protocol
+from typing import Protocol
 
+from utils.file_utils import json
 from .checkpoint import write_atomic_json
 
+
 class SnapshotResource(Protocol):
-    def list(self, params: Mapping[str, Any]) -> Mapping[str, Any]: ...
+    def list(self, params: Mapping[str, object]) -> Mapping[str, object]: ...
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ class SnapshotPolicy:
     id_key: str
     rows_key: str
     response_keys: tuple[str, ...]
-    timestamp: Callable[[Any], datetime]
+    timestamp: Callable[[object], datetime]
     label: str
     resource: str | None = None
     require_source_timezone: bool = False
@@ -33,25 +33,29 @@ def refresh_snapshot[Baseline](
     *, api: SnapshotResource, snapshot_path: Path, organization_id: str,
     workspace_id: str, policy: SnapshotPolicy,
     analytics_loader: Callable[[], tuple[Baseline, datetime]],
-    convert_baseline: Callable[[Baseline], Sequence[Mapping[str, Any]]],
+    convert_baseline: Callable[[Baseline], Sequence[Mapping[str, object]]],
     now: datetime | None = None,
-) -> list[dict[str, Any]]:
+) -> list[dict[str, object]]:
     """Reuse a scoped baseline, overlay validated 24h edits, then persist atomically.
 
     Adapters convert Analytics records and retain their own timestamp/empty-data
     policies. A failed load or incomplete live overlay never advances the snapshot.
     """
     current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    previous = None
+    previous: dict[str, object] | None = None
     if snapshot_path.is_file():
         loaded = json.loads(snapshot_path.read_text(encoding="utf-8"))
-        if (loaded.get("schema_version") == 1
-                and loaded.get("organization_id") == organization_id
-                and loaded.get("workspace_id") == workspace_id
-                and (policy.resource is None or loaded.get("resource") == policy.resource)):
-            previous = loaded
+        if isinstance(loaded, dict):
+            if (loaded.get("schema_version") == 1
+                    and loaded.get("organization_id") == organization_id
+                    and loaded.get("workspace_id") == workspace_id
+                    and (policy.resource is None or loaded.get("resource") == policy.resource)):
+                previous = loaded
     if previous and current - policy.timestamp(previous["checked_at"]) <= timedelta(hours=24):
-        baseline = previous[policy.rows_key]
+        raw_rows = previous.get(policy.rows_key)
+        baseline: Sequence[Mapping[str, object]] = (
+            raw_rows if isinstance(raw_rows, list) else []
+        )
         source_at = policy.timestamp(previous["analytics_at"])
     else:
         raw_baseline, source_at = analytics_loader()
@@ -62,13 +66,13 @@ def refresh_snapshot[Baseline](
             raise ValueError(f"Analytics {policy.label} baseline is older than 24 hours")
         baseline = convert_baseline(raw_baseline)
 
-    by_id = {str(row[policy.id_key]): dict(row) for row in baseline}
+    by_id: dict[str, dict[str, object]] = {str(row[policy.id_key]): dict(row) for row in baseline}
     cutoff = current - timedelta(hours=24)
     parameter = cutoff.strftime("%Y-%m-%dT%H:%M:%S+0000")
     page = 1
     while True:
         response = api.list(params={"last_modified_time": parameter, "page": page, "per_page": 200})
-        rows = [] if policy.missing_page_is_empty else None
+        rows: object = [] if policy.missing_page_is_empty else None
         for key in policy.response_keys:
             if key in response:
                 rows = response[key]
@@ -76,6 +80,8 @@ def refresh_snapshot[Baseline](
         if not isinstance(rows, list):
             raise ValueError(f"Books returned an invalid {policy.response_keys[0]} page")
         for row in rows:
+            if not isinstance(row, Mapping):
+                continue
             row_id = str(row.get(policy.id_key) or "")
             modified = row.get("last_modified_time")
             if not row_id or not modified:
@@ -83,14 +89,16 @@ def refresh_snapshot[Baseline](
             if policy.timestamp(modified) < cutoff - timedelta(minutes=5):
                 raise ValueError(f"Books did not honor the {policy.label} last_modified_time filter")
             by_id[row_id] = dict(row)
-        if not response.get("page_context", {}).get("has_more_page", False):
+        page_ctx = response.get("page_context")
+        has_more = bool(page_ctx.get("has_more_page", False)) if isinstance(page_ctx, Mapping) else False
+        if not has_more:
             break
         if not rows:
             raise ValueError(f"Books reported more changed {policy.label} pages but returned no rows")
         page += 1
 
     result = list(by_id.values())
-    payload = {
+    payload: dict[str, object] = {
         "schema_version": 1, "organization_id": organization_id,
         "workspace_id": workspace_id, "analytics_at": source_at.isoformat(),
         "checked_at": current.isoformat(), policy.rows_key: result,

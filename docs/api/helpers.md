@@ -10,28 +10,47 @@ Reusable financial helpers: fiscal-year date parsing, sequence numbering, accoun
   - [Function `get_month_range`](#helpers-formatting-dates-get_month_range)
   - [Function `get_previous_month_range`](#helpers-formatting-dates-get_previous_month_range)
   - [Function `get_financial_year_range`](#helpers-formatting-dates-get_financial_year_range)
-- [`helpers.formatting.sequences`](#helpers-formatting-sequences)
 - [`helpers.reports.accounts`](#helpers-reports-accounts)
+  - [Class `BooksBankAccountsResource`](#helpers-reports-accounts-booksbankaccountsresource)
+  - [Class `BooksBankAccountsClient`](#helpers-reports-accounts-booksbankaccountsclient)
+  - [Function `resolve_bank_account_by_name`](#helpers-reports-accounts-resolve_bank_account_by_name)
   - [Function `find_bank_account_by_name`](#helpers-reports-accounts-find_bank_account_by_name)
   - [Function `fetch_bank_accounts_map`](#helpers-reports-accounts-fetch_bank_accounts_map)
   - [Function `extract_bank_withdrawals`](#helpers-reports-accounts-extract_bank_withdrawals)
   - [Function `extract_bank_deposits`](#helpers-reports-accounts-extract_bank_deposits)
 - [`helpers.catalog.bins`](#helpers-catalog-bins)
+  - [Class `AnalyticsQueriesResource`](#helpers-catalog-bins-analyticsqueriesresource)
+  - [Class `AnalyticsBinClient`](#helpers-catalog-bins-analyticsbinclient)
   - [Function `get_bins_for_items`](#helpers-catalog-bins-get_bins_for_items)
   - [Function `get_bins_by_item_map`](#helpers-catalog-bins-get_bins_by_item_map)
 - [`helpers.catalog.contacts`](#helpers-catalog-contacts)
+  - [Class `_CustomerSearchClient`](#helpers-catalog-contacts-_customersearchclient)
+  - [Class `CustomerSearchResult`](#helpers-catalog-contacts-customersearchresult)
+  - [Class `BooksContactsResource`](#helpers-catalog-contacts-bookscontactsresource)
+  - [Class `BooksContactsClient`](#helpers-catalog-contacts-bookscontactsclient)
+  - [Function `search_customers`](#helpers-catalog-contacts-search_customers)
   - [Function `find_contact_by_gstin`](#helpers-catalog-contacts-find_contact_by_gstin)
   - [Function `find_contact_by_name`](#helpers-catalog-contacts-find_contact_by_name)
   - [Function `fetch_active_customers_map`](#helpers-catalog-contacts-fetch_active_customers_map)
 - [`helpers.catalog.custom_fields`](#helpers-catalog-custom_fields)
+  - [Class `BooksCustomFieldsResource`](#helpers-catalog-custom_fields-bookscustomfieldsresource)
+  - [Class `BooksCustomFieldsClient`](#helpers-catalog-custom_fields-bookscustomfieldsclient)
   - [Function `get_custom_field_value`](#helpers-catalog-custom_fields-get_custom_field_value)
   - [Function `extract_custom_fields_dict`](#helpers-catalog-custom_fields-extract_custom_fields_dict)
   - [Function `ensure_books_custom_fields`](#helpers-catalog-custom_fields-ensure_books_custom_fields)
 - [`helpers.reports.equity_ledger`](#helpers-reports-equity_ledger)
   - [Class `EquityLedgerEntry`](#helpers-reports-equity_ledger-equityledgerentry)
+  - [Class `BooksLocationsResource`](#helpers-reports-equity_ledger-bookslocationsresource)
+  - [Class `BooksLocationsClient`](#helpers-reports-equity_ledger-bookslocationsclient)
+  - [Class `BooksAccountsResource`](#helpers-reports-equity_ledger-booksaccountsresource)
+  - [Class `BooksRegistersResource`](#helpers-reports-equity_ledger-booksregistersresource)
+  - [Class `BooksEquityClient`](#helpers-reports-equity_ledger-booksequityclient)
   - [Function `resolve_excluded_location_name`](#helpers-reports-equity_ledger-resolve_excluded_location_name)
   - [Function `fetch_equity_general_ledger`](#helpers-reports-equity_ledger-fetch_equity_general_ledger)
 - [`helpers.operations.files`](#helpers-operations-files)
+  - [Class `BooksFileClient`](#helpers-operations-files-booksfileclient)
+  - [Class `WorkDriveFilesResource`](#helpers-operations-files-workdrivefilesresource)
+  - [Class `WorkDriveFileClient`](#helpers-operations-files-workdrivefileclient)
   - [Function `download_books_document`](#helpers-operations-files-download_books_document)
   - [Function `workdrive_upload_file`](#helpers-operations-files-workdrive_upload_file)
   - [Function `attach_file_to_books_resource`](#helpers-operations-files-attach_file_to_books_resource)
@@ -42,6 +61,9 @@ Reusable financial helpers: fiscal-year date parsing, sequence numbering, accoun
   - [Function `group_contacts_by_gstin`](#helpers-formatting-gst-group_contacts_by_gstin)
 - [`helpers.reports.inter_branch_ledger`](#helpers-reports-inter_branch_ledger)
   - [Class `InterBranchLedgerEntry`](#helpers-reports-inter_branch_ledger-interbranchledgerentry)
+  - [Class `BooksReportsGLResource`](#helpers-reports-inter_branch_ledger-booksreportsglresource)
+  - [Class `BooksRegistersInterBranchResource`](#helpers-reports-inter_branch_ledger-booksregistersinterbranchresource)
+  - [Class `BooksInterBranchClient`](#helpers-reports-inter_branch_ledger-booksinterbranchclient)
   - [Class `InterBranchGeneralLedger`](#helpers-reports-inter_branch_ledger-interbranchgeneralledger)
   - [Function `fetch_inter_branch_general_ledger`](#helpers-reports-inter_branch_ledger-fetch_inter_branch_general_ledger)
   - [Function `fetch_inter_branch_register_transactions`](#helpers-reports-inter_branch_ledger-fetch_inter_branch_register_transactions)
@@ -50,16 +72,30 @@ Reusable financial helpers: fiscal-year date parsing, sequence numbering, accoun
   - [Function `fetch_items_by_purchase_account`](#helpers-catalog-items-fetch_items_by_purchase_account)
   - [Function `find_item_by_sku_or_name`](#helpers-catalog-items-find_item_by_sku_or_name)
   - [Function `find_item_by_exact_sku`](#helpers-catalog-items-find_item_by_exact_sku)
+  - [Function `resolve_inventory_sku`](#helpers-catalog-items-resolve_inventory_sku)
+  - [Function `resolve_inventory_item_by_sku_or_name`](#helpers-catalog-items-resolve_inventory_item_by_sku_or_name)
 - [`helpers.reports.profit_and_loss`](#helpers-reports-profit_and_loss)
+  - [Class `BooksPnLReportsResource`](#helpers-reports-profit_and_loss-bookspnlreportsresource)
+  - [Class `BooksPnLClient`](#helpers-reports-profit_and_loss-bookspnlclient)
   - [Function `fetch_profit_and_loss_schedule_format`](#helpers-reports-profit_and_loss-fetch_profit_and_loss_schedule_format)
 - [`helpers.operations.records`](#helpers-operations-records)
   - [Class `_RecordResource`](#helpers-operations-records-_recordresource)
+  - [Class `SearchResource`](#helpers-operations-records-searchresource)
+  - [Class `AmbiguousMatchError`](#helpers-operations-records-ambiguousmatcherror)
+  - [Function `distinct_records`](#helpers-operations-records-distinct_records)
+  - [Function `unique_record`](#helpers-operations-records-unique_record)
   - [Function `get_verified_record`](#helpers-operations-records-get_verified_record)
 - [`helpers.formatting.references`](#helpers-formatting-references)
   - [Function `format_reference_lines`](#helpers-formatting-references-format_reference_lines)
   - [Function `parse_reference_lines`](#helpers-formatting-references-parse_reference_lines)
   - [Function `update_reference_lines`](#helpers-formatting-references-update_reference_lines)
 - [`helpers.operations.transactions`](#helpers-operations-transactions)
+  - [Class `BooksInvoicesClient`](#helpers-operations-transactions-booksinvoicesclient)
+  - [Class `BooksBillsSearchClient`](#helpers-operations-transactions-booksbillssearchclient)
+  - [Class `BooksBillsLookupResource`](#helpers-operations-transactions-booksbillslookupresource)
+  - [Class `BooksBillsClient`](#helpers-operations-transactions-booksbillsclient)
+  - [Function `resolve_bill_by_number`](#helpers-operations-transactions-resolve_bill_by_number)
+  - [Function `resolve_transaction_by_number`](#helpers-operations-transactions-resolve_transaction_by_number)
   - [Function `normalize_cheque_number`](#helpers-operations-transactions-normalize_cheque_number)
   - [Function `fetch_open_invoices`](#helpers-operations-transactions-fetch_open_invoices)
   - [Function `fetch_open_bills`](#helpers-operations-transactions-fetch_open_bills)
@@ -112,27 +148,52 @@ Defaults to the Indian financial year (April 1 to March 31).
 
 ---
 
-## Module `helpers.formatting.sequences`
-
-**Source:** [`src/helpers/formatting/sequences.py`](src/helpers/formatting/sequences.py)
-
-Public helper export for shared document-number parsing.
-
-**Declared Exports (`__all__`):**
-`parse_doc_number`
-
----
-
 ## Module `helpers.reports.accounts`
 
 **Source:** [`src/helpers/reports/accounts.py`](src/helpers/reports/accounts.py)
 
 Higher-level helper functions for Zoho Books bank account operations.
 
+### Class `BooksBankAccountsResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksBankAccountsResource.list`
+
+```python
+def list(self) -> object
+```
+
+##### `BooksBankAccountsResource.list_all`
+
+```python
+def list_all(self, *, resource_key: str | None = None) -> object
+```
+
+### Class `BooksBankAccountsClient`
+
+**Bases:** `Protocol`
+
+#### Class Attributes
+
+| Attribute | Type | Default Value | Notes |
+|---|---|---|---|
+| `bank_accounts` | `BooksBankAccountsResource` | - | - |
+
+### Function `resolve_bank_account_by_name`
+
+```python
+def resolve_bank_account_by_name(resource: SearchResource, account_name: str) -> dict[str, object] | None
+```
+
+Resolve a unique Books bank account from all pages.
+
 ### Function `find_bank_account_by_name`
 
 ```python
-def find_bank_account_by_name(books_client: Any, account_name: str) -> dict[str, Any] | None
+def find_bank_account_by_name(books_client: BooksBankAccountsClient, account_name: str) -> dict[str, object] | None
 ```
 
 Look up a bank account by case-insensitive account_name.
@@ -140,7 +201,7 @@ Look up a bank account by case-insensitive account_name.
 ### Function `fetch_bank_accounts_map`
 
 ```python
-def fetch_bank_accounts_map(books_client: Any) -> dict[str, dict[str, Any]]
+def fetch_bank_accounts_map(books_client: BooksBankAccountsClient) -> dict[str, dict[str, object]]
 ```
 
 Fetch all bank accounts and index them by case-folded account_name.
@@ -148,7 +209,7 @@ Fetch all bank accounts and index them by case-folded account_name.
 ### Function `extract_bank_withdrawals`
 
 ```python
-def extract_bank_withdrawals(transactions: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
+def extract_bank_withdrawals(transactions: Sequence[Mapping[str, object]]) -> list[dict[str, object]]
 ```
 
 Filter a list of bank transactions down to outflows (withdrawals / debits).
@@ -156,7 +217,7 @@ Filter a list of bank transactions down to outflows (withdrawals / debits).
 ### Function `extract_bank_deposits`
 
 ```python
-def extract_bank_deposits(transactions: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
+def extract_bank_deposits(transactions: Sequence[Mapping[str, object]]) -> list[dict[str, object]]
 ```
 
 Filter a list of bank transactions down to inflows (deposits / credits / receipts).
@@ -170,19 +231,41 @@ Filter a list of bank transactions down to inflows (deposits / credits / receipt
 Higher-level helper functions for Zoho Analytics and Inventory bin operations.
 
 **Declared Exports (`__all__`):**
-`DEFAULT_TABLE_NAME`, `DEFAULT_WORKSPACE_ID`, `get_bins_by_item_map`, `get_bins_for_items`, `getBinsForItems`
+`DEFAULT_TABLE_NAME`, `DEFAULT_WORKSPACE_ID`, `get_bins_by_item_map`, `get_bins_for_items`
 
 ### Constants & Settings
 
 | Constant | Type | Value | Description |
 |---|---|---|---|
-| `DEFAULT_WORKSPACE_ID` | - | `'264324000000002043'` | - |
+| `DEFAULT_WORKSPACE_ID` | - | `''` | - |
 | `DEFAULT_TABLE_NAME` | - | `'Item Stock by Bin'` | - |
+
+### Class `AnalyticsQueriesResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `AnalyticsQueriesResource.execute`
+
+```python
+def execute(self, workspace_id: str, sql_query: str) -> object
+```
+
+### Class `AnalyticsBinClient`
+
+**Bases:** `Protocol`
+
+#### Class Attributes
+
+| Attribute | Type | Default Value | Notes |
+|---|---|---|---|
+| `queries` | `AnalyticsQueriesResource` | - | - |
 
 ### Function `get_bins_for_items`
 
 ```python
-def get_bins_for_items(analytics_client: Any, workspace_id: str = DEFAULT_WORKSPACE_ID, item_ids: Sequence[str | int] | str | int | None = None, skus: Sequence[str] | str | None = None, item_names: Sequence[str] | str | None = None, available_only: bool = True, table_name: str = DEFAULT_TABLE_NAME, order_by: str | None = 'ORDER BY "Item Name" ASC') -> list[dict[str, Any]]
+def get_bins_for_items(analytics_client: AnalyticsBinClient, workspace_id: str = DEFAULT_WORKSPACE_ID, item_ids: Sequence[str | int] | str | int | None = None, skus: Sequence[str] | str | None = None, item_names: Sequence[str] | str | None = None, available_only: bool = True, table_name: str = DEFAULT_TABLE_NAME, order_by: str | None = 'ORDER BY "Item Name" ASC') -> list[dict[str, object]]
 ```
 
 Query item stock across warehouse bins using Zoho Analytics.
@@ -212,7 +295,7 @@ Returns:
 ### Function `get_bins_by_item_map`
 
 ```python
-def get_bins_by_item_map(analytics_client: Any, workspace_id: str = DEFAULT_WORKSPACE_ID, key_field: str = 'SKU', item_ids: Sequence[str | int] | str | int | None = None, skus: Sequence[str] | str | None = None, available_only: bool = True, table_name: str = DEFAULT_TABLE_NAME) -> dict[str, list[dict[str, Any]]]
+def get_bins_by_item_map(analytics_client: AnalyticsBinClient, workspace_id: str = DEFAULT_WORKSPACE_ID, key_field: str = 'SKU', item_ids: Sequence[str | int] | str | int | None = None, skus: Sequence[str] | str | None = None, available_only: bool = True, table_name: str = DEFAULT_TABLE_NAME) -> dict[str, list[dict[str, object]]]
 ```
 
 Fetch bin stock grouped by item key (e.g. SKU, Product ID, or Item Name).
@@ -227,10 +310,78 @@ Returns a mapping of {key_value: [bin_record_1, bin_record_2, ...]}.
 
 Higher-level helper functions for Zoho Books contact operations.
 
+### Class `_CustomerSearchClient`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `_CustomerSearchClient.contacts`
+
+```python
+@property
+def contacts(self) -> SearchResource
+```
+
+### Class `CustomerSearchResult`
+
+Distinct matching customers from a completed search.
+
+#### Class Attributes
+
+| Attribute | Type | Default Value | Notes |
+|---|---|---|---|
+| `candidates` | `tuple[dict[str, object], ...]` | - | - |
+
+#### Methods
+
+##### `CustomerSearchResult.status`
+
+```python
+@property
+def status(self) -> Literal['no_match', 'unique', 'ambiguous']
+```
+
+### Class `BooksContactsResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksContactsResource.list`
+
+```python
+def list(self, params: dict[str, object] | None = None) -> object
+```
+
+##### `BooksContactsResource.list_all`
+
+```python
+def list_all(self, params: dict[str, object] | None = None, resource_key: str | None = None) -> object
+```
+
+### Class `BooksContactsClient`
+
+**Bases:** `Protocol`
+
+#### Class Attributes
+
+| Attribute | Type | Default Value | Notes |
+|---|---|---|---|
+| `contacts` | `BooksContactsResource` | - | - |
+
+### Function `search_customers`
+
+```python
+def search_customers(books_client: _CustomerSearchClient, query: str, *, by: Literal['name', 'gstin', 'phone'] = 'name', exact: bool = True) -> CustomerSearchResult
+```
+
+Search Books customers by name, GSTIN, or the contact's phone/mobile.
+
 ### Function `find_contact_by_gstin`
 
 ```python
-def find_contact_by_gstin(books_client: Any, gstin: str, contact_type: str | None = None) -> dict[str, Any] | None
+def find_contact_by_gstin(books_client: BooksContactsClient, gstin: str, contact_type: str | None = None) -> dict[str, object] | None
 ```
 
 Look up a contact by their GSTIN (tax identifier).
@@ -240,7 +391,7 @@ Performs case-insensitive matching against `gst_no` and custom fields.
 ### Function `find_contact_by_name`
 
 ```python
-def find_contact_by_name(books_client: Any, contact_name: str, contact_type: str | None = None, exact: bool = True) -> dict[str, Any] | None
+def find_contact_by_name(books_client: BooksContactsClient, contact_name: str, contact_type: str | None = None, exact: bool = True) -> dict[str, object] | None
 ```
 
 Look up a contact by contact_name or company_name.
@@ -248,7 +399,7 @@ Look up a contact by contact_name or company_name.
 ### Function `fetch_active_customers_map`
 
 ```python
-def fetch_active_customers_map(books_client: Any, key_field: str = 'contact_id', status: str = 'active') -> dict[str, dict[str, Any]]
+def fetch_active_customers_map(books_client: BooksContactsClient, key_field: str = 'contact_id', status: str = 'active') -> dict[str, dict[str, object]]
 ```
 
 Fetch all customers from Zoho Books and return an indexed dictionary.
@@ -263,10 +414,38 @@ Keys are extracted from either direct attributes or custom fields using `key_fie
 
 Utilities for safely inspecting, extracting, and provisioning Zoho custom field values.
 
+### Class `BooksCustomFieldsResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksCustomFieldsResource.list_for_entity`
+
+```python
+def list_for_entity(self, entity: str) -> builtins.list[dict[str, object]]
+```
+
+##### `BooksCustomFieldsResource.create`
+
+```python
+def create(self, requirement: Mapping[str, object]) -> dict[str, object]
+```
+
+### Class `BooksCustomFieldsClient`
+
+**Bases:** `Protocol`
+
+#### Class Attributes
+
+| Attribute | Type | Default Value | Notes |
+|---|---|---|---|
+| `custom_fields` | `BooksCustomFieldsResource` | - | - |
+
 ### Function `get_custom_field_value`
 
 ```python
-def get_custom_field_value(record: Mapping[str, Any], field_name: str, default: Any | None = None) -> Any
+def get_custom_field_value(record: Mapping[str, object], field_name: str, default: object | None = None) -> object
 ```
 
 Extract a custom field value from a Zoho record across various response shapes.
@@ -279,7 +458,7 @@ Supports:
 ### Function `extract_custom_fields_dict`
 
 ```python
-def extract_custom_fields_dict(record: Mapping[str, Any]) -> dict[str, Any]
+def extract_custom_fields_dict(record: Mapping[str, object]) -> dict[str, object]
 ```
 
 Extract all custom fields in a record into a flat dictionary keyed by api_name or label.
@@ -287,7 +466,7 @@ Extract all custom fields in a record into a flat dictionary keyed by api_name o
 ### Function `ensure_books_custom_fields`
 
 ```python
-def ensure_books_custom_fields(books_client: Any, entity: str, requirements: Sequence[Mapping[str, Any]], create_missing: bool = False) -> dict[str, Any]
+def ensure_books_custom_fields(books_client: BooksCustomFieldsClient, entity: str, requirements: Sequence[Mapping[str, object]], create_missing: bool = False) -> dict[str, object]
 ```
 
 Verify and optionally provision custom fields on a Zoho Books entity.
@@ -311,12 +490,88 @@ Collect detailed Zoho Books ledger rows for every equity account.
 | `account_id` | `str` | - | - |
 | `account_name` | `str` | - | - |
 | `location_name` | `str` | - | - |
-| `transaction` | `Mapping[str, Any]` | - | - |
+| `transaction` | `Mapping[str, object]` | - | - |
+
+### Class `BooksLocationsResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksLocationsResource.list_all`
+
+```python
+def list_all(self, *, resource_key: str | None = None) -> object
+```
+
+### Class `BooksLocationsClient`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksLocationsClient.locations`
+
+```python
+@property
+def locations(self) -> BooksLocationsResource
+```
+
+### Class `BooksAccountsResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksAccountsResource.list_all`
+
+```python
+def list_all(self, *, params: dict[str, object] | None = None) -> object
+```
+
+### Class `BooksRegistersResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksRegistersResource.iter_transactions_for_accounts`
+
+```python
+def iter_transactions_for_accounts(self, account_ids: Sequence[str], *, from_date: str, to_date: str, per_page: int, cash_based: bool = False) -> Iterable[Mapping[str, object]]
+```
+
+### Class `BooksEquityClient`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksEquityClient.locations`
+
+```python
+@property
+def locations(self) -> BooksLocationsResource
+```
+
+##### `BooksEquityClient.chart_of_accounts`
+
+```python
+@property
+def chart_of_accounts(self) -> BooksAccountsResource
+```
+
+##### `BooksEquityClient.registers`
+
+```python
+@property
+def registers(self) -> BooksRegistersResource
+```
 
 ### Function `resolve_excluded_location_name`
 
 ```python
-def resolve_excluded_location_name(books_client: Any, excluded_location_id: str) -> str
+def resolve_excluded_location_name(books_client: BooksLocationsClient, excluded_location_id: str) -> str
 ```
 
 Resolve a Books branch ID to its unique register location name.
@@ -324,7 +579,7 @@ Resolve a Books branch ID to its unique register location name.
 ### Function `fetch_equity_general_ledger`
 
 ```python
-def fetch_equity_general_ledger(books_client: Any, *, from_date: str, to_date: str, excluded_location_id: str, per_page: int = 500) -> list[EquityLedgerEntry]
+def fetch_equity_general_ledger(books_client: BooksEquityClient, *, from_date: str, to_date: str, excluded_location_id: str, per_page: int = 500) -> list[EquityLedgerEntry]
 ```
 
 Read all equity account registers, excluding one Books location.
@@ -342,10 +597,44 @@ fails closed rather than silently widening the report scope.
 
 Higher-level helper functions for WorkDrive uploads and Books attachments.
 
+### Class `BooksFileClient`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksFileClient.request`
+
+```python
+def request(self, method: str, endpoint: str, json: dict[str, object] | None = None, data: dict[str, object] | None = None, params: dict[str, object] | None = None, headers: dict[str, object] | None = None, files: Mapping[str, object] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> object
+```
+
+### Class `WorkDriveFilesResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `WorkDriveFilesResource.upload`
+
+```python
+def upload(self, folder_id: str, file_path: str, file_name: str | None = None) -> dict[str, object]
+```
+
+### Class `WorkDriveFileClient`
+
+**Bases:** `Protocol`
+
+#### Class Attributes
+
+| Attribute | Type | Default Value | Notes |
+|---|---|---|---|
+| `files` | `WorkDriveFilesResource` | - | - |
+
 ### Function `download_books_document`
 
 ```python
-def download_books_document(books_client: Any, resource_name: str, resource_id: str, document_id: str, save_path: str) -> str
+def download_books_document(books_client: BooksFileClient, resource_name: str, resource_id: str, document_id: str, save_path: str) -> str
 ```
 
 Download a specific Books document; relative paths are confined to output/.
@@ -353,7 +642,7 @@ Download a specific Books document; relative paths are confined to output/.
 ### Function `workdrive_upload_file`
 
 ```python
-def workdrive_upload_file(wd_client: Any, folder_id: str, file_path: str, file_name: str | None = None) -> dict[str, Any]
+def workdrive_upload_file(wd_client: WorkDriveFileClient, folder_id: str, file_path: str, file_name: str | None = None) -> dict[str, object]
 ```
 
 Upload a local file to a Zoho WorkDrive folder.
@@ -361,7 +650,7 @@ Upload a local file to a Zoho WorkDrive folder.
 ### Function `attach_file_to_books_resource`
 
 ```python
-def attach_file_to_books_resource(books_client: Any, resource_name: str, resource_id: str, file_path: str, file_name: str | None = None) -> dict[str, Any]
+def attach_file_to_books_resource(books_client: BooksFileClient, resource_name: str, resource_id: str, file_path: str, file_name: str | None = None) -> dict[str, object]
 ```
 
 Attach a local file to a Zoho Books transaction (e.g., invoices, salesorders, bills).
@@ -369,7 +658,7 @@ Attach a local file to a Zoho Books transaction (e.g., invoices, salesorders, bi
 ### Function `workdrive_upload_and_attach`
 
 ```python
-def workdrive_upload_and_attach(wd_client: Any, books_client: Any, folder_id: str, file_path: str, resource_name: str, resource_id: str, file_name: str | None = None) -> dict[str, Any]
+def workdrive_upload_and_attach(wd_client: WorkDriveFileClient, books_client: BooksFileClient, folder_id: str, file_path: str, resource_name: str, resource_id: str, file_name: str | None = None) -> dict[str, object]
 ```
 
 Upload a file to WorkDrive and attach it to a Books resource in a single composite call.
@@ -391,7 +680,7 @@ GST (Goods and Services Tax) identification and validation helpers.
 ### Function `normalize_gstin`
 
 ```python
-def normalize_gstin(value: Any) -> str
+def normalize_gstin(value: object) -> str
 ```
 
 Normalize a GSTIN by removing non-alphanumeric characters and converting to uppercase.
@@ -399,7 +688,7 @@ Normalize a GSTIN by removing non-alphanumeric characters and converting to uppe
 ### Function `is_valid_gstin`
 
 ```python
-def is_valid_gstin(value: Any) -> bool
+def is_valid_gstin(value: object) -> bool
 ```
 
 Check whether a value is a valid 15-character Indian GSTIN.
@@ -407,7 +696,7 @@ Check whether a value is a valid 15-character Indian GSTIN.
 ### Function `group_contacts_by_gstin`
 
 ```python
-def group_contacts_by_gstin(contacts: Iterable[Mapping[str, Any]]) -> dict[str, list[Mapping[str, Any]]]
+def group_contacts_by_gstin(contacts: Iterable[Mapping[str, object]]) -> dict[str, list[Mapping[str, object]]]
 ```
 
 Group contact records by their normalized valid GSTIN.
@@ -430,7 +719,43 @@ Fetch one inter-branch account's detailed Zoho Books ledger.
 |---|---|---|---|
 | `account_id` | `str` | - | - |
 | `location_name` | `str` | - | - |
-| `transaction` | `Mapping[str, Any]` | - | - |
+| `transaction` | `Mapping[str, object]` | - | - |
+
+### Class `BooksReportsGLResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksReportsGLResource.general_ledger`
+
+```python
+def general_ledger(self, *, from_date: str, to_date: str, rule: str, cash_based: bool = False) -> Mapping[str, object]
+```
+
+### Class `BooksRegistersInterBranchResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksRegistersInterBranchResource.iter_transactions`
+
+```python
+def iter_transactions(self, account_id: str, *, from_date: str, to_date: str, per_page: int, cash_based: bool = False) -> Iterable[Mapping[str, object]]
+```
+
+### Class `BooksInterBranchClient`
+
+**Bases:** `Protocol`
+
+#### Class Attributes
+
+| Attribute | Type | Default Value | Notes |
+|---|---|---|---|
+| `locations` | `BooksLocationsResource` | - | - |
+| `reports` | `BooksReportsGLResource` | - | - |
+| `registers` | `BooksRegistersInterBranchResource` | - | - |
 
 ### Class `InterBranchGeneralLedger`
 
@@ -449,7 +774,7 @@ Fetch one inter-branch account's detailed Zoho Books ledger.
 ### Function `fetch_inter_branch_general_ledger`
 
 ```python
-def fetch_inter_branch_general_ledger(books_client: Any, *, from_date: str, to_date: str, account_id: str = '1094368000000443474', excluded_location_id: str = '1094368000044509446') -> InterBranchGeneralLedger
+def fetch_inter_branch_general_ledger(books_client: BooksInterBranchClient, *, from_date: str, to_date: str, account_id: str = '', excluded_location_id: str = '') -> InterBranchGeneralLedger
 ```
 
 Fetch the branch-filtered inter-branch balance via the Books SDK report.
@@ -457,7 +782,7 @@ Fetch the branch-filtered inter-branch balance via the Books SDK report.
 ### Function `fetch_inter_branch_register_transactions`
 
 ```python
-def fetch_inter_branch_register_transactions(books_client: Any, *, from_date: str, to_date: str, account_id: str = '1094368000000443474', excluded_location_id: str = '1094368000044509446', per_page: int = 500) -> list[InterBranchLedgerEntry]
+def fetch_inter_branch_register_transactions(books_client: BooksInterBranchClient, *, from_date: str, to_date: str, account_id: str = '', excluded_location_id: str = '', per_page: int = 500) -> list[InterBranchLedgerEntry]
 ```
 
 Read raw register postings, which may omit branch-generated balances.
@@ -471,12 +796,12 @@ Read raw register postings, which may omit branch-generated balances.
 Higher-level helper functions for Zoho Inventory item operations.
 
 **Declared Exports (`__all__`):**
-`fetch_items_lookup`, `fetch_items_by_purchase_account`, `find_item_by_sku_or_name`, `get_bins_for_items`, `getBinsForItems`, `get_bins_by_item_map`
+`fetch_items_lookup`, `fetch_items_by_purchase_account`, `find_item_by_sku_or_name`, `resolve_inventory_item_by_sku_or_name`, `resolve_inventory_sku`, `get_bins_for_items`, `get_bins_by_item_map`
 
 ### Function `fetch_items_lookup`
 
 ```python
-def fetch_items_lookup(inventory_client: ZohoInventoryAPI, key_field: str = 'name', status: str = 'active', purchase_account_id: str | None = None) -> dict[str, dict[str, Any]]
+def fetch_items_lookup(inventory_client: ZohoInventoryAPI, key_field: str = 'name', status: str = 'active', purchase_account_id: str | None = None) -> dict[str, dict[str, object]]
 ```
 
 Fetch all items from Zoho Inventory and index them by `key_field`.
@@ -487,7 +812,7 @@ scopes the query to a specific purchase account.
 ### Function `fetch_items_by_purchase_account`
 
 ```python
-def fetch_items_by_purchase_account(inventory_client: ZohoInventoryAPI, purchase_account_id: str, key_field: str = 'sku', status: str = 'all') -> dict[str, dict[str, Any]]
+def fetch_items_by_purchase_account(inventory_client: ZohoInventoryAPI, purchase_account_id: str, key_field: str = 'sku', status: str = 'all') -> dict[str, dict[str, object]]
 ```
 
 Fetch items scoped to a specific purchase account and index them by `key_field`.
@@ -495,7 +820,7 @@ Fetch items scoped to a specific purchase account and index them by `key_field`.
 ### Function `find_item_by_sku_or_name`
 
 ```python
-def find_item_by_sku_or_name(inventory_client: ZohoInventoryAPI, query: str, purchase_account_id: str | None = None) -> dict[str, Any] | None
+def find_item_by_sku_or_name(inventory_client: ZohoInventoryAPI, query: str, purchase_account_id: str | None = None) -> dict[str, object] | None
 ```
 
 Search for an item by matching SKU or name, optionally scoped by purchase_account_id.
@@ -503,10 +828,26 @@ Search for an item by matching SKU or name, optionally scoped by purchase_accoun
 ### Function `find_item_by_exact_sku`
 
 ```python
-def find_item_by_exact_sku(inventory_client: ZohoInventoryAPI, sku: str, purchase_account_id: str) -> dict[str, Any] | None
+def find_item_by_exact_sku(inventory_client: ZohoInventoryAPI, sku: str, purchase_account_id: str) -> dict[str, object] | None
 ```
 
 Find an exact Inventory SKU in one purchase account, preferring active items.
+
+### Function `resolve_inventory_sku`
+
+```python
+def resolve_inventory_sku(inventory_client: ZohoInventoryAPI, sku: str, *, purchase_account_id: str | None = None) -> dict[str, object] | None
+```
+
+Resolve one exact SKU, preferring active Inventory items.
+
+### Function `resolve_inventory_item_by_sku_or_name`
+
+```python
+def resolve_inventory_item_by_sku_or_name(inventory_client: ZohoInventoryAPI, query: str, *, purchase_account_id: str | None = None) -> dict[str, object] | None
+```
+
+Resolve one Inventory item, preferring exact SKU or name to partial name.
 
 ---
 
@@ -516,10 +857,35 @@ Find an exact Inventory SKU in one purchase account, preferring active items.
 
 Convenience wrapper for the branch-scoped schedule-format P&L.
 
+### Class `BooksPnLReportsResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksPnLReportsResource.profit_and_loss_schedule_format`
+
+```python
+def profit_and_loss_schedule_format(self, *, from_date: str, to_date: str, cash_based: bool, rule: str) -> Mapping[str, object]
+```
+
+### Class `BooksPnLClient`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksPnLClient.reports`
+
+```python
+@property
+def reports(self) -> BooksPnLReportsResource
+```
+
 ### Function `fetch_profit_and_loss_schedule_format`
 
 ```python
-def fetch_profit_and_loss_schedule_format(books_client: Any, *, from_date: str, to_date: str, excluded_location_id: str) -> Mapping[str, Any]
+def fetch_profit_and_loss_schedule_format(books_client: BooksPnLClient, *, from_date: str, to_date: str, excluded_location_id: str) -> Mapping[str, object]
 ```
 
 Fetch an accrual P&L excluding one Books branch by location ID.
@@ -541,13 +907,43 @@ Fetch resource details with explicit response-shape and identity checks.
 ##### `_RecordResource.get`
 
 ```python
-def get(self, identifier: str) -> Mapping[str, Any]
+def get(self, identifier: str) -> Mapping[str, object]
+```
+
+### Class `SearchResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `SearchResource.list_all`
+
+```python
+def list_all(self, params: dict[str, object] | None = None, resource_key: str | None = None) -> object
+```
+
+### Class `AmbiguousMatchError`
+
+**Bases:** `ValueError`
+
+More than one distinct record satisfied a unique lookup.
+
+### Function `distinct_records`
+
+```python
+def distinct_records(rows: Iterable[dict[str, object]], id_key: str) -> list[dict[str, object]]
+```
+
+### Function `unique_record`
+
+```python
+def unique_record(rows: Iterable[dict[str, object]], id_key: str) -> dict[str, object] | None
 ```
 
 ### Function `get_verified_record`
 
 ```python
-def get_verified_record(resource: _RecordResource, identifier: str, key: str, id_key: str) -> dict[str, Any]
+def get_verified_record(resource: _RecordResource, identifier: str, key: str, id_key: str) -> dict[str, object]
 ```
 
 Fetch a dictionary detail and verify its ID against the requested ID.
@@ -602,10 +998,77 @@ Higher-level helper functions for Zoho Books transaction lookups and response un
 |---|---|---|---|
 | `CLOSED_DOCUMENT_STATUSES` | - | `{'void', 'draft', 'paid', 'rejected',...` | - |
 
+### Class `BooksInvoicesClient`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksInvoicesClient.invoices`
+
+```python
+@property
+def invoices(self) -> SearchResource
+```
+
+### Class `BooksBillsSearchClient`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksBillsSearchClient.bills`
+
+```python
+@property
+def bills(self) -> SearchResource
+```
+
+### Class `BooksBillsLookupResource`
+
+**Bases:** `SearchResource`, `Protocol`
+
+#### Methods
+
+##### `BooksBillsLookupResource.list`
+
+```python
+def list(self, params: dict[str, object] | None = None) -> object
+```
+
+### Class `BooksBillsClient`
+
+**Bases:** `BooksBillsSearchClient`, `Protocol`
+
+#### Methods
+
+##### `BooksBillsClient.bills`
+
+```python
+@property
+def bills(self) -> BooksBillsLookupResource
+```
+
+### Function `resolve_bill_by_number`
+
+```python
+def resolve_bill_by_number(resource: SearchResource, vendor_id: str, bill_number: str) -> dict[str, object] | None
+```
+
+Resolve one exact Books bill number within the selected vendor.
+
+### Function `resolve_transaction_by_number`
+
+```python
+def resolve_transaction_by_number(resource: SearchResource, number: str, *, number_fields: Sequence[str], resource_key: str, id_key: str) -> dict[str, object] | None
+```
+
+Resolve one Books transaction using its supported number filters.
+
 ### Function `normalize_cheque_number`
 
 ```python
-def normalize_cheque_number(value: Any) -> str
+def normalize_cheque_number(value: object) -> str
 ```
 
 Normalize a cheque reference number by stripping non-alphanumerics and leading zeros.
@@ -613,7 +1076,7 @@ Normalize a cheque reference number by stripping non-alphanumerics and leading z
 ### Function `fetch_open_invoices`
 
 ```python
-def fetch_open_invoices(books_client: Any, customer_id: str) -> list[dict[str, Any]]
+def fetch_open_invoices(books_client: BooksInvoicesClient, customer_id: str) -> list[dict[str, object]]
 ```
 
 Fetch open, non-zero balance invoices for a customer from Zoho Books.
@@ -621,7 +1084,7 @@ Fetch open, non-zero balance invoices for a customer from Zoho Books.
 ### Function `fetch_open_bills`
 
 ```python
-def fetch_open_bills(books_client: Any, vendor_id: str) -> list[dict[str, Any]]
+def fetch_open_bills(books_client: BooksBillsSearchClient, vendor_id: str) -> list[dict[str, object]]
 ```
 
 Fetch open, non-zero balance bills for a vendor from Zoho Books.
@@ -629,7 +1092,7 @@ Fetch open, non-zero balance bills for a vendor from Zoho Books.
 ### Function `find_bill_by_number`
 
 ```python
-def find_bill_by_number(books_client: Any, vendor_id: str, bill_number: str) -> dict[str, Any] | None
+def find_bill_by_number(books_client: BooksBillsClient, vendor_id: str, bill_number: str) -> dict[str, object] | None
 ```
 
 Find a bill under a specific vendor by bill number.
@@ -637,7 +1100,7 @@ Find a bill under a specific vendor by bill number.
 ### Function `allocate_documents_fifo`
 
 ```python
-def allocate_documents_fifo(amount: Any, documents: Sequence[Mapping[str, Any]], id_key: str = 'invoice_id', include_metadata: bool = False) -> tuple[list[dict[str, Any]], Decimal]
+def allocate_documents_fifo(amount: object, documents: Sequence[Mapping[str, object]], id_key: str = 'invoice_id', include_metadata: bool = False) -> tuple[list[dict[str, object]], Decimal]
 ```
 
 Allocate a payment/credit amount across open documents sorted by due date and date.
@@ -647,7 +1110,7 @@ Returns a tuple of (allocations, unallocated_remaining_amount).
 ### Function `unwrap_record`
 
 ```python
-def unwrap_record(response: Mapping[str, Any], candidate_keys: Sequence[str] = ()) -> dict[str, Any]
+def unwrap_record(response: object, candidate_keys: str | Sequence[str] = ()) -> dict[str, object]
 ```
 
 Extract the primary record dictionary from a Zoho API response payload.
@@ -658,7 +1121,7 @@ Handles single-entity keys (e.g. 'salesorder', 'sales_order', 'payment', 'custom
 ### Function `find_transaction_by_number`
 
 ```python
-def find_transaction_by_number(resource: Any, number: str, number_keys: Sequence[str] = ('reference_number', 'salesorder_number', 'invoice_number', 'payment_number', 'creditnote_number', 'bill_number'), resource_key: str | None = None) -> dict[str, Any] | None
+def find_transaction_by_number(resource: object, number: str, number_keys: Sequence[str] = ('reference_number', 'salesorder_number', 'invoice_number', 'payment_number', 'creditnote_number', 'bill_number'), resource_key: str | None = None) -> dict[str, object] | None
 ```
 
 Look up a transaction in a Books resource (sales_orders, invoices, customer_payments, etc.) by reference or number.

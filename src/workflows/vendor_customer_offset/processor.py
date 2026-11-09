@@ -17,7 +17,8 @@ from helpers import (
     allocate_documents_fifo,
     fetch_open_bills,
     fetch_open_invoices,
-    find_bank_account_by_name,
+    AmbiguousMatchError,
+    resolve_bank_account_by_name,
     is_valid_gstin,
     normalize_gstin,
 )
@@ -116,7 +117,10 @@ def _resolve_bank_account_id(books_client: OffsetBooksClient, config: VendorCust
     if config.bank_account_id:
         return config.bank_account_id
 
-    account = find_bank_account_by_name(books_client, config.bank_account_name)
+    try:
+        account = resolve_bank_account_by_name(books_client.bank_accounts, config.bank_account_name)
+    except AmbiguousMatchError as exc:
+        raise VendorCustomerOffsetError(f"Ambiguous clearing bank account {config.bank_account_name!r}: {exc}") from exc
     if not account:
         raise VendorCustomerOffsetError(
             f"Expected exactly one bank account named {config.bank_account_name!r}; found 0."

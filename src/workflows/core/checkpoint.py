@@ -9,7 +9,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 from collections.abc import Generator, Callable, Iterator
-from typing import IO
+from typing import IO, TextIO
 
 
 def write_atomic_json(
@@ -38,7 +38,7 @@ def write_atomic_json(
 def atomic_text_writer(
     path: Path | str, *, encoding: str = "utf-8", newline: str | None = None,
     max_retries: int = 5, retry_delay: float = 0.1,
-) -> Generator[IO[str]]:
+) -> Generator[IO[str], None, None]:
     """Stage a text/CSV file uniquely, replacing the target only on success."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)

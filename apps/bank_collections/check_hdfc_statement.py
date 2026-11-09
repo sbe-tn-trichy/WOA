@@ -6,6 +6,7 @@ from collections import Counter
 import csv
 from utils.file_utils import json
 from pathlib import Path
+from typing import Any
 
 from workflows.analytics_catalog import AnalyticsCatalog
 from workflows.analytics_catalog.registry import WorkflowViewReference
@@ -34,7 +35,10 @@ def main(argv: list[str] | None = None) -> int:
     lines = read_hdfc_csv(args.csv)
     start, end = min(line.date for line in lines), max(line.date for line in lines)
     if args.saved:
-        snapshot = json.loads(args.saved.read_text(encoding="utf-8"))
+        raw_snapshot = json.loads(args.saved.read_text(encoding="utf-8"))
+        if not isinstance(raw_snapshot, dict):
+            raise ValueError("Saved snapshot must be a JSON object")
+        snapshot: dict[str, Any] = raw_snapshot
         expected = {"schema_version": 1, "workspace_id": args.workspace_id, "view_id": args.view_id,
                     "account_id": args.account_id, "start": start.isoformat(), "end": end.isoformat()}
         if any(snapshot.get(key) != value for key, value in expected.items()):
@@ -42,12 +46,15 @@ def main(argv: list[str] | None = None) -> int:
     else:
         catalog_dir = args.catalog_dir or ROOT / "workspace_metadata" / args.workspace_id
         reference = WorkflowViewReference("bank_statement_check", "", "src/workflows/bank_statements/checker.py", view_id=args.view_id)
-        catalog = AnalyticsCatalog(None, args.workspace_id, catalog_dir, references=(reference,))
+        client = get_analytics_client()
+        catalog = AnalyticsCatalog(client, args.workspace_id, catalog_dir, references=(reference,))
         # Check cached design before retrieving credentials or making remote reads.
         catalog.analyze(args.view_id)
-        snapshot = fetch_statement_snapshot(get_analytics_client(), catalog=catalog,
-            account_id=args.account_id, start=start, end=end, view_id=args.view_id)
-    books = parse_analytics_lines(snapshot["rows"], account_id=args.account_id, start=start, end=end)
+        snapshot = dict(fetch_statement_snapshot(client, catalog=catalog,
+            account_id=args.account_id, start=start, end=end, view_id=args.view_id))
+    raw_rows = snapshot.get("rows")
+    rows = [dict(r) for r in raw_rows if isinstance(r, dict)] if isinstance(raw_rows, list) else []
+    books = parse_analytics_lines(rows, account_id=args.account_id, start=start, end=end)
     report = compare_statement_lines(lines, books, account_id=args.account_id)
     output.mkdir(parents=True, exist_ok=True)
     write_atomic_json(output / "sources.json", snapshot)
@@ -71,8 +78,8 @@ def main(argv: list[str] | None = None) -> int:
                                  line.reference, line.description, item.status])
     md = ["# HDFC statement completeness", "",
           f"Account ID: {args.account_id}; Analytics view: {args.view_id}",
-          f"Period: {start} through {end}", f"Data captured (UTC): {snapshot['captured_at']}",
-          f"Last successful metadata sync (UTC): {snapshot['last_successful_metadata_sync_at']}", "",
+          f"Period: {start} through {end}", f"Data captured (UTC): {snapshot.get('captured_at')}",
+          f"Last successful metadata sync (UTC): {snapshot.get('last_successful_metadata_sync_at')}", "",
           f"CSV lines: {report.csv_count}; Books statement lines: {report.books_count}",
           f"Unmatched Books statement lines: {len(report.unmatched_books_ids)} (IDs recorded in comparison.json)",
           f"Matched: {counts['matched']}; Probable masked cheques: {counts['probable']}; Missing: {counts['missing']}; Duplicate shortages: {counts['duplicate_shortfall']}; Review: {counts['review']}", "",

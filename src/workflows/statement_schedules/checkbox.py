@@ -1,15 +1,14 @@
 """Refresh comparison formulas without replacing reviewed source inputs."""
 from collections.abc import Mapping, Sequence
-from typing import Any
 
 from .workflow import qualified
 
 
 def checkbox_formula_updates(
-    rows: Sequence[Sequence[Any]], *, sheet: str,
+    rows: Sequence[Sequence[object]], *, sheet: str,
     periods: Sequence[Mapping[str, str]], sheets: Mapping[str, str],
-    mappings: Sequence[Mapping[str, Any]] = (),
-) -> dict[str, list[list[Any]]]:
+    mappings: Sequence[Mapping[str, object]] = (),
+) -> dict[str, list[list[object]]]:
     """Build formulas for existing A:K checks, retaining custom combined lookups."""
     ordered = sorted(periods, key=lambda p: p['end'], reverse=True)
     years = {p['start'][:4] + '–' + p['end'][2:4]: i for i, p in enumerate(ordered)}
@@ -23,12 +22,12 @@ def checkbox_formula_updates(
                 or len(set(labels)) != len(labels) or identity in configured):
             raise ValueError('Invalid or duplicate checkbox mapping')
         configured[identity] = labels
-    result: dict[str, list[list[Any]]] = {}
+    result: dict[str, list[list[object]]] = {}
     for number, source in enumerate(rows, 1):
         row = list(source) + [''] * (11 - len(source))
-        if row[0] not in years or not row[3]:
+        if str(row[0]) not in years or not row[3]:
             continue
-        index = years[row[0]]
+        index = years[str(row[0])]
         if index > 1:
             raise ValueError('Checkbox supports two financial years')
         section = row[2]
@@ -63,13 +62,13 @@ def checkbox_formula_updates(
             f'IF(NOT(ISNUMBER(H{number})),"Missing / duplicate",IF(I{number}=0,"Match","Review"))))']]
     # Keep Google read URLs bounded even when hundreds of checks are present.
     if len(result) > 100:
-        combined: dict[str, list[list[Any]]] = {}
+        combined: dict[str, list[list[object]]] = {}
         for column in 'GHIK':
             cells = sorted((int(address.rsplit('!', 1)[1][1:]), values)
                            for address, values in result.items()
                            if address.rsplit('!', 1)[1].startswith(column))
             start = previous = 0
-            block: list[list[Any]] = []
+            block: list[list[object]] = []
             for number, values in cells:
                 if block and number != previous + 1:
                     combined[qualified(sheet, f'{column}{start}:{column}{previous}')] = block

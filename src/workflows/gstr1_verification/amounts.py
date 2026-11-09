@@ -1,7 +1,7 @@
 """Books document GST amounts and decimal-safe summaries."""
 from decimal import Decimal
 from collections.abc import Mapping, Sequence
-from typing import Any, TypedDict
+from typing import TypedDict
 
 
 class GSTAmounts(TypedDict):
@@ -15,20 +15,24 @@ class GSTAmounts(TypedDict):
 KEYS = ('total_taxable', 'igst', 'cgst', 'sgst', 'total')
 
 
-def document_amounts(record: Mapping[str, Any]) -> GSTAmounts:
+def document_amounts(record: Mapping[str, object]) -> GSTAmounts:
     """Read authoritative document amounts; reject absent or unsupported taxes."""
-    def amount(value: Any) -> Decimal:
+    def amount(value: object) -> Decimal:
         result = Decimal(str(value))
         if not result.is_finite():
             raise ValueError('Non-finite document amount')
         return result
 
-    values = dict.fromkeys(KEYS, Decimal(0))
+    values: dict[str, Decimal] = {key: Decimal(0) for key in KEYS}
     values['total_taxable'] = amount(record['total_taxable_amount'])
     values['total'] = amount(record['total'])
-    for tax in record['taxes']:
-        name = str(tax.get('tax_specific_type') or tax.get('tax_name') or '').lower()
-        value = amount(tax['tax_amount'])
+    raw_taxes = record.get('taxes')
+    taxes = raw_taxes if isinstance(raw_taxes, Sequence) else []
+    for tax_obj in taxes:
+        if not isinstance(tax_obj, Mapping):
+            continue
+        name = str(tax_obj.get('tax_specific_type') or tax_obj.get('tax_name') or '').lower()
+        value = amount(tax_obj.get('tax_amount', 0))
         kind = next((key for key in ('igst', 'cgst', 'sgst') if key in name), None)
         if kind is None:
             if value:
@@ -37,20 +41,26 @@ def document_amounts(record: Mapping[str, Any]) -> GSTAmounts:
             values[kind] += value
     if abs(sum(values[key] for key in ('igst', 'cgst', 'sgst')) - amount(record['tax_total'])) > Decimal('0.01'):
         raise ValueError('GST components do not reconcile to tax_total')
-    return {key: float(value) for key, value in values.items()}
+    return {
+        'total_taxable': float(values['total_taxable']),
+        'igst': float(values['igst']),
+        'cgst': float(values['cgst']),
+        'sgst': float(values['sgst']),
+        'total': float(values['total']),
+    }
 
 
-def summarize_amounts(invoices: Sequence[Mapping[str, Any]], credit_notes: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def summarize_amounts(invoices: Sequence[Mapping[str, object]], credit_notes: Sequence[Mapping[str, object]]) -> dict[str, object]:
     """Sum active invoices and credits separately, then subtract credits."""
     complete = True
-    totals = {}
+    totals: dict[str, dict[str, Decimal]] = {}
     for kind, records in (('invoices', invoices), ('credit_notes', credit_notes)):
-        values = dict.fromkeys(KEYS, Decimal(0))
+        values: dict[str, Decimal] = {key: Decimal(0) for key in KEYS}
         for record in records:
             if str(record.get('status', '')).strip().lower() in ('void', 'draft'):
                 continue
             amounts = record.get('gst_amounts')
-            if amounts is None:
+            if not isinstance(amounts, Mapping):
                 complete = False
                 continue
             for key in KEYS:

@@ -169,11 +169,14 @@ def build_stock_count(
     subgroup_orders: dict[tuple[str, str], int] = {}
     # Explicit layout ranks apply to the whole group, including inferred rows.
     for placement in layout.values():
-        for key, rank, ranks in ((placement.group, placement.group_order, group_orders),
-                                 ((placement.group, placement.subgroup), placement.subgroup_order, subgroup_orders)):
-            if key in ranks and ranks[key] != rank:
-                raise ValueError(f"Conflicting layout orders for {key!r}.")
-            ranks[key] = rank
+        if placement.group in group_orders and group_orders[placement.group] != placement.group_order:
+            raise ValueError(f"Conflicting layout orders for {placement.group!r}.")
+        group_orders[placement.group] = placement.group_order
+
+        subgroup_key = (placement.group, placement.subgroup)
+        if subgroup_key in subgroup_orders and subgroup_orders[subgroup_key] != placement.subgroup_order:
+            raise ValueError(f"Conflicting layout orders for {subgroup_key!r}.")
+        subgroup_orders[subgroup_key] = placement.subgroup_order
     for item in items:
         item_id = to_text(item.get("item_id"))
         if not item_id or item_id in seen:

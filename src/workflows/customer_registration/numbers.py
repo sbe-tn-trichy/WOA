@@ -1,9 +1,14 @@
 """Targeted customer-number backfill for existing Books-linked Creator records."""
 from dataclasses import dataclass
+from typing import Any
 
 from zoho.books import ZohoBooksAPI
 from zoho.creator import ZohoCreatorAPI
 from workflows.runtime.exceptions import ReconciliationError
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
 
 
 @dataclass(frozen=True)
@@ -56,8 +61,9 @@ def sync_customer_numbers(
         row = matches[0]
         if "Customer_no" not in row:
             raise ReconciliationError("Creator report must expose Customer_no.")
-        response = books_client.contacts.get(contact_id)
-        contact = response.get("contact", {})
+        raw_resp = books_client.contacts.get(contact_id)
+        response = _as_dict(raw_resp)
+        contact = _as_dict(response.get("contact"))
         if response.get("code") != 0 or str(contact.get("contact_id")) != contact_id or contact.get("contact_type") != "customer":
             raise ReconciliationError(f"Books customer {contact_id} could not be verified.")
         number = contact.get("contact_number")
@@ -78,19 +84,26 @@ def sync_customer_numbers(
     updated = 0
     if not dry_run:
         for change in changes:
-            response = creator_client.update_records(
+            raw_upd = creator_client.update_records(
                 app_link_name, report_link_name, record_id=change.creator_record_id,
                 payload={"data": {"Customer_no": change.books_number}, "skip_workflow": ["all"]},
             )
-            results = response.get("result", [])
-            if response.get("code") != 3000 or any(result.get("code", 3000) != 3000 for result in results):
+            response = _as_dict(raw_upd)
+            raw_res = response.get("result", [])
+            results = raw_res if isinstance(raw_res, list) else []
+            if response.get("code") != 3000 or any(_as_dict(result).get("code", 3000) != 3000 for result in results):
                 raise ReconciliationError(f"Creator update was not confirmed for {change.creator_record_id}.")
-            saved = creator_client.get_records(
+            raw_saved = creator_client.get_records(
                 app_link_name, report_link_name,
                 params={"criteria": "ID == " + change.creator_record_id, "field_config": "all"},
             )
-            records = saved.get("data", [])
-            if saved.get("code") != 3000 or len(records) != 1 or str(records[0].get("Customer_Id")) != change.books_contact_id or records[0].get("Customer_no") != change.books_number:
+            saved = _as_dict(raw_saved)
+            raw_recs = saved.get("data", [])
+            records = raw_recs if isinstance(raw_recs, list) else []
+            if saved.get("code") != 3000 or len(records) != 1:
+                raise ReconciliationError(f"Creator number read-back failed for {change.creator_record_id}.")
+            first_rec = _as_dict(records[0])
+            if str(first_rec.get("Customer_Id")) != change.books_contact_id or first_rec.get("Customer_no") != change.books_number:
                 raise ReconciliationError(f"Creator number read-back failed for {change.creator_record_id}.")
             updated += 1
     return CustomerNumberSyncResult(dry_run, changes, unchanged, updated)

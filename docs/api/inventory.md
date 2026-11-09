@@ -47,13 +47,13 @@ Main Zoho Inventory API Client linking all modules together.
 ##### `ZohoInventoryAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, organization_id: str, domain: str = 'in', on_request_completed: Any | None = None, token_refresh_callback: Any | None = None)
+def __init__(self, access_token: str, organization_id: str, domain: str = 'in', on_request_completed: Callable[..., None] | None = None, token_refresh_callback: Callable[..., str] | None = None)
 ```
 
 ##### `ZohoInventoryAPI.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, files: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
+def request(self, method: str, endpoint: str, json: Mapping[str, object] | Sequence[object] | None = None, data: Mapping[str, object] | str | bytes | None = None, params: Mapping[str, object] | None = None, headers: Mapping[str, str] | None = None, files: Mapping[str, object] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> object
 ```
 
 Internal HTTP request handler with logging.
@@ -74,8 +74,16 @@ Base class for Zoho Inventory modules providing standard CRUD operations.
 
 | Attribute | Type | Default Value | Notes |
 |---|---|---|---|
-| `error_class` | `type[ZohoInventoryError]` | `ZohoInventoryError` | - |
-| `logger_name` | `str` | `'zoho.inventory.api'` | - |
+| `logger_name` | `ClassVar[str]` | `'zoho.inventory.api'` | - |
+
+#### Methods
+
+##### `BaseResource.error_class`
+
+```python
+@property
+def error_class(self) -> type[ZohoInventoryError]
+```
 
 ---
 
@@ -107,13 +115,13 @@ Resource class for Zoho Inventory Items operations.
 ##### `Items.__init__`
 
 ```python
-def __init__(self, client: Any)
+def __init__(self, client: BaseZohoClient) -> None
 ```
 
 ##### `Items.mark_as_active`
 
 ```python
-def mark_as_active(self, item_id: str) -> dict[str, Any]
+def mark_as_active(self, item_id: str) -> object
 ```
 
 Activate an Inventory item.
@@ -121,7 +129,7 @@ Activate an Inventory item.
 ##### `Items.mark_as_inactive`
 
 ```python
-def mark_as_inactive(self, item_id: str) -> dict[str, Any]
+def mark_as_inactive(self, item_id: str) -> object
 ```
 
 Deactivate an Inventory item.
@@ -129,7 +137,7 @@ Deactivate an Inventory item.
 ##### `Items.get_details`
 
 ```python
-def get_details(self, item_ids: list[str], batch_size: int = 50) -> list[dict[str, Any]]
+def get_details(self, item_ids: Sequence[str], batch_size: int = 50) -> list[dict[str, object]]
 ```
 
 Bulk-fetch complete items through GET /itemdetails; require every ID.
@@ -137,7 +145,7 @@ Bulk-fetch complete items through GET /itemdetails; require every ID.
 ##### `Items.list_bins`
 
 ```python
-def list_bins(self, item_id: str, location_id: str) -> list[dict[str, Any]]
+def list_bins(self, item_id: str, location_id: str) -> list[dict[str, object]]
 ```
 
 Read item-specific bin balances at one location.
@@ -145,7 +153,7 @@ Read item-specific bin balances at one location.
 ##### `Items.group_items`
 
 ```python
-def group_items(self, data: dict[str, Any]) -> dict[str, Any]
+def group_items(self, data: Mapping[str, object]) -> object
 ```
 
 Group existing items under a new item group.
@@ -153,19 +161,19 @@ Group existing items under a new item group.
 ##### `Items.list_by_status`
 
 ```python
-def list_by_status(self, status: str = 'active') -> list[dict[str, Any]]
+def list_by_status(self, status: str = 'active') -> list[dict[str, object]]
 ```
 
 ##### `Items.list_by_purchase_account`
 
 ```python
-def list_by_purchase_account(self, account_id: str, status: str = 'all') -> list[dict[str, Any]]
+def list_by_purchase_account(self, account_id: str, status: str = 'all') -> list[dict[str, object]]
 ```
 
 ##### `Items.mark_inactive_bulk`
 
 ```python
-def mark_inactive_bulk(self, item_ids: list[str], batch_size: int = 200) -> list[dict[str, Any]]
+def mark_inactive_bulk(self, item_ids: Sequence[str], batch_size: int = 200) -> list[dict[str, object]]
 ```
 
 ---
@@ -198,13 +206,13 @@ Resource class for Zoho Inventory Item Groups operations.
 ##### `ItemGroups.__init__`
 
 ```python
-def __init__(self, client: Any)
+def __init__(self, client: BaseZohoClient) -> None
 ```
 
 ##### `ItemGroups.mark_as_active`
 
 ```python
-def mark_as_active(self, itemgroup_id: str) -> dict[str, Any]
+def mark_as_active(self, itemgroup_id: str) -> object
 ```
 
 Mark an item group status as active.
@@ -212,7 +220,7 @@ Mark an item group status as active.
 ##### `ItemGroups.mark_as_inactive`
 
 ```python
-def mark_as_inactive(self, itemgroup_id: str) -> dict[str, Any]
+def mark_as_inactive(self, itemgroup_id: str) -> object
 ```
 
 Mark an item group status as inactive.
@@ -247,7 +255,7 @@ Resource class for Zoho Inventory Adjustments operations.
 ##### `InventoryAdjustments.__init__`
 
 ```python
-def __init__(self, client: Any)
+def __init__(self, client: BaseZohoClient) -> None
 ```
 
 ---
@@ -280,13 +288,13 @@ Resource class for Zoho Inventory Move Orders operations.
 ##### `MoveOrders.__init__`
 
 ```python
-def __init__(self, client: Any)
+def __init__(self, client: BaseZohoClient) -> None
 ```
 
 ##### `MoveOrders.mark_as_confirmed`
 
 ```python
-def mark_as_confirmed(self, move_order_id: str) -> dict[str, Any]
+def mark_as_confirmed(self, move_order_id: str) -> object
 ```
 
 Mark a move order status as confirmed.
@@ -294,7 +302,7 @@ Mark a move order status as confirmed.
 ##### `MoveOrders.mark_as_in_progress`
 
 ```python
-def mark_as_in_progress(self, move_order_id: str) -> dict[str, Any]
+def mark_as_in_progress(self, move_order_id: str) -> object
 ```
 
 Mark a move order status as in progress.
@@ -302,7 +310,7 @@ Mark a move order status as in progress.
 ##### `MoveOrders.mark_as_completed`
 
 ```python
-def mark_as_completed(self, move_order_id: str) -> dict[str, Any]
+def mark_as_completed(self, move_order_id: str) -> object
 ```
 
 Mark a move order status as completed.
@@ -337,13 +345,13 @@ Resource class for Zoho Inventory Transfer Orders operations.
 ##### `TransferOrders.__init__`
 
 ```python
-def __init__(self, client: Any)
+def __init__(self, client: BaseZohoClient) -> None
 ```
 
 ##### `TransferOrders.mark_as_in_transit`
 
 ```python
-def mark_as_in_transit(self, transfer_order_id: str) -> dict[str, Any]
+def mark_as_in_transit(self, transfer_order_id: str) -> object
 ```
 
 Mark a transfer order as in-transit.
@@ -351,7 +359,7 @@ Mark a transfer order as in-transit.
 ##### `TransferOrders.mark_as_received`
 
 ```python
-def mark_as_received(self, transfer_order_id: str) -> dict[str, Any]
+def mark_as_received(self, transfer_order_id: str) -> object
 ```
 
 Mark a transfer order as received.
@@ -359,7 +367,7 @@ Mark a transfer order as received.
 ##### `TransferOrders.submit_for_approval`
 
 ```python
-def submit_for_approval(self, transfer_order_id: str) -> dict[str, Any]
+def submit_for_approval(self, transfer_order_id: str) -> object
 ```
 
 Submit a transfer order for approval.
@@ -367,7 +375,7 @@ Submit a transfer order for approval.
 ##### `TransferOrders.approve`
 
 ```python
-def approve(self, transfer_order_id: str) -> dict[str, Any]
+def approve(self, transfer_order_id: str) -> object
 ```
 
 Approve a transfer order.
@@ -375,7 +383,7 @@ Approve a transfer order.
 ##### `TransferOrders.reject`
 
 ```python
-def reject(self, transfer_order_id: str) -> dict[str, Any]
+def reject(self, transfer_order_id: str) -> object
 ```
 
 Reject a transfer order.
@@ -410,7 +418,7 @@ Resource class for Zoho Inventory Packages operations.
 ##### `Packages.__init__`
 
 ```python
-def __init__(self, client: Any)
+def __init__(self, client: BaseZohoClient) -> None
 ```
 
 ---
@@ -443,13 +451,13 @@ Resource class for Zoho Inventory Shipment Orders operations.
 ##### `Shipments.__init__`
 
 ```python
-def __init__(self, client: Any)
+def __init__(self, client: BaseZohoClient) -> None
 ```
 
 ##### `Shipments.mark_as_delivered`
 
 ```python
-def mark_as_delivered(self, shipment_id: str) -> dict[str, Any]
+def mark_as_delivered(self, shipment_id: str) -> object
 ```
 
 Mark a shipment order status as delivered.
@@ -484,13 +492,13 @@ Resource class for Zoho Inventory Picklists operations.
 ##### `Picklists.__init__`
 
 ```python
-def __init__(self, client: Any)
+def __init__(self, client: BaseZohoClient) -> None
 ```
 
 ##### `Picklists.mark_status`
 
 ```python
-def mark_status(self, picklist_id: str, status: str) -> dict[str, Any]
+def mark_status(self, picklist_id: str, status: str) -> object
 ```
 
 Update the status of a picklist.
@@ -525,7 +533,7 @@ Resource class for Zoho Inventory Bins operations.
 ##### `Bins.__init__`
 
 ```python
-def __init__(self, client: Any)
+def __init__(self, client: BaseZohoClient) -> None
 ```
 
 ---
@@ -558,13 +566,13 @@ Resource class for Zoho Inventory Batches operations.
 ##### `Batches.__init__`
 
 ```python
-def __init__(self, client: Any)
+def __init__(self, client: BaseZohoClient) -> None
 ```
 
 ##### `Batches.mark_as_active`
 
 ```python
-def mark_as_active(self, batch_id: str) -> dict[str, Any]
+def mark_as_active(self, batch_id: str) -> object
 ```
 
 Mark a batch as active.
@@ -572,7 +580,7 @@ Mark a batch as active.
 ##### `Batches.mark_as_inactive`
 
 ```python
-def mark_as_inactive(self, batch_id: str) -> dict[str, Any]
+def mark_as_inactive(self, batch_id: str) -> object
 ```
 
 Mark a batch as inactive.

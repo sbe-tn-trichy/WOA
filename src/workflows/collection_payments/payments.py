@@ -1,9 +1,9 @@
 """Shared Books customer-payment payload fields for Creator collections."""
+from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
 from collections.abc import Mapping, Sequence
-from typing import Any
 
 from workflows.runtime.exceptions import ReconciliationError
 
@@ -18,15 +18,15 @@ def customer_payment_payload(
     description: str,
     account_id: str,
     creator_record_id: str,
-    creator_payment_id: Any = None,
-    invoices: Sequence[Mapping[str, Any]] | None = None,
-) -> dict[str, Any]:
+    creator_payment_id: object = None,
+    invoices: Sequence[Mapping[str, object]] | None = None,
+) -> dict[str, object]:
     if not payment_date or amount is None:
         raise ReconciliationError("A valid payment date and amount are required.")
-    custom_fields = [{"label": "Creator Record ID", "value": creator_record_id}]
+    custom_fields: list[dict[str, object]] = [{"label": "Creator Record ID", "value": creator_record_id}]
     if creator_payment_id not in (None, ""):
         custom_fields.append({"label": "Creator Payment ID", "value": creator_payment_id})
-    payload: dict[str, Any] = {
+    payload: dict[str, object] = {
         "customer_id": customer_id,
         "payment_mode": payment_mode,
         "date": payment_date.isoformat(),

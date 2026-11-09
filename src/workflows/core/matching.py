@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import logging
 import re
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any
+from typing import TypedDict
 
 from workflows.runtime.config import Config
 
@@ -54,7 +56,7 @@ def parse_currency_amount(value: object, *, currency: str = "INR") -> Decimal:
     return Decimal(str(value).replace(currency, "").replace(",", "").strip())
 
 
-def references_intersect(left: Sequence[Any], right: Sequence[Any]) -> bool:
+def references_intersect(left: Sequence[object], right: Sequence[object]) -> bool:
     """Compare nonempty references after stripping and lowercasing only."""
     left_refs = {str(value or "").strip().lower() for value in left} - {""}
     right_refs = {str(value or "").strip().lower() for value in right} - {""}
@@ -86,10 +88,11 @@ def parse_date(date_str: object) -> date | None:
         return None
 
 
-def get_abs_amount(tx: dict[str, Any]) -> float:
+def get_abs_amount(tx: Mapping[str, object]) -> float:
     """Extract absolute amount from a bank transaction dict."""
     try:
-        return abs(float(tx.get("amount", 0.0)))
+        val = tx.get("amount", 0.0)
+        return abs(float(str(val)))
     except (ValueError, TypeError):
         return 0.0
 
@@ -113,22 +116,33 @@ def get_bank_reference(tx: Mapping[str, object], bank_account_id: str) -> object
     return tx.get("reference_number") or tx.get("reference") or tx.get("cheque_number")
 
 
-def ref_match(ref1: Any, ref2: Any) -> bool:
+def ref_match(ref1: object, ref2: object) -> bool:
     """Compare two reference numbers case-insensitively and stripped of whitespace."""
     r1 = str(ref1 or "").strip().lower()
     r2 = str(ref2 or "").strip().lower()
     return bool(r1 and r2 and r1 == r2)
 
 
+class ReconciledRows(TypedDict):
+    exact_matches: list[tuple[object, object]]
+    strong_matches: list[tuple[object, object]]
+    weak_matches: list[tuple[object, object]]
+    ambiguous_matches: list[dict[str, object]]
+    matched_left_indices: set[int]
+    matched_right_indices: set[int]
+    ambiguous_left_indices: set[int]
+    ambiguous_right_indices: set[int]
+
+
 def reconcile_rows(
-    left_rows: Sequence[dict[str, Any]],
-    right_rows: Sequence[dict[str, Any]],
+    left_rows: Sequence[Mapping[str, object]],
+    right_rows: Sequence[Mapping[str, object]],
     *,
-    reference_matches: Callable[[dict[str, Any], dict[str, Any]], bool],
+    reference_matches: Callable[[Mapping[str, object], Mapping[str, object]], bool],
     date_tolerance_days: int,
-    reference_conflicts: Callable[[dict[str, Any], dict[str, Any]], bool] | None = None,
-    amount_tolerance: Any = Decimal("0"),
-) -> dict[str, Any]:
+    reference_conflicts: Callable[[Mapping[str, object], Mapping[str, object]], bool] | None = None,
+    amount_tolerance: object = Decimal("0"),
+) -> ReconciledRows:
     """Conservatively reconcile parsed rows without relying on external IDs.
 
     Each row must contain ``date``, ``amount``, and ``raw``. A match is accepted
@@ -147,14 +161,12 @@ def reconcile_rows(
     matched_right: set[int] = set()
     ambiguous_left: set[int] = set()
     ambiguous_right: set[int] = set()
-    result: dict[str, Any] = {
-        "exact_matches": [],
-        "strong_matches": [],
-        "weak_matches": [],
-        "ambiguous_matches": [],
-    }
+    exact_matches: list[tuple[object, object]] = []
+    strong_matches: list[tuple[object, object]] = []
+    weak_matches: list[tuple[object, object]] = []
+    ambiguous_matches: list[dict[str, object]] = []
 
-    def eligible_amount(row: dict[str, Any]) -> Decimal | None:
+    def eligible_amount(row: Mapping[str, object]) -> Decimal | None:
         amount = to_decimal(row.get("amount"))
         return abs(amount) if amount is not None else None
 
@@ -163,16 +175,22 @@ def reconcile_rows(
         for left_index, left_row in enumerate(left):
             if left_index in matched_left or left_index in ambiguous_left:
                 continue
-            left_date = left_row.get("date")
+            raw_left_date = left_row.get("date")
+            if not isinstance(raw_left_date, (date, datetime)):
+                continue
+            left_date = raw_left_date.date() if isinstance(raw_left_date, datetime) else raw_left_date
             left_amount = eligible_amount(left_row)
-            if left_date is None or left_amount is None:
+            if left_amount is None:
                 continue
             for right_index, right_row in enumerate(right):
                 if right_index in matched_right or right_index in ambiguous_right:
                     continue
-                right_date = right_row.get("date")
+                raw_right_date = right_row.get("date")
+                if not isinstance(raw_right_date, (date, datetime)):
+                    continue
+                right_date = raw_right_date.date() if isinstance(raw_right_date, datetime) else raw_right_date
                 right_amount = eligible_amount(right_row)
-                if right_date is None or right_amount is None:
+                if right_amount is None:
                     continue
                 if abs((left_date - right_date).days) > date_tolerance_days:
                     continue
@@ -193,11 +211,13 @@ def reconcile_rows(
                     candidates.setdefault(left_index, []).append(right_index)
         return candidates
 
-    for pass_name, result_key in (
-        ("exact", "exact_matches"),
-        ("strong", "strong_matches"),
-        ("weak", "weak_matches"),
-    ):
+    pass_buckets = [
+        ("exact", exact_matches),
+        ("strong", strong_matches),
+        ("weak", weak_matches),
+    ]
+
+    for pass_name, target_list in pass_buckets:
         if pass_name == "weak" and tolerance == 0:
             continue
         candidates = candidates_for(pass_name)
@@ -212,7 +232,7 @@ def reconcile_rows(
             and len(right_to_left.get(right_indexes[0], [])) == 1
         ]
         for left_index, right_index in accepted:
-            result[result_key].append(
+            target_list.append(
                 (left[left_index]["raw"], right[right_index]["raw"])
             )
             matched_left.add(left_index)
@@ -229,7 +249,7 @@ def reconcile_rows(
                 continue
             ambiguous_left.add(left_index)
             ambiguous_right.update(remaining)
-            result["ambiguous_matches"].append(
+            ambiguous_matches.append(
                 {
                     "pass": pass_name,
                     "left": left[left_index]["raw"],
@@ -237,10 +257,13 @@ def reconcile_rows(
                 }
             )
 
-    result.update(
-        matched_left_indices=matched_left,
-        matched_right_indices=matched_right,
-        ambiguous_left_indices=ambiguous_left,
-        ambiguous_right_indices=ambiguous_right,
-    )
-    return result
+    return {
+        "exact_matches": exact_matches,
+        "strong_matches": strong_matches,
+        "weak_matches": weak_matches,
+        "ambiguous_matches": ambiguous_matches,
+        "matched_left_indices": matched_left,
+        "matched_right_indices": matched_right,
+        "ambiguous_left_indices": ambiguous_left,
+        "ambiguous_right_indices": ambiguous_right,
+    }

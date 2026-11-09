@@ -12,7 +12,7 @@ from .references import (
     parse_reference_lines,
     update_reference_lines,
 )
-from .sequences import parse_doc_number
+from utils.general_utils.sequences import parse_doc_number
 
 __all__ = [
     "parse_date",

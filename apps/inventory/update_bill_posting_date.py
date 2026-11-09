@@ -2,13 +2,14 @@
 """Preview or update one Zoho Books bill's transaction posting date."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.purchasing.bill_updates import update_bill_transaction_posting_date
 from workflows.runtime.auth import get_books_client

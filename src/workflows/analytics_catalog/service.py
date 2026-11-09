@@ -1,13 +1,17 @@
 """Cached SQLite analysis with explicit manual metadata synchronization."""
+from __future__ import annotations
 
-from utils.file_utils import json
 from contextlib import contextmanager
 from pathlib import Path
-from collections.abc import Iterator, Sequence
-from typing import Any, TypedDict
+from collections.abc import Generator, Mapping, Sequence
+from typing import TYPE_CHECKING, TypedDict
 
+from utils.file_utils import json
 from zoho.analytics import WorkspaceMetadataStore, WorkflowViewUsage
 from .registry import DEFAULT_REFERENCES, WorkflowViewReference
+
+if TYPE_CHECKING:
+    from zoho.analytics import ZohoAnalyticsAPI
 
 
 class MetadataSyncError(RuntimeError):
@@ -20,8 +24,23 @@ class RegistryIssue(TypedDict):
     reason: str
 
 
+class AnalyticsSyncInfo(TypedDict, total=False):
+    last_successful_sync_at: str | None
+    complete: bool
+    counts: Mapping[str, int]
+
+
+class AnalyticsCatalogAnalysis(TypedDict, total=False):
+    sync: AnalyticsSyncInfo
+    last_successful_sync_at: str | None
+    source: str
+    views: list[dict[str, object]]
+    query_tables: list[dict[str, object]]
+    workflow_impact: list[dict[str, object]]
+
+
 class AnalyticsCatalog:
-    def __init__(self, analytics: Any, workspace_id: str,
+    def __init__(self, analytics: ZohoAnalyticsAPI | None, workspace_id: str,
                  output_dir: Path | None = None,
                  references: Sequence[WorkflowViewReference] = DEFAULT_REFERENCES):
         self.analytics = analytics
@@ -29,10 +48,12 @@ class AnalyticsCatalog:
         self.output_dir = output_dir or Path("output/analytics_metadata") / workspace_id
         self.references = tuple(references)
 
-    def sync(self) -> dict[str, Any]:
+    def sync(self) -> dict[str, object]:
         """Refresh remote metadata and replace the project registry atomically."""
+        if self.analytics is None:
+            raise ValueError("Analytics client is required to sync workspace")
         try:
-            result = self.analytics.metadata.sync_workspace(self.workspace_id, self.output_dir)
+            result: dict[str, object] = dict(self.analytics.metadata.sync_workspace(self.workspace_id, self.output_dir))
         except Exception as exc:
             raise MetadataSyncError(f"Metadata sync failed: {exc}; last successful sync: {self._last_sync()}") from exc
         if not result.get("complete"):
@@ -58,7 +79,7 @@ class AnalyticsCatalog:
                 if not ref.view_id:
                     continue
             rows.append({"workflow_key": ref.workflow_key,
-                         "view_id": ref.view_id or matches[0]["view_id"],
+                         "view_id": str(ref.view_id or matches[0]["view_id"]),
                          "usage_type": ref.usage_type, "source_file": ref.source_file, "notes": ref.notes})
         # Runtime registrations override defaults for the same consumer identity.
         store.replace_workflow_usage(list({
@@ -75,7 +96,7 @@ class AnalyticsCatalog:
             return store.get_info("last_successful_sync_at", "never") or "never"
 
     @contextmanager
-    def cached_store(self) -> Iterator[WorkspaceMetadataStore]:
+    def cached_store(self) -> Generator[WorkspaceMetadataStore, None, None]:
         """Read the existing catalog without remote requests or implicit creation."""
         path = self.output_dir / "metadata.sqlite"
         if not path.is_file():
@@ -88,15 +109,15 @@ class AnalyticsCatalog:
             yield store
 
     @contextmanager
-    def synchronized_store(self) -> Iterator[WorkspaceMetadataStore]:
+    def synchronized_store(self) -> Generator[WorkspaceMetadataStore, None, None]:
         """Explicit opt-in refresh followed by catalog access."""
         self.sync()
         with WorkspaceMetadataStore(self.output_dir / "metadata.sqlite", self.workspace_id) as store:
             yield store
 
-    def analyze(self, view_id: str | None = None) -> dict[str, Any]:
+    def analyze(self, view_id: str | None = None) -> AnalyticsCatalogAnalysis:
         with self.cached_store() as store:
-            sync = {"last_successful_sync_at": store.get_info("last_successful_sync_at"),
+            sync: AnalyticsSyncInfo = {"last_successful_sync_at": store.get_info("last_successful_sync_at"),
                     "complete": store.get_info("complete") == "True", "counts": store.counts()}
             views = [dict(r) for r in store.connection.execute(
                 "SELECT view_id, name, view_type, used_by_workflows FROM views_with_workflows ORDER BY name")]
@@ -104,12 +125,17 @@ class AnalyticsCatalog:
                 views = [v for v in views if v["view_id"] == view_id]
                 if not views:
                     raise ValueError(f"Unknown view: {view_id}")
-            return {"sync": sync, "last_successful_sync_at": sync["last_successful_sync_at"], "source": "cached_sqlite", "views": views,
-                    "query_tables": [store.get_query_table(v["view_id"]) for v in views if v["view_type"].lower() in {"querytable", "query table"}],
-                    "workflow_impact": store.workflow_impact(view_id) if view_id else []}
+            res: AnalyticsCatalogAnalysis = {
+                "sync": sync, "last_successful_sync_at": sync.get("last_successful_sync_at"), "source": "cached_sqlite", "views": views,
+                "query_tables": [store.get_query_table(str(v["view_id"])) for v in views if str(v["view_type"]).lower() in {"querytable", "query table"}],
+                "workflow_impact": store.workflow_impact(view_id) if view_id else []
+            }
+            return res
 
     def verify_query_update(self, view_id: str, expected_sql: str) -> None:
         """Force read-back even if Zoho's inventory timestamp has not advanced."""
+        if self.analytics is None:
+            raise MetadataSyncError(f"Cannot verify saved query table {view_id}: Analytics client is not configured.")
         try:
             definition = self.analytics.metadata.get_query_table(self.workspace_id, view_id)
         except Exception as exc:

@@ -2,17 +2,19 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from decimal import Decimal
 from utils.file_utils import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from utils.file_utils import yaml
 
 from workflows.runtime.auth import get_books_client
 from workflows.statement_schedules import (
+    ScheduleConfig, ScheduleSources,
     apply_plan, build_schedule_plan, cell_data, changed_update_requests,
     checkbox_formula_updates, fetch_schedule_sources, grid_address,
     note_bold_requests, update_requests,
@@ -22,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "config/statement-schedules.yaml"
 
 
-def asset_statement_preview(values: dict[str, list[list[Any]]], config: dict[str, Any]) -> list[str]:
+def asset_statement_preview(values: Mapping[str, Sequence[Sequence[Any]]], config: Mapping[str, Any]) -> list[str]:
     """Show reviewed A:I output with calculated totals, without a Sheets write."""
     if config.get("asset_layout") != "reviewed_statement":
         return []
@@ -60,7 +62,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=ROOT / "output/statement-schedules")
     parser.add_argument("--apply", action="store_true", help="Apply the verified plan to Google Sheets")
     args = parser.parse_args(argv)
-    config = yaml.safe_load(args.config.read_text(encoding="utf-8-sig"))
+    raw_config = yaml.safe_load(args.config.read_text(encoding="utf-8-sig"))
+    config: dict[str, Any] = raw_config if isinstance(raw_config, dict) else {}
     output = args.output.resolve()
     inputs = [args.config.resolve()] + ([args.saved.resolve()] if args.saved else [])
     if any(path == output or output in path.parents for path in inputs):
@@ -68,13 +71,14 @@ def main(argv: list[str] | None = None) -> int:
     output.mkdir(parents=True, exist_ok=True)
     if args.apply and not os.environ.get("GOOGLE_SHEETS_ACCESS_TOKEN"):
         parser.error("Set GOOGLE_SHEETS_ACCESS_TOKEN with spreadsheet edit scope before --apply")
-    sources = (json.loads(args.saved.read_text(encoding="utf-8")) if args.saved else fetch_schedule_sources(
+    raw_sources = (json.loads(args.saved.read_text(encoding="utf-8")) if args.saved else fetch_schedule_sources(
         get_books_client(), periods=config["periods"], excluded_location_id=config["excluded_location_id"],
         include_opening_inventory=bool(config.get("inventory_rollforward"))))
-    if sources.get("organization_id") != str(config["organization_id"]):
+    sources: ScheduleSources = cast(ScheduleSources, raw_sources if isinstance(raw_sources, dict) else {})
+    if sources.get("organization_id") != str(config.get("organization_id")):
         raise ValueError("Books organization does not match configuration")
     (output / "sources.json").write_text(json.dumps(sources, indent=2), encoding="utf-8")
-    plan = build_schedule_plan(sources, config)
+    plan = build_schedule_plan(sources, cast(ScheduleConfig, config))
     (output / "plan.json").write_text(json.dumps(asdict(plan), indent=2, default=str), encoding="utf-8")
     lines = ["# Financial statement schedule preview", "", "Two separate annual Schedule III reads per report; accrual basis; configured branch excluded.",
              "", "Source captured at: " + str(sources.get("captured_at", "not recorded in imported snapshot")),
@@ -97,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
     (output / "preview.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     if args.apply:
         config["backup_path"] = str(output / "sheet-before.json")
-        apply_plan(config["spreadsheet_id"], plan.values, access_token=os.environ["GOOGLE_SHEETS_ACCESS_TOKEN"], config=config)
+        apply_plan(str(config["spreadsheet_id"]), plan.values, access_token=os.environ["GOOGLE_SHEETS_ACCESS_TOKEN"], config=config)
         print("Google Sheets update verified by read-back")
     print(f"Preview: {output / 'preview.md'}")
     return 0

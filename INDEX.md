@@ -838,7 +838,7 @@ Log output during tests goes to `tests/logs/`. Set `TESTING=true` or run under p
 
 ## Workflow helper migration
 
-- `helpers.formatting.sequences.parse_doc_number`: shared lower-layer number parsing.
+- `utils.general_utils.sequences.parse_doc_number`: shared lower-layer number parsing.
 - `workflows.core.dates` and `workflows.core.sequences`: pure FY selection and bounded series analysis.
 - `workflows.customer_payments.inspection`: injected Analytics queries and payment summaries.
 - `workflows.payment_renumbering`: live-checked planning and checkpointed execution.

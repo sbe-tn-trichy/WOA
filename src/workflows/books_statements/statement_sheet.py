@@ -5,11 +5,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Protocol
 
 from helpers import fetch_equity_general_ledger
 
 from workflows.core.matching import to_finite_decimal
+
+
+from helpers.reports.equity_ledger import BooksEquityClient
+
+
+class BooksReportsRequestProtocol(Protocol):
+    def request(self, method: str, endpoint: str, *, params: Mapping[str, object] | None = None) -> object: ...
+
+
+class BooksEquityStatementClient(BooksEquityClient, BooksReportsRequestProtocol, Protocol):
+    pass
 
 
 @dataclass(frozen=True)
@@ -43,8 +54,8 @@ class EquityMapping:
     closing_cell: str
 
 
-def _value_at(payload: Mapping[str, Any], path: Sequence[str]) -> Decimal:
-    value: Any = payload
+def _value_at(payload: Mapping[str, object], path: Sequence[str]) -> Decimal:
+    value: object = payload
     for part in path:
         if isinstance(value, Mapping) and part in value:
             value = value[part]
@@ -61,10 +72,10 @@ def _value_at(payload: Mapping[str, Any], path: Sequence[str]) -> Decimal:
     return result
 
 
-def _account_total(payload: Mapping[str, Any], report: str, account_ids: Sequence[str]) -> Decimal:
+def _account_total(payload: Mapping[str, object], report: str, account_ids: Sequence[str]) -> Decimal:
     found: dict[str, Decimal] = {}
 
-    def visit(nodes: Any) -> None:
+    def visit(nodes: object) -> None:
         if not isinstance(nodes, list):
             return
         for node in nodes:
@@ -85,7 +96,7 @@ def _account_total(payload: Mapping[str, Any], report: str, account_ids: Sequenc
 
 
 def prepare_updates(
-    books: Any,
+    books: BooksReportsRequestProtocol,
     periods: StatementPeriod,
     mappings: Sequence[StatementMapping],
     location_ids: Sequence[str] = (),
@@ -96,7 +107,7 @@ def prepare_updates(
     Paths name scalar fields in the Books JSON response; ambiguous account names
     must be resolved to exact report paths in the mapping before running.
     """
-    reports: dict[tuple[str, str, str], Mapping[str, Any]] = {}
+    reports: dict[tuple[str, str, str], Mapping[str, object]] = {}
     updates: dict[str, Decimal] = {}
     for mapping in mappings:
         if not mapping.report or not mapping.sheet or not (mapping.source_path or mapping.account_ids):
@@ -111,7 +122,7 @@ def prepare_updates(
         ):
             key = (mapping.report, start, end)
             if key not in reports:
-                params = {
+                params: dict[str, object] = {
                     "filter_by": "TransactionDate.CustomDate",
                     "from_date": start,
                     "to_date": end,
@@ -123,7 +134,8 @@ def prepare_updates(
                 response = books.request("GET", f"reports/{mapping.report}", params=params)
                 if not isinstance(response, Mapping) or response.get("code") != 0:
                     raise ValueError(f"Books {mapping.report} failed for {start} to {end}")
-                context = response.get("page_context") or {}
+                raw_context = response.get("page_context")
+                context = raw_context if isinstance(raw_context, Mapping) else {}
                 if context.get("to_date") != end or context.get("filter_by") != "TransactionDate.CustomDate" or (
                     mapping.report == "profitandloss" and context.get("from_date") != start
                 ) or context.get("cash_based") != "false":
@@ -139,7 +151,7 @@ def prepare_updates(
 
 
 def prepare_equity_updates(
-    books: Any,
+    books: BooksEquityStatementClient,
     periods: StatementPeriod,
     mappings: Sequence[EquityMapping],
     *,

@@ -1,16 +1,17 @@
 """Export reviewable payment location proposals from the all-bank-account Analytics QT."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
 from collections import Counter
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_analytics_client
 from workflows.runtime.config import Config
@@ -19,8 +20,8 @@ from workflows.inter_location.payment_proposals import allocation_summary_query,
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workspace-id", default="264324000000002043")
-    parser.add_argument("--view-id", default="264324000008274019")
+    parser.add_argument("--workspace-id", default=Config.ANALYTICS_WORKSPACE_ID)
+    parser.add_argument("--view-id", default=Config.INTER_LOCATION_CONTRA_VIEW_ID)
     parser.add_argument("--output", type=Path, default=Path("output/inter_location_payment_proposals.json"))
     parser.add_argument("--markdown", type=Path, default=Path("output/inter_location_payment_proposals.md"))
     args = parser.parse_args()

@@ -2,19 +2,22 @@
 """Compare the filed FY 2024-25 balance sheet with Zoho Books."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
+from collections.abc import Mapping, Sequence
 from utils.file_utils import json
 import os
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 from utils.http_utils import http_transport
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
 from workflows.books_statements.it_balance_sheet_comparison import BalanceSheetLine, compare_balance_sheet, write_comparison_csv
@@ -22,18 +25,20 @@ from workflows.books_statements.it_balance_sheet_comparison import BalanceSheetL
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def _load_filed_cells(config: dict, snapshot_path: Path, live_sheet: bool) -> dict:
+def _load_filed_cells(config: dict[str, Any], snapshot_path: Path, live_sheet: bool) -> dict[str, Any]:
     if not live_sheet:
-        snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        raw_snap = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        snapshot: dict[str, Any] = raw_snap if isinstance(raw_snap, dict) else {}
         for key in ("spreadsheet_id", "sheet_name", "as_of_date"):
             if snapshot.get(key) != config[key]:
                 raise ValueError(f"Filed snapshot {key} does not match mapping")
-        return snapshot["cells"]
+        raw_cells = snapshot.get("cells")
+        return raw_cells if isinstance(raw_cells, dict) else {}
     token = os.environ.get("GOOGLE_SHEETS_ACCESS_TOKEN")
     if not token:
         raise ValueError("Set GOOGLE_SHEETS_ACCESS_TOKEN to read the live filed sheet")
     cells = [item["filed_cell"] for item in config["lines"]]
-    sheet = config["sheet_name"].replace("'", "''")
+    sheet = str(config["sheet_name"]).replace("'", "''")
     ranges = [f"'{sheet}'!{cell}" for cell in cells]
     response = http_transport.get(
         f"https://sheets.googleapis.com/v4/spreadsheets/{config['spreadsheet_id']}/values:batchGet",
@@ -42,7 +47,10 @@ def _load_filed_cells(config: dict, snapshot_path: Path, live_sheet: bool) -> di
         timeout=30,
     )
     response.raise_for_status()
-    entries = response.json().get("valueRanges", [])
+    raw_body = response.json()
+    body = raw_body if isinstance(raw_body, dict) else {}
+    raw_entries = body.get("valueRanges")
+    entries = raw_entries if isinstance(raw_entries, list) else []
     if len(entries) != len(cells):
         raise ValueError("Google Sheets did not return every filed cell")
     return {cell: entry["values"][0][0] for cell, entry in zip(cells, entries)}
@@ -56,7 +64,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=REPO_ROOT / "output/it_balance_sheet_fy2425_vs_books.csv")
     parser.add_argument("--tolerance", type=Decimal, default=Decimal("1.00"))
     args = parser.parse_args(argv)
-    config = json.loads(args.mapping.read_text(encoding="utf-8"))
+    raw_config = json.loads(args.mapping.read_text(encoding="utf-8"))
+    config: dict[str, Any] = raw_config if isinstance(raw_config, dict) else {}
     lines = [BalanceSheetLine(
         label=item["label"], filed_cell=item["filed_cell"],
         account_ids=tuple(item.get("account_ids", ())),
@@ -68,12 +77,16 @@ def main(argv: list[str] | None = None) -> int:
              "value": [config["excluded_location_id"]], "comparator": "not_in", "group": "branch"}],
             "criteria_string": "1"}
     as_of_date = config["as_of_date"]
-    report = get_books_client().request("GET", "reports/balancesheet", params={
+    raw_report = get_books_client().request("GET", "reports/balancesheet", params={
         "filter_by": "TransactionDate.CustomDate", "from_date": f"{int(as_of_date[:4])-1}-04-01",
         "to_date": as_of_date, "cash_based": "false", "show_rows": "all",
         "is_expand": "true", "rule": json.dumps(rule),
     })
-    applied = report.get("page_context", {}).get("rule", {})
+    report: dict[str, Any] = raw_report if isinstance(raw_report, dict) else {}
+    raw_ctx = report.get("page_context")
+    ctx = raw_ctx if isinstance(raw_ctx, dict) else {}
+    raw_rule = ctx.get("rule")
+    applied = raw_rule if isinstance(raw_rule, dict) else {}
     if (applied.get("criteria_string") != "1"
             or len(applied.get("columns", [])) != 1
             or any(applied["columns"][0].get(key) != rule["columns"][0][key]

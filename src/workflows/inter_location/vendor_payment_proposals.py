@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
 
 from workflows.core.payments import payment_series_params, payment_series_records, payment_number_suffix
@@ -36,7 +36,7 @@ def _last_suffix(books: Any, prefix: str) -> int:
 
 
 def propose_vendor_payment_moves(
-    books: Any, proposals: list[Mapping[str, Any]],
+    books: Any, proposals: Sequence[Mapping[str, Any]],
 ) -> tuple[list[VendorPaymentMove], list[dict[str, str]]]:
     """Preflight each FY25-26 vendor proposal and assign the next number per series."""
     candidates = sorted((p for p in proposals if p.get("status") == "proposed"

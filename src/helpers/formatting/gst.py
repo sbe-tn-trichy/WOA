@@ -8,29 +8,28 @@ except ImportError:
     import re
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
-from typing import Any
 
 GSTIN_PATTERN = re.compile(
     r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$"
 )
 
 
-def normalize_gstin(value: Any) -> str:
+def normalize_gstin(value: object) -> str:
     """Normalize a GSTIN by removing non-alphanumeric characters and converting to uppercase."""
     return re.sub(r"[^0-9A-Z]", "", str(value or "").upper())
 
 
-def is_valid_gstin(value: Any) -> bool:
+def is_valid_gstin(value: object) -> bool:
     """Check whether a value is a valid 15-character Indian GSTIN."""
     cleaned = normalize_gstin(value)
     return bool(GSTIN_PATTERN.match(cleaned))
 
 
 def group_contacts_by_gstin(
-    contacts: Iterable[Mapping[str, Any]],
-) -> dict[str, list[Mapping[str, Any]]]:
+    contacts: Iterable[Mapping[str, object]],
+) -> dict[str, list[Mapping[str, object]]]:
     """Group contact records by their normalized valid GSTIN."""
-    grouped: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    grouped: dict[str, list[Mapping[str, object]]] = defaultdict(list)
     for contact in contacts:
         raw_gst = contact.get("gst_no") or contact.get("gstin")
         if not raw_gst:

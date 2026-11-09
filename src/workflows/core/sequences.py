@@ -5,7 +5,7 @@ from datetime import date
 from collections.abc import Mapping, Sequence
 from typing import TypedDict
 
-from helpers.formatting.sequences import parse_doc_number
+from utils.general_utils.sequences import parse_doc_number
 from .matching import parse_date
 
 

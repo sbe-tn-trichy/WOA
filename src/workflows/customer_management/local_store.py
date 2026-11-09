@@ -6,6 +6,7 @@ import sqlite3
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from collections.abc import Mapping
 from typing import Any
 
 from .table import _expand_constants, capture_table_edits, materialize_customers
@@ -132,7 +133,10 @@ def sync_customers(db: sqlite3.Connection, books: Any, *, request_delay: float =
 
 def stage_mobile_plan(db: sqlite3.Connection, plan_path: Path) -> dict[str, int]:
     """Atomically stage the previously reviewed phone moves from detail backups."""
-    plan = json.loads(plan_path.read_text())
+    raw_plan = json.loads(plan_path.read_text())
+    if not isinstance(raw_plan, dict):
+        raise ValueError('Plan must be a JSON object')
+    plan: dict[str, Any] = raw_plan
     if not plan['summary']['complete'] or plan['review'] or plan['failures']:
         raise ValueError('Preparation plan is incomplete or contains unresolved records')
     with db:
@@ -152,8 +156,12 @@ def stage_mobile_plan(db: sqlite3.Connection, plan_path: Path) -> dict[str, int]
                 raise ValueError(f'Cloud modification time changed for {cid}; review again')
             snapshot = Path(entry['before_file'])
             raw = json.loads(snapshot.read_text())
+            if not isinstance(raw, dict):
+                raise ValueError(f'Invalid snapshot JSON for {cid}')
             detail = raw.get('contact', raw)
             cloud = json.loads(row['cloud_json'])
+            if not isinstance(cloud, dict):
+                raise ValueError(f'Invalid cloud JSON for {cid}')
             phone = detail.get('phone', '')
             if (detail.get('contact_id') != cid or not phone or detail.get('mobile')
                 or cloud.get('phone') != phone or cloud.get('mobile')
@@ -230,13 +238,16 @@ def stage_creator_beats_locally(db: sqlite3.Connection, rows: list[dict[str, Any
                 unchanged += 1
                 continue
             snapshot = db.execute('SELECT * FROM customer_snapshots WHERE contact_id=?', (cid,)).fetchone()
-            cloud_beat = str(get_custom_field_value(json.loads(snapshot['cloud_json']), 'cf_beat') or '').strip()
+            raw_cloud = json.loads(snapshot['cloud_json'])
+            cloud_dict = raw_cloud if isinstance(raw_cloud, Mapping) else {}
+            cloud_beat = str(get_custom_field_value(cloud_dict, 'cf_beat') or '').strip()
             item = {'contact_id': cid, 'creator_id': creator_id, 'customer': row['contact_name'],
                     'before': current, 'creator_beat': beat}
             if snapshot['conflict'] or current != cloud_beat:
                 preserved.append(item)
                 continue
-            fields = json.loads(row['custom_fields'] or '[]')
+            raw_fields = json.loads(row['custom_fields'] or '[]')
+            fields: list[dict[str, Any]] = [dict(f) for f in raw_fields if isinstance(f, Mapping)] if isinstance(raw_fields, list) else []
             matches = [f for f in fields if f.get('api_name') == 'cf_beat']
             if len(matches) > 1:
                 raise ValueError(f'Duplicate Beat custom fields for {cid}')
@@ -244,7 +255,8 @@ def stage_creator_beats_locally(db: sqlite3.Connection, rows: list[dict[str, Any
                 matches = [{'api_name': 'cf_beat'}]
                 fields.extend(matches)
             matches[0]['value'] = matches[0]['value_formatted'] = beat
-            field_hash = json.loads(row['custom_field_hash'] or '{}')
+            raw_hash = json.loads(row['custom_field_hash'] or '{}')
+            field_hash: dict[str, Any] = dict(raw_hash) if isinstance(raw_hash, Mapping) else {}
             for key in ('cf_beat', 'cf_beat_formatted', 'cf_beat_unformatted'):
                 field_hash[key] = beat
             db.execute('''UPDATE customers SET cf_beat=?,cf_beat_formatted=?,cf_beat_unformatted=?,

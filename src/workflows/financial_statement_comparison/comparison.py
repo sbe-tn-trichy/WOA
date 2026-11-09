@@ -4,8 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
-from collections.abc import Mapping, Sequence
-from typing import Any
+from collections.abc import Iterator, Mapping, Sequence
+from typing import Protocol
 from utils.file_utils import json
 import re
 
@@ -15,6 +15,22 @@ from utils.http_utils.http import request_json
 from workflows.core.matching import to_finite_decimal
 
 KEYS = {"profitandloss": "schedule_profit_and_loss", "balancesheet": "schedule_balance_sheet"}
+
+
+class ScheduleReportsResource(Protocol):
+    def profit_and_loss_schedule_format(
+        self, *, from_date: str, to_date: str, rule: str,
+        cash_based: bool = False,
+    ) -> Mapping[str, object]: ...
+    def balance_sheet_schedule_format(
+        self, *, from_date: str, to_date: str, rule: str,
+        cash_based: bool = False,
+    ) -> Mapping[str, object]: ...
+
+
+class BooksScheduleClient(Protocol):
+    @property
+    def reports(self) -> ScheduleReportsResource: ...
 
 
 @dataclass(frozen=True)
@@ -28,9 +44,9 @@ class ComparisonLine:
     source: str
 
 
-def fetch_schedule_reports(books: Any, *, from_date: str, to_date: str,
+def fetch_schedule_reports(books: BooksScheduleClient, *, from_date: str, to_date: str,
                            excluded_location_id: str,
-                           include_opening_balance_sheet: bool = False) -> dict[str, Mapping[str, Any]]:
+                           include_opening_balance_sheet: bool = False) -> dict[str, Mapping[str, object]]:
     """Read each schedule once with a verified branch exclusion and explicit FY."""
     if date.fromisoformat(from_date) > date.fromisoformat(to_date):
         raise ValueError("Invalid date range")
@@ -39,9 +55,10 @@ def fetch_schedule_reports(books: Any, *, from_date: str, to_date: str,
     rule = json.dumps({"columns": [{"index": 1, "field": "location_name",
         "value": [excluded_location_id], "comparator": "not_in", "group": "branch"}],
         "criteria_string": "1"})
-    params = dict(from_date=from_date, to_date=to_date, rule=rule)
-    reports = {"profitandloss": books.reports.profit_and_loss_schedule_format(**params),
-               "balancesheet": books.reports.balance_sheet_schedule_format(**params)}
+    reports: dict[str, Mapping[str, object]] = {
+        "profitandloss": books.reports.profit_and_loss_schedule_format(from_date=from_date, to_date=to_date, rule=rule),
+        "balancesheet": books.reports.balance_sheet_schedule_format(from_date=from_date, to_date=to_date, rule=rule),
+    }
     if include_opening_balance_sheet:
         opening_date = (date.fromisoformat(from_date) - timedelta(days=1)).isoformat()
         reports["balancesheet-opening"] = books.reports.balance_sheet_schedule_format(
@@ -50,7 +67,7 @@ def fetch_schedule_reports(books: Any, *, from_date: str, to_date: str,
 
 
 def read_sheet_cells(spreadsheet_id: str, cells: Sequence[str], *, access_token: str,
-                     session: Any = http_transport) -> dict[str, Any]:
+                     session: object = http_transport) -> dict[str, object]:
     """Read exact qualified A1 cells using the caller's Google OAuth token."""
     if not re.fullmatch(r"[A-Za-z0-9_-]+", spreadsheet_id) or not access_token:
         raise ValueError("A spreadsheet ID and Google OAuth token are required")
@@ -62,35 +79,43 @@ def read_sheet_cells(spreadsheet_id: str, cells: Sequence[str], *, access_token:
         params={"ranges": list(cells), "valueRenderOption": "UNFORMATTED_VALUE"},
         timeout=30,
     )
-    ranges = payload.get("valueRanges", [])
+    if not isinstance(payload, Mapping):
+        raise ValueError("Invalid response payload from Google Sheets")
+    ranges_val = payload.get("valueRanges")
+    ranges = ranges_val if isinstance(ranges_val, list) else []
     if len(ranges) != len(cells):
         raise ValueError("Google Sheets did not return every requested cell")
-    result = {}
+    result: dict[str, object] = {}
     for cell, entry in zip(cells, ranges):
+        if not isinstance(entry, Mapping):
+            raise ValueError(f"Missing or invalid entry for cell: {cell}")
         values = entry.get("values")
-        if not values or len(values) != 1 or len(values[0]) != 1:
+        if not isinstance(values, list) or len(values) != 1 or not isinstance(values[0], list) or len(values[0]) != 1:
             raise ValueError(f"Missing or non-scalar sheet cell: {cell}")
         result[cell] = values[0][0]
     return result
 
 
-def _amount(value: Any) -> Decimal:
+def _amount(value: object) -> Decimal:
     amount = to_finite_decimal(value, allow_commas=True)
     if amount is None:
         raise ValueError(f"Invalid financial amount: {value!r}")
     return amount
 
 
-def _nodes(nodes: Sequence[Mapping[str, Any]], path: tuple[str, ...] = ()):
+def _nodes(nodes: Sequence[Mapping[str, object]], path: tuple[str, ...] = ()) -> Iterator[tuple[Mapping[str, object], tuple[str, ...]]]:
     for node in nodes:
-        current = path + (node["name"],)
+        current = path + (str(node.get("name", "")),)
         if not node.get("section"):
             yield node, current
-        yield from _nodes(node.get("account_transactions", []), current)
+        txs = node.get("account_transactions", [])
+        if isinstance(txs, Sequence):
+            seq = [t for t in txs if isinstance(t, Mapping)]
+            yield from _nodes(seq, current)
 
 
-def compare_statement_cells(cells: Mapping[str, Any], reports: Mapping[str, Mapping[str, Any]],
-                            mappings: Sequence[Mapping[str, Any]], *,
+def compare_statement_cells(cells: Mapping[str, object], reports: Mapping[str, Mapping[str, object]],
+                            mappings: Sequence[Mapping[str, object]], *,
                             tolerance: Decimal = Decimal("1")) -> list[ComparisonLine]:
     """Compare every mapped cell; unknown sources remain visible as UNMAPPED.
 
@@ -101,32 +126,42 @@ def compare_statement_cells(cells: Mapping[str, Any], reports: Mapping[str, Mapp
     tolerance = _amount(tolerance)
     if tolerance < 0:
         raise ValueError("Tolerance must be non-negative")
-    rows = []
-    seen = set()
+    rows: list[ComparisonLine] = []
+    seen: set[str] = set()
     for mapping in mappings:
-        cell = mapping["cell"]
+        cell = str(mapping["cell"])
         if cell in seen:
             raise ValueError(f"Duplicate source cell: {cell}")
         seen.add(cell)
         filed = _amount(cells[cell])
-        terms = mapping.get("terms", [])
+        raw_terms = mapping.get("terms")
+        terms: list[Mapping[str, object]] = [t for t in raw_terms if isinstance(t, Mapping)] if isinstance(raw_terms, Sequence) else []
         if mapping.get("remaining_expense_path"):
             if terms:
                 raise ValueError("Remaining expense mapping cannot also specify terms")
-            scope = tuple(mapping["remaining_expense_path"])
-            candidates = list(_nodes(reports["profitandloss"][KEYS["profitandloss"]]))
+            rem_path = mapping.get("remaining_expense_path")
+            scope = tuple(str(x) for x in rem_path) if isinstance(rem_path, Sequence) else ()
+            pnl_report = reports["profitandloss"]
+            pnl_tree = pnl_report.get(KEYS["profitandloss"], [])
+            pnl_seq = [n for n in pnl_tree if isinstance(n, Mapping)] if isinstance(pnl_tree, Sequence) else []
+            candidates = list(_nodes(pnl_seq))
             if sum(path == scope for _, path in candidates) != 1:
                 raise ValueError("Remaining expense scope must identify one schedule section")
-            assigned = [term for other in mappings if other is not mapping
-                        for term in other.get("terms", []) if term["report"] == "profitandloss"]
+            assigned: list[Mapping[str, object]] = []
+            for other in mappings:
+                if other is mapping:
+                    continue
+                o_terms = other.get("terms")
+                if isinstance(o_terms, Sequence):
+                    assigned.extend(t for t in o_terms if isinstance(t, Mapping) and t.get("report") == "profitandloss")
             terms = []
-            account_ids = set()
+            account_ids: set[str] = set()
             for node, path in candidates:
                 if path[:len(scope)] != scope or not node.get("account_id"):
                     continue
-                if any(("name" in term and node["name"] == term["name"]) or
-                       ("account_id" in term and str(node["account_id"]) == term["account_id"]) or
-                       ("path" in term and path[:len(term["path"])] == tuple(term["path"]))
+                if any(("name" in term and node.get("name") == term["name"]) or
+                       ("account_id" in term and str(node.get("account_id")) == str(term["account_id"])) or
+                       ("path" in term and isinstance(term["path"], Sequence) and path[:len(term["path"])] == tuple(str(x) for x in term["path"]))
                        for term in assigned):
                     continue
                 account_id = str(node["account_id"])
@@ -135,25 +170,33 @@ def compare_statement_cells(cells: Mapping[str, Any], reports: Mapping[str, Mapp
                 account_ids.add(account_id)
                 terms.append({"report": "profitandloss", "account_id": account_id})
         total = Decimal()
-        sources = []
-        missing = []
+        sources: list[str] = []
+        missing: list[str] = []
         for term in terms:
+            if not isinstance(term, Mapping):
+                continue
             if sum(key in term for key in ("path", "account_id", "name")) != 1:
                 raise ValueError("A Books term needs exactly one path, account_id or name")
-            period = term.get("period", "current")
-            if period not in ("current", "opening") or (period == "opening" and term["report"] != "balancesheet"):
+            period = str(term.get("period", "current"))
+            if period not in ("current", "opening") or (period == "opening" and term.get("report") != "balancesheet"):
                 raise ValueError("Opening-period terms require a balance-sheet source")
-            report = reports[term["report"] + ("-opening" if period == "opening" else "")]
-            candidates = list(_nodes(report[KEYS[term["report"]]]))
+            report_key = str(term["report"]) + ("-opening" if period == "opening" else "")
+            report = reports[report_key]
+            rep_tree = report.get(KEYS[str(term["report"])], [])
+            rep_seq = [n for n in rep_tree if isinstance(n, Mapping)] if isinstance(rep_tree, Sequence) else []
+            candidates = list(_nodes(rep_seq))
             matches = [node for node, path in candidates if
-                (path == tuple(term["path"]) if "path" in term else
-                 str(node.get("account_id", "")) == term["account_id"] if "account_id" in term else
-                 node["name"] == term["name"])]
-            source = str(term.get("account_id") or term.get("name") or " / ".join(term.get("path", [])))
+                (path == tuple(str(x) for x in term["path"]) if "path" in term and isinstance(term["path"], Sequence) else
+                 str(node.get("account_id", "")) == str(term["account_id"]) if "account_id" in term else
+                 node.get("name") == term["name"])]
+            term_path = term.get("path")
+            path_str = " / ".join(str(x) for x in term_path) if isinstance(term_path, Sequence) else ""
+            source = str(term.get("account_id") or term.get("name") or path_str)
             if mapping.get("remaining_expense_path") and len(matches) == 1:
-                source = matches[0]["name"] + " (" + f"{_amount(matches[0]['total']):,.2f}" + ")"
-            if term["report"] == "balancesheet" and report.get("page_context", {}).get("to_date"):
-                source += " (as of " + report["page_context"]["to_date"] + ")"
+                source = str(matches[0].get("name", "")) + " (" + f"{_amount(matches[0].get('total')):,.2f}" + ")"
+            page_ctx = report.get("page_context")
+            if term.get("report") == "balancesheet" and isinstance(page_ctx, Mapping) and page_ctx.get("to_date"):
+                source += " (as of " + str(page_ctx["to_date"]) + ")"
             if not matches:
                 missing.append(source)
                 continue
@@ -161,27 +204,33 @@ def compare_statement_cells(cells: Mapping[str, Any], reports: Mapping[str, Mapp
                 raise ValueError(f"Ambiguous Books source: {source}")
             node = matches[0]
             field = "total_sub_account" if term.get("include_children") and node.get("is_child_present") else "total"
-            total += _amount(node[field]) * _amount(term.get("multiplier", 1))
+            total += _amount(node.get(field)) * _amount(term.get("multiplier", 1))
             sources.append(source)
         mapped = bool(terms) and not missing
         if mapping.get("note"):
-            sources.append(mapping["note"])
+            sources.append(str(mapping["note"]))
         difference = total - filed if mapped else None
-        status = "MATCH" if mapped and abs(difference) <= tolerance else "DIFFERENCE" if mapped else "UNMAPPED"
-        rows.append(ComparisonLine(mapping["label"], cell, filed, total if mapped else None,
-            difference, status, "; ".join(sources + ["Missing: " + x for x in missing]) or
-            mapping.get("note", "Needs reviewed ledger mapping")))
+        status = "MATCH" if mapped and difference is not None and abs(difference) <= tolerance else "DIFFERENCE" if mapped else "UNMAPPED"
+        label_val = str(mapping.get("label", ""))
+        note_fallback = str(mapping.get("note", "Needs reviewed ledger mapping"))
+        source_val = "; ".join(sources + ["Missing: " + x for x in missing]) or note_fallback
+        rows.append(ComparisonLine(label_val, cell, filed, total if mapped else None,
+            difference, status, source_val))
     return rows
 
 
-def validate_statement_totals(cells: Mapping[str, Any], groups: Sequence[Mapping[str, Any]]) -> None:
+def validate_statement_totals(cells: Mapping[str, object], groups: Sequence[Mapping[str, object]]) -> None:
     """Verify source line sums, and require the two sides of each statement to balance."""
     totals: dict[str, list[Decimal]] = {}
     for group in groups:
-        actual = _amount(cells[group["total_cell"]])
-        if abs(sum((_amount(cells[cell]) for cell in group["cells"]), Decimal()) - actual) > Decimal("0.01"):
+        total_cell = str(group["total_cell"])
+        actual = _amount(cells[total_cell])
+        group_cells = group.get("cells")
+        cell_seq = [str(c) for c in group_cells] if isinstance(group_cells, Sequence) else []
+        if abs(sum((_amount(cells[c]) for c in cell_seq), Decimal()) - actual) > Decimal("0.01"):
             raise ValueError(f"Sheet line sum does not agree with {group['total_cell']}")
-        totals.setdefault(group["statement"], []).append(actual)
+        statement = str(group["statement"])
+        totals.setdefault(statement, []).append(actual)
     for statement, amounts in totals.items():
         if len(amounts) != 2 or abs(amounts[0] - amounts[1]) > Decimal("0.01"):
             raise ValueError(f"Sheet {statement} does not balance")
@@ -190,7 +239,7 @@ def validate_statement_totals(cells: Mapping[str, Any], groups: Sequence[Mapping
 def render_comparison(rows: Sequence[ComparisonLine], *, source_url: str,
                       from_date: str, to_date: str, provenance: str) -> str:
     """Render amounts and qualifications without changing either source."""
-    def escaped(value: Any) -> str:
+    def escaped(value: object) -> str:
         return str(value).replace("|", "\\|").replace("\n", " ")
     def mismatch_group(row: ComparisonLine) -> str:
         # The source workbook has liabilities in B and assets in D.

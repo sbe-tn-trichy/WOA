@@ -1,19 +1,24 @@
 """Recheck every FY 2025-26 payment proposal against current Zoho Books."""
 
 from __future__ import annotations
+import importlib
 
 from utils.file_utils import json
 from collections import Counter
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
+from workflows.runtime.config import Config
+from helpers.operations.transactions import unwrap_record
 
 
 SOURCE = Path("output/inter_location_payment_proposals.json")
@@ -21,30 +26,35 @@ MARKDOWN = Path("output/inter_location_payment_proposals.md")
 AUDIT = Path("output/inter_location_payment_proposals_books_recheck.json")
 
 
+def _get_entity(res: object, key: str) -> dict[str, Any]:
+    raw = res if isinstance(res, Mapping) else {}
+    return unwrap_record(raw, key)
+
+
 def _amount(value: object) -> Decimal:
     return Decimal(str(value).replace("INR", "").replace(",", "").strip())
 
 
-def recheck(books: object, proposals: list[dict]) -> tuple[list[dict], list[dict]]:
+def recheck(books: Any, proposals: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Return outstanding proposals and a Books observation for each source row."""
-    remaining: list[dict] = []
-    audit: list[dict] = []
+    remaining: list[dict[str, Any]] = []
+    audit: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
     for proposal in proposals:
-        kind = proposal["payment_type"]
+        kind = str(proposal["payment_type"])
         payment_id = str(proposal["payment_id"])
         key = (kind, payment_id)
         if key in seen:
             raise ValueError(f"Duplicate payment proposal: {kind} {payment_id}")
         seen.add(key)
         if kind == "Customer Payment":
-            payload = books.customer_payments.get(payment_id)["payment"]
+            payload = _get_entity(books.customer_payments.get(payment_id), "payment")
             account_key = "account_id"
-            expected_date = datetime.strptime(proposal["date"], "%d/%m/%Y").date().isoformat()
+            expected_date = datetime.strptime(str(proposal["date"]), "%d/%m/%Y").date().isoformat()
         elif kind == "Vendor Payment":
-            payload = books.vendor_payments.get(payment_id)["vendorpayment"]
+            payload = _get_entity(books.vendor_payments.get(payment_id), "vendorpayment")
             account_key = "paid_through_account_id"
-            expected_date = datetime.strptime(proposal["date"], "%d/%m/%Y").date().isoformat()
+            expected_date = datetime.strptime(str(proposal["date"]), "%d/%m/%Y").date().isoformat()
         else:
             raise ValueError(f"Unsupported payment type: {kind}")
         if str(payload.get("payment_id")) != payment_id:
@@ -76,21 +86,23 @@ def recheck(books: object, proposals: list[dict]) -> tuple[list[dict], list[dict
                       "target_location_id": target_location,
                       "current_number": str(payload.get("payment_number") or "")})
         if state != "already_updated":
+            prop_dict = dict(proposal)
             if state != "outstanding":
-                proposal = dict(proposal)
-                proposal["status"] = "manual_review"
-                proposal["reason"] = f"Books recheck: {state}; inspect current payment"
-            remaining.append(proposal)
+                prop_dict["status"] = "manual_review"
+                prop_dict["reason"] = f"Books recheck: {state}; inspect current payment"
+            remaining.append(prop_dict)
     return remaining, audit
 
 
 def main() -> int:
-    report = json.loads(SOURCE.read_text(encoding="utf-8"))
+    raw_report = json.loads(SOURCE.read_text(encoding="utf-8"))
+    report = raw_report if isinstance(raw_report, dict) else {}
     if (report.get("view_id"), report.get("financial_year")) != (
-        "264324000008274019", "FY 2025-26"
+        Config.INTER_LOCATION_CONTRA_VIEW_ID, "FY 2025-26"
     ):
         raise ValueError("Unexpected proposal source or financial year")
-    source = report["proposals"]
+    raw_source = report.get("proposals")
+    source = [p for p in raw_source if isinstance(p, Mapping)] if isinstance(raw_source, Sequence) else []
     remaining, observations = recheck(get_books_client(), source)
     counts = Counter(p["status"] for p in remaining)
     states = Counter(item["state"] for item in observations)
@@ -99,11 +111,11 @@ def main() -> int:
     report["status_counts"] = dict(counts)
     report["books_rechecked_at_utc"] = datetime.now(timezone.utc).isoformat()
     report["already_updated_removed"] = states["already_updated"]
-    audit = {"view_id": report["view_id"], "financial_year": report["financial_year"],
+    audit = {"view_id": report.get("view_id"), "financial_year": report.get("financial_year"),
              "checked_count": len(observations), "state_counts": dict(states),
              "observations": observations}
     lines = ["# FY 2025–26 inter-location payment location proposals", "",
-             f"Source: Analytics Query Table {report['view_id']}. Books checked: {len(observations)}; "
+             f"Source: Analytics Query Table {report.get('view_id')}. Books checked: {len(observations)}; "
              f"already updated and removed: {states['already_updated']}; remaining: {len(remaining)}.", "",
              "Verify current Books payment, document, and destination number-series state before applying a move.", "",
              "| Status | Bank account | Payment type | Payment ID | Date | Amount | From | To | Number prefix | Documents | Reason |",

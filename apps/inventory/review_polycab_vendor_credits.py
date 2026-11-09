@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Audit Polycab PDFs and preview/apply selected RMA credit corrections."""
 from __future__ import annotations
+import importlib
 
 import argparse
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
 from workflows.core.checkpoint import write_atomic_json

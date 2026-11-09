@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Import one Polycab RSO PDF into Zoho Books as a sales order."""
 
+import importlib
 import argparse
 from utils.file_utils import json
 import sys
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:  # Direct script execution.
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows import get_books_client, import_polycab_rso_pdf
 from workflows.runtime.config import Config

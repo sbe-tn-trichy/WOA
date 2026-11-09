@@ -1,18 +1,23 @@
 """Apply the current FY 2025-26 vendor-payment proposals after full preflight."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import cast
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
+from workflows.runtime.config import Config
+from workflows.inter_location.vendor_payment_proposals import VendorPaymentMove
 from workflows.inter_location.vendor_payment_updates import preflight_vendor_moves, submit_vendor_move, verify_vendor_batch
 
 
@@ -25,15 +30,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
-    proposal = json.loads(SOURCE.read_text(encoding="utf-8"))
-    numbered = json.loads(NUMBERED.read_text(encoding="utf-8"))
+    raw_proposal = json.loads(SOURCE.read_text(encoding="utf-8"))
+    proposal = raw_proposal if isinstance(raw_proposal, Mapping) else {}
+    raw_numbered = json.loads(NUMBERED.read_text(encoding="utf-8"))
+    numbered = raw_numbered if isinstance(raw_numbered, Mapping) else {}
     if (proposal.get("view_id"), proposal.get("financial_year"),
             numbered.get("source_view_id")) != (
-            "264324000008274019", "FY 2025-26", "264324000008274019"):
+            Config.INTER_LOCATION_CONTRA_VIEW_ID, "FY 2025-26", Config.INTER_LOCATION_CONTRA_VIEW_ID):
         raise ValueError("Unexpected proposal source")
-    candidates = {str(row["payment_id"]): row for row in proposal["proposals"]
-                  if row["status"] == "proposed" and row["payment_type"] == "Vendor Payment"}
-    moves = numbered["moves"]
+    raw_proposals = proposal.get("proposals")
+    candidates = {str(row["payment_id"]): row for row in raw_proposals
+                  if isinstance(row, Mapping) and row.get("status") == "proposed" and row.get("payment_type") == "Vendor Payment"} if isinstance(raw_proposals, Sequence) else {}
+    raw_moves = numbered.get("moves")
+    moves: list[VendorPaymentMove] = [cast(VendorPaymentMove, m) for m in raw_moves if isinstance(m, dict)] if isinstance(raw_moves, Sequence) else []
     if (not candidates or len(candidates) != len(moves)
             or {str(move["payment_id"]) for move in moves} != set(candidates)
             or numbered.get("held_count") != 0):
@@ -44,9 +53,9 @@ def main() -> int:
                 or move["to_location_id"] != row["to_location_id"]
                 or move["bank_account_id"] != row["bank_account_id"]
                 or move["bill_numbers"] != row["document_numbers"]
-                or not move["destination_number"].startswith(row["expected_number_prefix"])):
+                or not move["destination_number"].startswith(str(row["expected_number_prefix"]))):
             raise ValueError(f"Numbered move differs from current proposal: {move['payment_id']}")
-    groups: dict[str, list[dict]] = defaultdict(list)
+    groups: dict[str, list[VendorPaymentMove]] = defaultdict(list)
     for move in moves:
         groups[move["destination_number"].rsplit("-", 1)[0]].append(move)
     books = get_books_client()

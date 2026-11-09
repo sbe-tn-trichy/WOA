@@ -6,7 +6,7 @@ from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from datetime import date
 from decimal import Decimal
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 
@@ -281,7 +281,7 @@ def review_bank_payment_locations(
     }
 
 
-def add_analytics_location_evidence(review: dict[str, Any], rows: list[Mapping[str, Any]]) -> dict[str, Any]:
+def add_analytics_location_evidence(review: dict[str, Any], rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """Attach exact payment/invoice matches from the Analytics mismatch view."""
     by_number: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for row in rows:

@@ -6,6 +6,10 @@ Google Sheets API v4 client supporting both OAuth token and Service Account cred
 ## Table of Contents
 
 - [`google_sheets.client`](#google_sheets-client)
+  - [Class `HttpRequestProtocol`](#google_sheets-client-httprequestprotocol)
+  - [Class `SpreadsheetValuesResourceProtocol`](#google_sheets-client-spreadsheetvaluesresourceprotocol)
+  - [Class `SpreadsheetsResourceProtocol`](#google_sheets-client-spreadsheetsresourceprotocol)
+  - [Class `GoogleSheetsResourceProtocol`](#google_sheets-client-googlesheetsresourceprotocol)
   - [Class `GoogleSheetsClient`](#google_sheets-client-googlesheetsclient)
 - [`google_sheets.auth`](#google_sheets-auth)
   - [Function `create_credentials`](#google_sheets-auth-create_credentials)
@@ -29,6 +33,96 @@ Google Sheets API client.
 |---|---|---|---|
 | `SPREADSHEET_ID_PATTERN` | - | `re.compile('^[A-Za-z0-9_-]+$')` | - |
 
+### Class `HttpRequestProtocol`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `HttpRequestProtocol.execute`
+
+```python
+def execute(self) -> dict[str, object]
+```
+
+### Class `SpreadsheetValuesResourceProtocol`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `SpreadsheetValuesResourceProtocol.get`
+
+```python
+def get(self, *, spreadsheetId: str, range: str, valueRenderOption: str = ..., dateTimeRenderOption: str = ...) -> HttpRequestProtocol
+```
+
+##### `SpreadsheetValuesResourceProtocol.batchGet`
+
+```python
+def batchGet(self, *, spreadsheetId: str, ranges: list[str], valueRenderOption: str = ..., dateTimeRenderOption: str = ...) -> HttpRequestProtocol
+```
+
+##### `SpreadsheetValuesResourceProtocol.update`
+
+```python
+def update(self, *, spreadsheetId: str, range: str, valueInputOption: str = ..., body: Mapping[str, object] = ...) -> HttpRequestProtocol
+```
+
+##### `SpreadsheetValuesResourceProtocol.batchUpdate`
+
+```python
+def batchUpdate(self, *, spreadsheetId: str, body: Mapping[str, object] = ...) -> HttpRequestProtocol
+```
+
+##### `SpreadsheetValuesResourceProtocol.append`
+
+```python
+def append(self, *, spreadsheetId: str, range: str, valueInputOption: str = ..., insertDataOption: str = ..., body: Mapping[str, object] = ...) -> HttpRequestProtocol
+```
+
+##### `SpreadsheetValuesResourceProtocol.clear`
+
+```python
+def clear(self, *, spreadsheetId: str, range: str, body: Mapping[str, object] = ...) -> HttpRequestProtocol
+```
+
+### Class `SpreadsheetsResourceProtocol`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `SpreadsheetsResourceProtocol.get`
+
+```python
+def get(self, **kwargs: object) -> HttpRequestProtocol
+```
+
+##### `SpreadsheetsResourceProtocol.batchUpdate`
+
+```python
+def batchUpdate(self, **kwargs: object) -> HttpRequestProtocol
+```
+
+##### `SpreadsheetsResourceProtocol.values`
+
+```python
+def values(self) -> SpreadsheetValuesResourceProtocol
+```
+
+### Class `GoogleSheetsResourceProtocol`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `GoogleSheetsResourceProtocol.spreadsheets`
+
+```python
+def spreadsheets(self) -> SpreadsheetsResourceProtocol
+```
+
 ### Class `GoogleSheetsClient`
 
 High-level client for Google Sheets API v4.
@@ -41,7 +135,7 @@ convenient methods for workbook metadata, batch range reads, updates, and modifi
 ##### `GoogleSheetsClient.__init__`
 
 ```python
-def __init__(self, credentials: BaseCredentials | None = None, *, service: Resource | None = None, access_token: str | None = None, service_account_file: str | Path | None = None, service_account_info: Mapping[str, Any] | None = None, scopes: Sequence[str] | None = None) -> None
+def __init__(self, credentials: BaseCredentials | None = None, *, service: GoogleSheetsResourceProtocol | Resource | None = None, access_token: str | None = None, service_account_file: str | Path | None = None, service_account_info: Mapping[str, object] | None = None, scopes: Sequence[str] | None = None) -> None
 ```
 
 Initialize Google Sheets client.
@@ -58,7 +152,7 @@ Args:
 
 ```python
 @property
-def service(self) -> Resource
+def service(self) -> GoogleSheetsResourceProtocol
 ```
 
 The underlying googleapiclient discovery Resource.
@@ -91,7 +185,7 @@ Translate Google API HttpError into SDK exceptions.
 ##### `GoogleSheetsClient.get_spreadsheet`
 
 ```python
-def get_spreadsheet(self, spreadsheet_id: str, *, fields: str | None = None, include_grid_data: bool = False) -> dict[str, Any]
+def get_spreadsheet(self, spreadsheet_id: str, *, fields: str | None = None, include_grid_data: bool = False) -> dict[str, object]
 ```
 
 Fetch metadata for a spreadsheet.
@@ -121,7 +215,7 @@ Returns:
 ##### `GoogleSheetsClient.get_values`
 
 ```python
-def get_values(self, spreadsheet_id: str, range_name: str, *, value_render_option: str = 'FORMATTED_VALUE', date_time_render_option: str = 'SERIAL_NUMBER') -> list[list[Any]]
+def get_values(self, spreadsheet_id: str, range_name: str, *, value_render_option: str = 'FORMATTED_VALUE', date_time_render_option: str = 'SERIAL_NUMBER') -> list[list[object]]
 ```
 
 Fetch cell values from a single range.
@@ -138,7 +232,7 @@ Returns:
 ##### `GoogleSheetsClient.batch_get_values`
 
 ```python
-def batch_get_values(self, spreadsheet_id: str, ranges: Sequence[str], *, value_render_option: str = 'FORMATTED_VALUE', date_time_render_option: str = 'SERIAL_NUMBER') -> dict[str, list[list[Any]]]
+def batch_get_values(self, spreadsheet_id: str, ranges: Sequence[str], *, value_render_option: str = 'FORMATTED_VALUE', date_time_render_option: str = 'SERIAL_NUMBER') -> dict[str, list[list[object]]]
 ```
 
 Fetch cell values from multiple ranges in a single request.
@@ -155,7 +249,7 @@ Returns:
 ##### `GoogleSheetsClient.update_values`
 
 ```python
-def update_values(self, spreadsheet_id: str, range_name: str, values: Sequence[Sequence[Any]], *, value_input_option: str = 'RAW') -> dict[str, Any]
+def update_values(self, spreadsheet_id: str, range_name: str, values: Sequence[Sequence[object]], *, value_input_option: str = 'RAW') -> dict[str, object]
 ```
 
 Write values to a single range.
@@ -172,7 +266,7 @@ Returns:
 ##### `GoogleSheetsClient.batch_update_values`
 
 ```python
-def batch_update_values(self, spreadsheet_id: str, data: Sequence[dict[str, Any]] | Mapping[str, Sequence[Sequence[Any]]], *, value_input_option: str = 'RAW') -> dict[str, Any]
+def batch_update_values(self, spreadsheet_id: str, data: Sequence[Mapping[str, object]] | Mapping[str, Sequence[Sequence[object]]], *, value_input_option: str = 'RAW') -> dict[str, object]
 ```
 
 Write values to multiple ranges in a single request.
@@ -189,7 +283,7 @@ Returns:
 ##### `GoogleSheetsClient.append_values`
 
 ```python
-def append_values(self, spreadsheet_id: str, range_name: str, values: Sequence[Sequence[Any]], *, value_input_option: str = 'RAW', insert_data_option: str = 'INSERT_ROWS') -> dict[str, Any]
+def append_values(self, spreadsheet_id: str, range_name: str, values: Sequence[Sequence[object]], *, value_input_option: str = 'RAW', insert_data_option: str = 'INSERT_ROWS') -> dict[str, object]
 ```
 
 Append values to a sheet.
@@ -207,7 +301,7 @@ Returns:
 ##### `GoogleSheetsClient.clear_values`
 
 ```python
-def clear_values(self, spreadsheet_id: str, range_name: str) -> dict[str, Any]
+def clear_values(self, spreadsheet_id: str, range_name: str) -> dict[str, object]
 ```
 
 Clear values in a range.
@@ -222,7 +316,7 @@ Returns:
 ##### `GoogleSheetsClient.batch_update`
 
 ```python
-def batch_update(self, spreadsheet_id: str, requests: Sequence[dict[str, Any]], *, include_spreadsheet_in_response: bool = False) -> dict[str, Any]
+def batch_update(self, spreadsheet_id: str, requests: Sequence[Mapping[str, object]], *, include_spreadsheet_in_response: bool = False) -> dict[str, object]
 ```
 
 Execute a batch of update requests (e.g. formatting, updateCells, addSheet).
@@ -253,7 +347,7 @@ Authentication helpers for Google Sheets API.
 ### Function `create_credentials`
 
 ```python
-def create_credentials(*, access_token: str | None = None, service_account_file: str | Path | None = None, service_account_info: Mapping[str, Any] | None = None, scopes: Sequence[str] | None = None) -> BaseCredentials
+def create_credentials(*, access_token: str | None = None, service_account_file: str | Path | None = None, service_account_info: Mapping[str, object] | None = None, scopes: Sequence[str] | None = None) -> BaseCredentials
 ```
 
 Create Google credentials from an access token, service account, or environment.

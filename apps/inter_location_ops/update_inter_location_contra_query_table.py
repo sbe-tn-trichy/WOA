@@ -1,23 +1,24 @@
 """Compatibility command for inter-location Query Table update; prefer the manager."""
 
 from __future__ import annotations
+import importlib
 
 from collections.abc import Sequence
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
-
-try:
+if __package__:
+    from . import _bootstrap
     from .manage_inter_location_contra_query_table import main as _manage
-except ImportError:
-    from manage_inter_location_contra_query_table import main as _manage
+else:
+    importlib.import_module("_bootstrap")
+    _manage = importlib.import_module("manage_inter_location_contra_query_table").main
+
+
+from workflows.runtime.config import Config
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Retain the historical command defaults using the shared manager."""
-    return _manage(argv, default_view_id='264324000008274019')
+    return _manage(argv, default_view_id=Config.INTER_LOCATION_CONTRA_VIEW_ID)
 
 
 if __name__ == "__main__":

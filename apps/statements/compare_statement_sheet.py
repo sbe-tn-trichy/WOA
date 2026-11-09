@@ -1,7 +1,9 @@
 """Compare a reviewed Google financial statement sheet with Books schedules."""
 from __future__ import annotations
+import importlib
 
 import argparse
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -9,12 +11,14 @@ from utils.file_utils import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
+from zoho.core_sdk.base_client import BaseZohoClient
 from workflows.runtime.auth import get_books_client
 from workflows.core.checkpoint import atomic_text_writer, write_atomic_json
 from workflows.financial_statement_comparison import (
@@ -33,8 +37,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=ROOT / "output/sheet-schedule-comparison")
     parser.add_argument("--tolerance", type=Decimal, default=Decimal("1"))
     args = parser.parse_args(argv)
-    config = json.loads(args.mapping.read_text(encoding="utf-8"))
-    include_opening = any(term.get("period") == "opening" for line in config["lines"] for term in line.get("terms", []))
+    raw_config = json.loads(args.mapping.read_text(encoding="utf-8"))
+    config: dict[str, Any] = raw_config if isinstance(raw_config, dict) else {}
+    lines_list: list[dict[str, Any]] = [l for l in config.get("lines", []) if isinstance(l, dict)]
+    include_opening = any(term.get("period") == "opening" for line in lines_list for term in line.get("terms", []))
     if args.saved and not args.sheet_snapshot:
         parser.error("--saved requires --sheet-snapshot for fully offline replay")
     targets = [args.output / name for name in ("report.md", "comparison.json", "sheet-cells.json",
@@ -49,42 +55,61 @@ def main(argv: list[str] | None = None) -> int:
     if any(path.resolve() in protected for path in written):
         parser.error("Report outputs must not overwrite input files")
     if args.sheet_snapshot:
-        snapshot = json.loads(args.sheet_snapshot.read_text(encoding="utf-8"))
+        raw_snap = json.loads(args.sheet_snapshot.read_text(encoding="utf-8"))
+        snapshot: dict[str, Any] = raw_snap if isinstance(raw_snap, dict) else {}
         for key in ("spreadsheet_id", "from_date", "to_date"):
-            if snapshot.get(key) != config[key]:
+            if snapshot.get(key) != config.get(key):
                 raise ValueError(f"Sheet snapshot {key} does not match configuration")
-        cells = snapshot["cells"]
-        provenance = "captured Google cells at " + snapshot["captured_at"]
+        cells = snapshot.get("cells", {})
+        provenance = "captured Google cells at " + str(snapshot.get("captured_at", ""))
     else:
-        requested_cells = list(dict.fromkeys([line["cell"] for line in config["lines"]] +
+        requested_cells = list(dict.fromkeys([line["cell"] for line in lines_list] +
             [cell for group in config.get("total_checks", []) for cell in [group["total_cell"], *group["cells"]]]))
-        cells = read_sheet_cells(config["spreadsheet_id"], requested_cells,
+        cells = read_sheet_cells(str(config["spreadsheet_id"]), requested_cells,
                                  access_token=os.environ.get("GOOGLE_SHEETS_ACCESS_TOKEN", ""))
         provenance = "live Google cells at " + datetime.now(timezone.utc).isoformat()
     validate_statement_totals(cells, config.get("total_checks", []))
     if args.saved:
         names = ["profitandloss", "balancesheet"] + (["balancesheet-opening"] if include_opening else [])
-        reports = {name: json.loads((args.output / f"schedule{name}.json").read_text(encoding="utf-8"))
-                   for name in names}
+        saved_reports: dict[str, Mapping[str, object]] = {}
+        for name in names:
+            loaded = json.loads((args.output / f"schedule{name}.json").read_text(encoding="utf-8"))
+            saved_reports[name] = loaded if isinstance(loaded, Mapping) else {}
         # Use SDK validation against saved responses, including period and scope.
         from zoho.books.custom.reports import Reports
-        class SavedClient:
-            def request(self, method, endpoint, *, params):
+        class SavedClient(BaseZohoClient):
+            def __init__(self) -> None:
+                super().__init__("dummy-token", domain="in")
+            def request(
+                self,
+                method: str,
+                endpoint: str,
+                json: Mapping[str, object] | Sequence[object] | None = None,
+                data: Mapping[str, object] | str | bytes | None = None,
+                params: Mapping[str, object] | None = None,
+                headers: Mapping[str, str] | None = None,
+                files: Mapping[str, object] | None = None,
+                stream: bool = False,
+                override_url: str | None = None,
+                is_mutation: bool | None = None,
+                timeout: int | None = None,
+                **kwargs: Any,
+            ) -> Any:
                 name = endpoint.removeprefix("reports/schedule")
-                if name == "balancesheet" and params["to_date"] != config["to_date"]:
+                if name == "balancesheet" and isinstance(params, Mapping) and params.get("to_date") != config["to_date"]:
                     name += "-opening"
-                return reports[name]
+                return saved_reports[name]
         books = SimpleNamespace(reports=Reports(SavedClient()))
-        reports = fetch_schedule_reports(books, from_date=config["from_date"], to_date=config["to_date"],
-                                         excluded_location_id=config["excluded_location_id"],
+        reports = fetch_schedule_reports(cast(Any, books), from_date=str(config["from_date"]), to_date=str(config["to_date"]),
+                                         excluded_location_id=str(config["excluded_location_id"]),
                                          include_opening_balance_sheet=include_opening)
         provenance += "; saved Books schedules (retrieval metadata retained in JSON)"
     else:
-        reports = fetch_schedule_reports(get_books_client(), from_date=config["from_date"],
-            to_date=config["to_date"], excluded_location_id=config["excluded_location_id"],
+        reports = fetch_schedule_reports(get_books_client(), from_date=str(config["from_date"]),
+            to_date=str(config["to_date"]), excluded_location_id=str(config["excluded_location_id"]),
             include_opening_balance_sheet=include_opening)
         provenance += "; Books retrieved at " + datetime.now(timezone.utc).isoformat()
-    rows = compare_statement_cells(cells, reports, config["lines"], tolerance=args.tolerance)
+    rows = compare_statement_cells(cells, reports, lines_list, tolerance=args.tolerance)
     if not args.saved:
         for name, report in reports.items():
             target = args.output / f"schedule{name}.json"

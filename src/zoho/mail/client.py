@@ -1,16 +1,24 @@
+from __future__ import annotations
+
 import logging
-import os
-from typing import Any
+from collections.abc import Callable, Mapping, Sequence
+
 from zoho.core_sdk.base_client import BaseZohoClient
 from .resources.accounts import Accounts
 from .resources.folders import Folders
 from .resources.messages import Messages
 
+
 class ZohoMailAPI(BaseZohoClient):
     """
     Main Zoho Mail API Client.
     """
-    def __init__(self, access_token: str, domain: str = "in", token_refresh_callback: Any | None = None):
+    def __init__(
+        self,
+        access_token: str,
+        domain: str = "in",
+        token_refresh_callback: Callable[[BaseZohoClient], None] | Callable[[], str] | None = None,
+    ):
         """
         Initialize the Zoho Mail API client.
         """
@@ -20,36 +28,31 @@ class ZohoMailAPI(BaseZohoClient):
             domain=domain,
             base_url=base_url,
             service_name="mail",
-            token_refresh_callback=token_refresh_callback
+            token_refresh_callback=token_refresh_callback,
         )
         # Global resources
         self.accounts = Accounts(self)
 
-    def account(self, account_id: str):
+    def account(self, account_id: str) -> AccountScope:
         """
         Returns a helper object to access account-specific resources.
         """
-        class AccountScope:
-            def __init__(self, client, acc_id):
-                self.folders = Folders(client, acc_id)
-                self.messages = Messages(client, acc_id)
-        
         return AccountScope(self, account_id)
 
     def request(
         self,
         method: str,
         endpoint: str,
-        json: dict[str, Any] | None = None,
-        data: dict[str, Any] | None = None,
-        params: dict[str, Any] | None = None,
-        headers: dict[str, Any] | None = None,
-        files: dict[str, Any] | None = None,
+        json: Mapping[str, object] | Sequence[object] | None = None,
+        data: Mapping[str, object] | str | bytes | None = None,
+        params: Mapping[str, object] | None = None,
+        headers: Mapping[str, str] | None = None,
+        files: Mapping[str, object] | None = None,
         stream: bool = False,
         override_url: str | None = None,
         is_mutation: bool | None = None,
         timeout: int | None = None,
-    ) -> Any:
+    ) -> object:
         """
         Internal HTTP request handler with logging.
         """
@@ -66,3 +69,9 @@ class ZohoMailAPI(BaseZohoClient):
             is_mutation=is_mutation,
             timeout=timeout,
         )
+
+
+class AccountScope:
+    def __init__(self, client: BaseZohoClient, acc_id: str):
+        self.folders = Folders(client, acc_id)
+        self.messages = Messages(client, acc_id)

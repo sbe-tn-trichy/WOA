@@ -1,15 +1,21 @@
 """Read-only discovery of customer payments with unused balances."""
+from __future__ import annotations
 
+import re
+import time
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any
-import time
-import re
+from typing import TYPE_CHECKING, TypedDict
 
-from workflows.runtime.exceptions import ReconciliationError
 from workflows.core.matching import to_finite_decimal, to_text
+from workflows.runtime.config import Config
+from workflows.runtime.exceptions import ReconciliationError
 
-DEFAULT_UNEARNED_ACCOUNT_ID = "1094368000000000617"
+if TYPE_CHECKING:
+    from zoho.analytics import ZohoAnalyticsAPI
+    from zoho.books import ZohoBooksAPI
+
+DEFAULT_UNEARNED_ACCOUNT_ID = Config.UNEARNED_REVENUE_ACCOUNT_ID
 
 
 @dataclass(frozen=True)
@@ -34,8 +40,19 @@ class UnearnedRevenueReview:
     limitations: list[str]
 
 
+class UnearnedRevenueAnalyticsReview(TypedDict):
+    account: dict[str, object]
+    unused_payment_total_bcy: Decimal
+    account_net_credit_bcy: Decimal
+    ledger_less_unused_bcy: Decimal
+    payments: list[dict[str, object]]
+    account_posting_groups: list[dict[str, object]]
+    customers: list[dict[str, object]]
+    limitations: list[str]
+
+
 def find_unused_customer_payments(
-    books: Any, *, account_id: str = DEFAULT_UNEARNED_ACCOUNT_ID,
+    books: ZohoBooksAPI, *, account_id: str = DEFAULT_UNEARNED_ACCOUNT_ID,
     request_interval: float = 0.5,
 ) -> UnearnedRevenueReview:
     """Scan all payment details for current unused amounts, without date filters.
@@ -45,9 +62,11 @@ def find_unused_customer_payments(
     """
     if not account_id.isdigit() or request_interval < 0:
         raise ValueError("A numeric account ID and nonnegative request interval are required")
-    response = books.chart_of_accounts.get(account_id)
-    account = response.get("chart_of_account")
-    if response.get("code") != 0 or not isinstance(account, dict):
+    raw_response = books.chart_of_accounts.get(account_id)
+    if not isinstance(raw_response, dict):
+        raise ReconciliationError(f"Cannot read account {account_id}")
+    account = raw_response.get("chart_of_account")
+    if raw_response.get("code") != 0 or not isinstance(account, dict):
         raise ReconciliationError(f"Cannot read account {account_id}")
     if to_text(account.get("account_id")) != account_id:
         raise ReconciliationError("Account detail identity mismatch")
@@ -63,9 +82,11 @@ def find_unused_customer_payments(
             raise ReconciliationError("Missing or duplicate customer payment ID")
         seen.add(identifier)
         time.sleep(request_interval)
-        response = books.customer_payments.get(identifier)
-        payment = response.get("payment")
-        if response.get("code") != 0 or not isinstance(payment, dict):
+        raw_pmt_response = books.customer_payments.get(identifier)
+        if not isinstance(raw_pmt_response, dict):
+            raise ReconciliationError(f"Cannot read payment {identifier}")
+        payment = raw_pmt_response.get("payment")
+        if raw_pmt_response.get("code") != 0 or not isinstance(payment, dict):
             raise ReconciliationError(f"Cannot read payment {identifier}")
         if to_text(payment.get("payment_id")) != identifier:
             raise ReconciliationError(f"Payment detail identity mismatch: {identifier}")
@@ -98,8 +119,8 @@ def find_unused_customer_payments(
 
 
 def review_unearned_revenue_analytics(
-    analytics: Any, *, workspace_id: str, account_id: str = DEFAULT_UNEARNED_ACCOUNT_ID,
-) -> dict[str, Any]:
+    analytics: ZohoAnalyticsAPI, *, workspace_id: str, account_id: str = DEFAULT_UNEARNED_ACCOUNT_ID,
+) -> UnearnedRevenueAnalyticsReview:
     """Read unused payments and all account postings through Analytics SQL.
 
     Joins are performed after aggregation to avoid multiplying ledger amounts.
@@ -123,12 +144,16 @@ def review_unearned_revenue_analytics(
             WHERE "Account ID" = '{account_id}'
             GROUP BY "Entity ID", "Entity Type", "Customer ID"''',
     }
-    data = {key: analytics.queries.execute(workspace_id=workspace_id, sql_query=sql,
-            max_attempts=30, poll_interval=2.0) for key, sql in queries.items()}
+    data: dict[str, list[dict[str, object]]] = {
+        key: analytics.queries.execute(
+            workspace_id=workspace_id, sql_query=sql, max_attempts=30, poll_interval=2.0
+        )
+        for key, sql in queries.items()
+    }
     if len(data["account"]) != 1 or to_text(data["account"][0].get("Account ID")) != account_id:
         raise ReconciliationError("Analytics account identity is missing or ambiguous")
 
-    def amount(row: dict[str, Any], field: str) -> Decimal:
+    def amount(row: dict[str, object], field: str) -> Decimal:
         raw = row.get(field)
         if isinstance(raw, str):
             raw = re.sub(r"^[A-Z]{3}\s+", "", raw.strip())
@@ -138,14 +163,15 @@ def review_unearned_revenue_analytics(
         return value
 
     ledger_balance = Decimal(0)
-    by_entity: dict[str, list[dict[str, Any]]] = {}
+    by_entity: dict[str, list[dict[str, object]]] = {}
     for row in data["postings"]:
-        row["net_credit_bcy"] = amount(row, "Credit") - amount(row, "Debit")
-        ledger_balance += row["net_credit_bcy"]
+        net_credit = amount(row, "Credit") - amount(row, "Debit")
+        row["net_credit_bcy"] = net_credit
+        ledger_balance += net_credit
         by_entity.setdefault(to_text(row.get("Entity ID")), []).append(row)
-    seen = set()
+    seen: set[str] = set()
     total = Decimal(0)
-    customers: dict[str, dict[str, Any]] = {}
+    customers: dict[str, dict[str, object]] = {}
     for row in data["payments"]:
         identifier = to_text(row.get("Payment ID"))
         customer_id = to_text(row.get("Customer ID"))
@@ -159,13 +185,19 @@ def review_unearned_revenue_analytics(
         total += unused
         customer = customers.setdefault(customer_id, {"customer_id": customer_id,
             "customer_name": row.get("Customer Name"), "unused_bcy": Decimal(0), "payment_count": 0})
-        customer["unused_bcy"] += unused
-        customer["payment_count"] += 1
+        raw_unused = customer["unused_bcy"]
+        customer["unused_bcy"] = (raw_unused if isinstance(raw_unused, Decimal) else Decimal(0)) + unused
+        raw_count = customer["payment_count"]
+        customer["payment_count"] = (raw_count if isinstance(raw_count, int) else 0) + 1
+    def _sort_key(row: dict[str, object]) -> Decimal:
+        val = row.get("unused_bcy")
+        return val if isinstance(val, Decimal) else Decimal(0)
+
     return {"account": data["account"][0], "unused_payment_total_bcy": total,
         "account_net_credit_bcy": ledger_balance,
         "ledger_less_unused_bcy": ledger_balance - total,
         "payments": data["payments"], "account_posting_groups": data["postings"],
-        "customers": sorted(customers.values(), key=lambda row: row["unused_bcy"], reverse=True),
+        "customers": sorted(customers.values(), key=_sort_key, reverse=True),
         "limitations": ["Analytics source data may lag Books; no connector refresh was requested.",
             "Account balance is the sum of available accrual credits less debits; source opening balances and completeness need verification.",
             "Entity ID matches are evidence only. Unused payments without matches remain candidates, not confirmed account associations.",

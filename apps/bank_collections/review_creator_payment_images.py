@@ -2,12 +2,14 @@
 """Download Creator payment images and cross-check local Tesseract OCR evidence."""
 from __future__ import annotations
 import argparse
+import importlib
+from collections.abc import Mapping
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_creator_client
 from workflows.creator_payments.ocr import PaymentOCRSource, review_creator_payment_images
@@ -35,11 +37,13 @@ def main(argv: list[str] | None = None) -> int:
                  PaymentOCRSource(args.cheque_report, args.image_field, date_field="Cheque_Date")),
         output_dir=args.output_dir, criteria=args.criteria, limit=args.limit,
     )
+    summary = result.get("summary")
+    summary_dict = summary if isinstance(summary, Mapping) else {}
     print("| Status | Records |\n| --- | ---: |")
-    for status, count in result["summary"].items():
+    for status, count in summary_dict.items():
         print(f"| {status} | {count} |")
     print(f"Review: {(args.output_dir / 'review.md').resolve()}")
-    return 1 if result["summary"].get("error") else 0
+    return 1 if summary_dict.get("error") else 0
 
 
 if __name__ == "__main__":

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Fill Creator Customer# from Books for explicitly selected linked customers."""
+import importlib
 import argparse
 from dataclasses import asdict
 from utils.file_utils import json
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client, get_creator_client
 from workflows.customer_registration import sync_customer_numbers

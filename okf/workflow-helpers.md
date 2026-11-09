@@ -69,7 +69,8 @@ Atomic replacement gives concurrent writers last-replacement-wins semantics,
 not a read-modify-write transaction. Financial mutation and snapshot policies
 remain in their domain workflows. Compatibility entry points are retained.
 
-Generic document-number parsing lives in `helpers.formatting.sequences.parse_doc_number`.
+Generic document-number parsing lives in `utils.general_utils.sequences.parse_doc_number`
+(re-exported by `helpers` and `helpers.formatting`).
 It returns `(prefix, trailing_integer, observed_width)`; width zero means no
 numeric suffix. The old Books GST import remains a lower-layer re-export.
 `workflows.core.sequences.analyze_number_series` consumes supplied records only,

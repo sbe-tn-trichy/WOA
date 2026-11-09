@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 from workflows.vendor_customer_offset import (
     VendorCustomerOffsetConfig,
+    VendorCustomerOffsetError,
     run_vendor_customer_offset,
 )
 
@@ -32,6 +33,19 @@ def _contacts(customer_outstanding=120, vendor_outstanding=80):
 
 
 class TestVendorCustomerOffset(unittest.TestCase):
+    def test_duplicate_clearing_account_blocks_payments(self):
+        self.books.bank_accounts.list_all.return_value.append(
+            {"account_id": "bank-2", "account_name": "vendor to customer"}
+        )
+        with self.assertRaisesRegex(VendorCustomerOffsetError, "Ambiguous clearing bank account"):
+            run_vendor_customer_offset(
+                self.books,
+                VendorCustomerOffsetConfig(dry_run=False, checkpoint_path=self.checkpoint),
+            )
+        self.books.customer_payments.create.assert_not_called()
+        self.books.vendor_payments.create.assert_not_called()
+        self.books.request.assert_not_called()
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

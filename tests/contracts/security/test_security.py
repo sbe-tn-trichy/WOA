@@ -143,7 +143,7 @@ class TestSalesOrdersSecurity(unittest.TestCase):
 
     def test_create_from_yaml_missing_items_requires_default_accounts(self):
         yaml_content = "inv:\n  no: '123'\n  date: '2026-01-01'\nitems:\n  - sku: 'NEW-SKU'\n    qty: 1\n    rate: 100\n    name: 'Widget'\n"
-        self.inventory.items.list.return_value = {"items": []}
+        self.inventory.items.list_all.return_value = []
         with self.assertRaises(ValueError) as ctx:
             create_sales_order_from_yaml(self.client,
                 yaml_content,

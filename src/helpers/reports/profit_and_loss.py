@@ -4,16 +4,27 @@ from __future__ import annotations
 
 from utils.file_utils import json
 from collections.abc import Mapping
-from typing import Any
+from typing import Protocol
+
+
+class BooksPnLReportsResource(Protocol):
+    def profit_and_loss_schedule_format(
+        self, *, from_date: str, to_date: str, cash_based: bool, rule: str,
+    ) -> Mapping[str, object]: ...
+
+
+class BooksPnLClient(Protocol):
+    @property
+    def reports(self) -> BooksPnLReportsResource: ...
 
 
 def fetch_profit_and_loss_schedule_format(
-    books_client: Any,
+    books_client: BooksPnLClient,
     *,
     from_date: str,
     to_date: str,
     excluded_location_id: str,
-) -> Mapping[str, Any]:
+) -> Mapping[str, object]:
     """Fetch an accrual P&L excluding one Books branch by location ID."""
     if not excluded_location_id or not excluded_location_id.strip():
         raise ValueError("excluded_location_id is required")

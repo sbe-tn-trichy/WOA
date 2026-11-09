@@ -5,16 +5,32 @@ from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
-from collections.abc import Mapping, Sequence
-from typing import Any
+from collections.abc import Iterator, Mapping, Sequence
+from typing import Protocol, TypedDict, cast
 
 from workflows.core.matching import to_finite_decimal
-from workflows.financial_statement_comparison.comparison import fetch_schedule_reports
+from workflows.financial_statement_comparison.comparison import (
+    BooksScheduleClient,
+    fetch_schedule_reports,
+)
 
 KEYS = {"balancesheet": "schedule_balance_sheet", "profitandloss": "schedule_profit_and_loss"}
 
 
-def amount(value: Any) -> Decimal:
+class BooksFixedAssetsResource(Protocol):
+    def list_iter(self, *, params: dict[str, object] | None = None, resource_key: str | None = None) -> Iterator[Mapping[str, object]]: ...
+    def get(self, resource_id: str) -> object: ...
+    def history(self, fixed_asset_id: str, /) -> Sequence[Mapping[str, object]]: ...
+
+
+class BooksScheduleSourceClient(BooksScheduleClient, Protocol):
+    @property
+    def organization_id(self) -> str: ...
+    @property
+    def fixed_assets(self) -> BooksFixedAssetsResource: ...
+
+
+def amount(value: object) -> Decimal:
     result = to_finite_decimal(value, allow_commas=True)
     if result is None:
         raise ValueError(f"Invalid financial amount: {value!r}")
@@ -25,14 +41,14 @@ def money(value: Decimal) -> Decimal:
     return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def reviewed_asset_table(review: Mapping[str, Any], period: Mapping[str, str]) -> list[list[Any]]:
+def reviewed_asset_table(review: Mapping[str, object], period: Mapping[str, str]) -> list[list[object]]:
     """Render an explicitly reviewed annual statement without inferring depreciation."""
     if review.get("start") != period["start"] or review.get("end") != period["end"]:
         raise ValueError("Reviewed asset statement dates do not match the current year")
     entries = review.get("rows")
     if not isinstance(entries, list) or not entries:
         raise ValueError("Reviewed asset statement requires nonempty rows")
-    rows: list[list[Any]] = [["DEPRECIATION STATEMENT:"],
+    rows: list[list[object]] = [["DEPRECIATION STATEMENT:"],
         ["PARTICULARS", "WDV AS ON " + date.fromisoformat(period["start"]).strftime("%d.%m.%Y"),
          "ADDITIONS", "", "DOP", "TOTAL", "RATE", "DEPR. FOR THE YEAR",
          "WDV AS ON " + date.fromisoformat(period["end"]).strftime("%d.%m.%Y")],
@@ -69,20 +85,25 @@ def reviewed_asset_table(review: Mapping[str, Any], period: Mapping[str, str]) -
     return rows
 
 
-def nodes(rows: Sequence[Mapping[str, Any]], path: tuple[str, ...] = ()):
+def nodes(rows: Sequence[Mapping[str, object]], path: tuple[str, ...] = ()) -> Iterator[tuple[Mapping[str, object], tuple[str, ...]]]:
     for row in rows:
-        current = path + (row["name"],)
+        current = path + (str(row["name"]),)
         if not row.get("section"):
             yield row, current
-        yield from nodes(row.get("account_transactions", []), current)
+        children = row.get("account_transactions")
+        if isinstance(children, Sequence):
+            yield from nodes(cast(Sequence[Mapping[str, object]], children), current)
 
 
 def qualified(sheet: str, cell: str) -> str:
     return "'" + sheet.replace("'", "''") + "'!" + cell
 
 
-def section(report: Mapping[str, Any], kind: str, path: Sequence[str]) -> Decimal:
-    matches = [node for node, current in nodes(report[KEYS[kind]]) if current == tuple(path)]
+def section(report: Mapping[str, object], kind: str, path: Sequence[str]) -> Decimal:
+    rows_val = report.get(KEYS[kind])
+    if not isinstance(rows_val, Sequence):
+        raise ValueError(f"Missing schedule report section {kind}")
+    matches = [node for node, current in nodes(cast(Sequence[Mapping[str, object]], rows_val)) if current == tuple(path)]
     if len(matches) != 1:
         raise ValueError(f"Missing or ambiguous schedule section: {' / '.join(path)}")
     return amount(matches[0]["total"])
@@ -106,28 +127,93 @@ class AssetVerification:
     location: str
 
 
+class NoteConfig(TypedDict, total=False):
+    number: int
+    title: str
+    report: str
+    statement: str
+    statement_row: int
+    paths: Sequence[Sequence[str]]
+    groups: Sequence[Mapping[str, object]]
+
+
+class DirectInputConfig(TypedDict, total=False):
+    statement: str
+    row: int
+    report: str
+    path: Sequence[str]
+    expense: bool
+    inventory_changes: bool
+    exceptional: bool
+
+
+class ScheduleChecksConfig(TypedDict, total=False):
+    asset_notes: Sequence[int]
+    liability_notes: Sequence[int]
+    revenue_notes: Sequence[int]
+    expense_notes: Sequence[int]
+    profit_before_tax_path: Sequence[str]
+    depreciation_note: int
+    depreciation_path: Sequence[str]
+
+
+class ScheduleConfig(TypedDict, total=False):
+    company: str
+    excluded_location_id: str
+    periods: Sequence[Mapping[str, str]]
+    sheets: Mapping[str, str]
+    sheet_ids: Mapping[str, int | str]
+    notes: Sequence[NoteConfig]
+    direct_inputs: Sequence[DirectInputConfig]
+    account_notes: Mapping[str, int]
+    standalone_paths: Sequence[Sequence[str]]
+    inventory_rollforward: Mapping[str, object]
+    reviewed_asset_statement: Mapping[str, object]
+    asset_layout: str
+    checks: ScheduleChecksConfig
+
+
+class ScheduleAssetItem(TypedDict):
+    asset: Mapping[str, object]
+    history: Sequence[Mapping[str, object]]
+
+
+class ScheduleSources(TypedDict, total=False):
+    reports: Mapping[str, Mapping[str, Mapping[str, object]]]
+    assets: Sequence[ScheduleAssetItem]
+    excluded_location_id: str
+    organization_id: str
+    periods: Sequence[Mapping[str, str]]
+    captured_at: str
+
+
+class ClassifiedItem(TypedDict):
+    name: str
+    amounts: dict[str, Decimal]
+
+
 @dataclass(frozen=True)
 class SchedulePlan:
-    values: dict[str, list[list[Any]]]
+    values: dict[str, Sequence[Sequence[object]]]
     note_total_rows: dict[int, int]
     asset_checks: dict[str, tuple[AssetVerification, ...]]
     warnings: tuple[str, ...]
     checks: dict[str, dict[str, str]]
 
 
-def fetch_schedule_sources(books: Any, *, periods: Sequence[Mapping[str, str]],
-                           excluded_location_id: str, include_opening_inventory: bool = False) -> dict[str, Any]:
+def fetch_schedule_sources(books: BooksScheduleSourceClient, *, periods: Sequence[Mapping[str, str]],
+                           excluded_location_id: str, include_opening_inventory: bool = False) -> ScheduleSources:
     """Fetch each report once per year, then each in-scope asset and history once."""
     if len(periods) != 2:
         raise ValueError("Exactly two periods are required")
-    reports = {}
+    reports: dict[str, Mapping[str, Mapping[str, object]]] = {}
     for p in periods:
         opening_date = (date.fromisoformat(p["start"]) - timedelta(days=1)).isoformat()
         needs_opening = include_opening_inventory and not any(q["end"] == opening_date for q in periods)
         reports[p["label"]] = fetch_schedule_reports(
             books, from_date=p["start"], to_date=p["end"], excluded_location_id=excluded_location_id,
             **({"include_opening_balance_sheet": True} if needs_opening else {}))
-    assets = []
+    assets: list[ScheduleAssetItem] = []
     seen = set()
     for asset in books.fixed_assets.list_iter(params={"filter_by": "Status.All"}, resource_key="fixedassets"):
         asset_id = str(asset.get("fixed_asset_id") or "")
@@ -139,91 +225,126 @@ def fetch_schedule_sources(books: Any, *, periods: Sequence[Mapping[str, str]],
         if not asset_id or asset_id in seen:
             raise ValueError("Missing or duplicate fixed asset ID")
         seen.add(asset_id)
-        if date.fromisoformat(asset["asset_purchase_date"]) > max(date.fromisoformat(p["end"]) for p in periods):
+        if date.fromisoformat(str(asset.get("asset_purchase_date"))) > max(date.fromisoformat(p["end"]) for p in periods):
             continue
-        detail = books.fixed_assets.get(asset_id)
-        if detail.get("code") != 0 or not isinstance(detail.get("fixed_asset"), dict):
+        raw_detail = books.fixed_assets.get(asset_id)
+        detail = raw_detail if isinstance(raw_detail, Mapping) else {}
+        if detail.get("code") != 0 or not isinstance(detail.get("fixed_asset"), Mapping):
             raise ValueError(f"Missing fixed asset details: {asset_id}")
-        assets.append({"asset": detail["fixed_asset"], "history": books.fixed_assets.history(asset_id)})
-    result = {"reports": reports, "assets": assets, "excluded_location_id": excluded_location_id,
+        assets.append({"asset": cast(Mapping[str, object], detail["fixed_asset"]), "history": books.fixed_assets.history(asset_id)})
+    result: ScheduleSources = {"reports": reports, "assets": assets, "excluded_location_id": excluded_location_id,
               "organization_id": str(books.organization_id), "periods": list(periods),
               "captured_at": datetime.now(timezone.utc).isoformat()}
     validate_sources(result, periods=periods, excluded_location_id=excluded_location_id)
     return result
 
 
-def _validate_report(report: Mapping[str, Any], kind: str, *, start: str, end: str,
+def _validate_report(report: Mapping[str, object], kind: str, *, start: str, end: str,
                      excluded_location_id: str) -> None:
-    context = report.get("page_context", {})
+    raw_ctx = report.get("page_context")
+    context = raw_ctx if isinstance(raw_ctx, Mapping) else {}
     if (report.get("code") != 0 or not isinstance(report.get(KEYS[kind]), list)
             or context.get("to_date") != end
             or (kind == "profitandloss" and context.get("from_date") != start)
             or context.get("cash_based") != "false"
             or context.get("filter_by") != "TransactionDate.CustomDate"):
         raise ValueError("Schedule dates, basis or response shape do not match")
-    rule = context.get("rule", {})
-    columns = rule.get("columns", [])
+    raw_rule = context.get("rule")
+    rule = raw_rule if isinstance(raw_rule, Mapping) else {}
+    raw_columns = rule.get("columns")
+    columns = raw_columns if isinstance(raw_columns, list) else []
     if (rule.get("criteria_string") != "1" or len(columns) != 1
+            or not isinstance(columns[0], Mapping)
             or any(columns[0].get(key) != value for key, value in {
                 "field": "location_name", "value": [excluded_location_id],
                 "comparator": "not_in", "group": "branch", "index": 1}.items())):
         raise ValueError("Schedule did not apply the configured branch exclusion")
 
 
-def validate_sources(sources: Mapping[str, Any], *, periods: Sequence[Mapping[str, str]],
+def validate_sources(sources: Mapping[str, object], *, periods: Sequence[Mapping[str, str]],
                      excluded_location_id: str) -> None:
     if len(periods) != 2 or sources.get("periods") != list(periods) or sources.get("excluded_location_id") != excluded_location_id:
         raise ValueError("Snapshot dates or excluded location do not match configuration")
+    raw_reports = sources.get("reports")
+    reports_map = raw_reports if isinstance(raw_reports, Mapping) else {}
     for p in periods:
         start, end = date.fromisoformat(p["start"]), date.fromisoformat(p["end"])
         if start > end:
             raise ValueError("Invalid financial period")
         for kind in KEYS:
-            report = sources["reports"][p["label"]][kind]
+            period_reports = reports_map.get(p["label"])
+            if not isinstance(period_reports, Mapping):
+                raise ValueError(f"Missing reports for {p['label']}")
+            report = period_reports.get(kind)
+            if not isinstance(report, Mapping):
+                raise ValueError(f"Missing report {kind} for {p['label']}")
             _validate_report(report, kind, start=p["start"], end=p["end"],
                              excluded_location_id=excluded_location_id)
     seen = set()
-    for item in sources["assets"]:
-        asset = item["asset"]
-        identity = asset["fixed_asset_id"]
+    raw_assets = sources.get("assets")
+    assets_seq = raw_assets if isinstance(raw_assets, Sequence) else []
+    for item in assets_seq:
+        if not isinstance(item, Mapping):
+            continue
+        raw_asset = item.get("asset")
+        asset = raw_asset if isinstance(raw_asset, Mapping) else {}
+        identity = asset.get("fixed_asset_id")
         location = asset.get("location_id") or asset.get("branch_id")
         if not location or location == excluded_location_id or identity in seen:
             raise ValueError("Invalid asset location or duplicate asset")
         seen.add(identity)
 
 
-def _opening_inventory(sources: Mapping[str, Any], config: Mapping[str, Any],
+def _opening_inventory(sources: Mapping[str, object], config: Mapping[str, object],
                       period: Mapping[str, str], note_number: int) -> Decimal:
     """Use prior closing stock with identical account overrides and verified scope."""
     opening_date = (date.fromisoformat(period["start"]) - timedelta(days=1)).isoformat()
-    prior = next((p for p in config["periods"] if p["end"] == opening_date), None)
-    report = (sources["reports"][prior["label"]]["balancesheet"] if prior else
-              sources["reports"][period["label"]].get("balancesheet-opening"))
-    if report is None:
+    config_periods = config.get("periods")
+    periods_seq = config_periods if isinstance(config_periods, Sequence) else []
+    prior = next((p for p in periods_seq if isinstance(p, Mapping) and p.get("end") == opening_date), None)
+    raw_reports = sources.get("reports")
+    reports_map = raw_reports if isinstance(raw_reports, Mapping) else {}
+    if prior:
+        prior_reports = reports_map.get(str(prior.get("label")))
+        prior_map = prior_reports if isinstance(prior_reports, Mapping) else {}
+        report = prior_map.get("balancesheet")
+    else:
+        period_reports = reports_map.get(period["label"])
+        period_map = period_reports if isinstance(period_reports, Mapping) else {}
+        report = period_map.get("balancesheet-opening")
+    if not isinstance(report, Mapping):
         raise ValueError(f"Missing opening inventory balance sheet at {opening_date}")
+    excluded_loc = str(config.get("excluded_location_id", ""))
     _validate_report(report, "balancesheet", start=opening_date, end=opening_date,
-                     excluded_location_id=config["excluded_location_id"])
+                     excluded_location_id=excluded_loc)
     seen = set()
     total = Decimal(0)
-    for node, path in nodes(report[KEYS["balancesheet"]]):
+    raw_bs_rows = report.get(KEYS["balancesheet"])
+    if not isinstance(raw_bs_rows, Sequence):
+        raise ValueError("Missing balance sheet rows in opening inventory")
+    for node, path in nodes(cast(Sequence[Mapping[str, object]], raw_bs_rows)):
         account = str(node.get("account_id") or "")
         if not account:
             continue
         if account in seen:
             raise ValueError(f"Duplicate opening inventory account: {account}")
         seen.add(account)
-        override = config.get("account_notes", {}).get(account)
-        candidates = [n for n in config["notes"] if n["report"] == "balancesheet" and
-                      (n["number"] == override if override is not None else
-                       any(path[:len(p)] == tuple(p) for p in n["paths"]))]
+        raw_acct_notes = config.get("account_notes")
+        acct_notes_map = raw_acct_notes if isinstance(raw_acct_notes, Mapping) else {}
+        override = acct_notes_map.get(account)
+        raw_notes = config.get("notes")
+        notes_seq = raw_notes if isinstance(raw_notes, Sequence) else []
+        candidates = [n for n in notes_seq if isinstance(n, Mapping) and n.get("report") == "balancesheet" and
+                      (n.get("number") == override if override is not None else
+                       any(path[:len(p)] == tuple(p) for p in cast(Sequence[Sequence[str]], n.get("paths", []))))]
         if len(candidates) > 1:
             raise ValueError(f"Ambiguous opening inventory classification: {node['name']}")
-        if candidates and candidates[0]["number"] == note_number:
+        if candidates and candidates[0].get("number") == note_number:
             total += amount(node["total"])
     return total
 
 
-def verify_asset(asset: Mapping[str, Any], history: Sequence[Mapping[str, Any]], *,
+def verify_asset(asset: Mapping[str, object], history: Sequence[Mapping[str, object]], *,
                  start: str, end: str) -> AssetVerification:
     """Recalculate yearly declining depreciation from historical posted opening WDV.
 
@@ -232,13 +353,13 @@ def verify_asset(asset: Mapping[str, Any], history: Sequence[Mapping[str, Any]],
     Today's asset value is never used as a historical year-end value.
     """
     first, last = date.fromisoformat(start), date.fromisoformat(end)
-    purchase = date.fromisoformat(asset["asset_purchase_date"])
-    dep_start = date.fromisoformat(asset["depreciation_start_date"])
+    purchase = date.fromisoformat(str(asset["asset_purchase_date"]))
+    dep_start = date.fromisoformat(str(asset["depreciation_start_date"]))
     if first > last:
         raise ValueError("Invalid asset verification period")
-    if asset["depreciation_method"] != "declining_method" or asset["depreciation_frequency"] != "yearly":
-        raise ValueError(f"Unsupported depreciation method/frequency: {asset['asset_name']}")
-    computation = asset["computation_type"]
+    if asset.get("depreciation_method") != "declining_method" or asset.get("depreciation_frequency") != "yearly":
+        raise ValueError(f"Unsupported depreciation method/frequency: {asset.get('asset_name')}")
+    computation = str(asset.get("computation_type", ""))
     if computation not in {"prorata_basis", "no_prorata"}:
         raise ValueError("Unsupported depreciation computation")
     rate = amount(asset["depreciation_percentage"]) / 100
@@ -254,7 +375,7 @@ def verify_asset(asset: Mapping[str, Any], history: Sequence[Mapping[str, Any]],
         if not identity or identity in seen:
             raise ValueError("Missing or duplicate asset valuation")
         seen.add(identity)
-        day = date.fromisoformat(entry["valuation_date"])
+        day = date.fromisoformat(str(entry["valuation_date"]))
         if day > last:
             continue
         kind = entry["type"]
@@ -300,14 +421,16 @@ def verify_asset(asset: Mapping[str, Any], history: Sequence[Mapping[str, Any]],
 
 
 
-def reviewed_statement_with_additions(review: Mapping[str, Any], period: Mapping[str, str],
-                                      results: Sequence[AssetVerification]) -> dict[str, Any]:
+def reviewed_statement_with_additions(review: Mapping[str, object], period: Mapping[str, str],
+                                      results: Sequence[AssetVerification]) -> dict[str, object]:
     """Append register acquisitions, excluding explicitly matched opening imports."""
     reviewed_asset_table(review, period)
-    rows = [dict(row) for row in review["rows"]]
-    matched = {}
+    raw_rows = review.get("rows")
+    rows_seq = raw_rows if isinstance(raw_rows, Sequence) else []
+    rows = [dict(cast(Mapping[str, object], row)) for row in rows_seq]
+    matched: dict[str, dict[str, object]] = {}
     for row in rows:
-        identity = row.get("opening_asset_id")
+        identity = str(row.get("opening_asset_id") or "")
         if identity:
             if identity in matched:
                 raise ValueError(f"Duplicate reviewed opening asset ID: {identity}")
@@ -335,7 +458,7 @@ def reviewed_statement_with_additions(review: Mapping[str, Any], period: Mapping
     return dict(review, rows=rows)
 
 
-def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -> SchedulePlan:
+def build_schedule_plan(sources: ScheduleSources, config: ScheduleConfig) -> SchedulePlan:
     """Build two-year notes and statement links, with current-year assets only."""
     periods = config["periods"]
     validate_sources(sources, periods=periods, excluded_location_id=config["excluded_location_id"])
@@ -354,14 +477,14 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
     targets += [(direct["statement"], direct["row"]) for direct in config["direct_inputs"]]
     if len(set(targets)) != len(targets):
         raise ValueError("Duplicate statement destination row")
-    classified: dict[int, dict[str, dict[str, Any]]] = {n: {} for n in note_ids}
+    classified: dict[int, dict[str, ClassifiedItem]] = {n: {} for n in note_ids}
     warnings = []
     totals: dict[str, dict[int, Decimal]] = {label: {n: Decimal(0) for n in note_ids} for label in labels}
     for label in labels:
         for kind in KEYS:
             report = sources["reports"][label][kind]
             seen = set()
-            for node, path in nodes(report[KEYS[kind]]):
+            for node, path in nodes(cast(Sequence[Mapping[str, object]], report[KEYS[kind]])):
                 account = str(node.get("account_id") or "")
                 is_earnings = path in [tuple(p) for p in config.get("standalone_paths", [])]
                 if not account and not is_earnings:
@@ -385,9 +508,17 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
                 if len(candidates) != 1:
                     raise ValueError(f"Ambiguous note classification: {node['name']}")
                 number = candidates[0]["number"]
-                reduction = config.get('inventory_rollforward', {}).get('cogs_reductions', {}).get(label)
-                if reduction and account == str(reduction['account_id']):
-                    if kind != 'profitandloss' or number != config['inventory_rollforward']['purchases_note']:
+                reduction: Mapping[str, object] | None = None
+                rf_cfg = config.get('inventory_rollforward')
+                if isinstance(rf_cfg, Mapping):
+                    cogs_reds = rf_cfg.get('cogs_reductions')
+                    if isinstance(cogs_reds, Mapping):
+                        raw_red = cogs_reds.get(label)
+                        if isinstance(raw_red, Mapping):
+                            reduction = raw_red
+                if reduction and account == str(reduction.get('account_id', '')):
+                    purchases_note_num = int(str(rf_cfg['purchases_note'])) if isinstance(rf_cfg, Mapping) else -1
+                    if kind != 'profitandloss' or number != purchases_note_num:
                         raise ValueError('COGS reduction must target a purchases-note account')
                     decrease = amount(reduction['amount'])
                     if decrease < 0 or decrease > value:
@@ -395,7 +526,7 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
                     value -= decrease
                     warnings.append(f'{label}: {node["name"]} reduced by {money(decrease)}; '
                                     'profit increases by that amount. Books and balance-sheet earnings are unchanged.')
-                item = classified[number].setdefault(identity, {"name": node["name"], "amounts": {}})
+                item = classified[number].setdefault(identity, {"name": str(node["name"]), "amounts": {}})
                 item["amounts"][label] = value
                 totals[label][number] += value
     rollforward = config.get("inventory_rollforward")
@@ -404,15 +535,17 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
         reductions = rollforward.get('cogs_reductions', {})
         if not isinstance(reductions, Mapping) or set(reductions) - set(labels):
             raise ValueError('COGS reductions must use configured financial-year labels')
-        for label, reduction in reductions.items():
-            item = classified[rollforward['purchases_note']].get(str(reduction['account_id']))
+        purchases_note = int(str(rollforward["purchases_note"]))
+        inventory_note = int(str(rollforward["inventory_note"]))
+        for label, reduction_item in reductions.items():
+            if not isinstance(reduction_item, Mapping):
+                continue
+            item = classified[purchases_note].get(str(reduction_item['account_id']))
             if not item or label not in item['amounts']:
                 raise ValueError(f'{label} COGS reduction account was not found')
         opening_overrides = rollforward.get('opening_stock_overrides', {})
         if not isinstance(opening_overrides, Mapping) or set(opening_overrides) - set(labels):
             raise ValueError('Opening stock overrides must use configured financial-year labels')
-        purchases_note = rollforward["purchases_note"]
-        inventory_note = rollforward["inventory_note"]
         purchase_config = next((n for n in notes if n["number"] == purchases_note), None)
         inventory_config = next((n for n in notes if n["number"] == inventory_note), None)
         changes = [d for d in config["direct_inputs"] if d.get("inventory_changes")]
@@ -441,7 +574,7 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
                                        "net_purchases": purchases, "changes_in_inventories": cogs - purchases}
             totals[label][purchases_note] = purchases
     note_sheet = config["sheets"]["notes"]
-    rows: list[list[Any]] = [[config["company"]], ["Notes forming part of the Financial Statements"],
+    rows: list[list[object]] = [[config["company"]], ["Notes forming part of the Financial Statements"],
                             ["Particulars", periods[0]["end"], periods[1]["end"]]]
     total_rows = {}
     header_rows = {}
@@ -457,18 +590,24 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
         if "groups" in note:
             groups = note["groups"]
             names = [group["name"] for group in groups]
-            members = [str(account) for group in groups for account in group["account_ids"]]
+            group_members: list[str] = []
+            for group in groups:
+                raw_group_accts = group.get("account_ids")
+                if isinstance(raw_group_accts, Sequence):
+                    group_members.extend(str(account) for account in raw_group_accts)
             if not groups or any(not name for name in names) or len(set(names)) != len(names):
                 raise ValueError(f"Invalid group names in Note {number}")
-            if any(not group["account_ids"] for group in groups) or len(set(members)) != len(members):
+            if any(not group.get("account_ids") for group in groups) or len(set(group_members)) != len(group_members):
                 raise ValueError(f"Empty or duplicate group membership in Note {number}")
-            ungrouped = [item["name"] for identity, item in items if identity not in members
+            ungrouped = [item["name"] for identity, item in items if identity not in group_members
                          and any(item["amounts"].values())]
             if ungrouped:
                 raise ValueError(f"Ungrouped nonzero accounts in Note {number}: {', '.join(ungrouped)}")
             for group in groups:
+                raw_group_accts = group.get("account_ids")
+                group_accts_seq = raw_group_accts if isinstance(raw_group_accts, Sequence) else []
                 amounts = [sum((classified[number].get(str(account), {}).get("amounts", {}).get(label, Decimal(0))
-                                for account in group["account_ids"]), Decimal(0)) for label in labels]
+                                for account in group_accts_seq), Decimal(0)) for label in labels]
                 rows.append([group["name"], *[float(money(value)) for value in amounts]])
             items = []
         for identity, item in items:
@@ -530,9 +669,15 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
         expected_assets = section(report["balancesheet"], "balancesheet", ["ASSETS"])
         expected_liabilities = section(report["balancesheet"], "balancesheet", ["EQUITY AND LIABILITIES"])
         expected_pbt = section(report["profitandloss"], "profitandloss", config["checks"]["profit_before_tax_path"])
-        reduction = (rollforward or {}).get('cogs_reductions', {}).get(label)
-        if reduction:
-            expected_pbt += amount(reduction['amount'])
+        reduction_amt = Decimal(0)
+        if isinstance(rollforward, Mapping):
+            cogs_reds = rollforward.get('cogs_reductions')
+            if isinstance(cogs_reds, Mapping):
+                label_red = cogs_reds.get(label)
+                if isinstance(label_red, Mapping):
+                    reduction_amt = amount(label_red['amount'])
+        if reduction_amt:
+            expected_pbt += reduction_amt
         pbt = revenue - expense - sum((section(report["profitandloss"], "profitandloss", d["path"])
                                       for d in config["direct_inputs"] if d.get("exceptional")), Decimal(0))
         for actual, expected, description in ((assets, expected_assets, "assets"),
@@ -545,7 +690,7 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
         checks[label].update({key: str(money(value)) for key, value in inventory_checks.get(label, {}).items()})
         warnings.append(f"{label}: Books branch-rule echo verifies requested scope; SBE-named accounts can retain balances.")
     asset_checks = {}
-    asset_rows: list[list[Any]] = []
+    asset_rows: list[list[object]] = []
     # Select by date so configuration ordering cannot switch depreciation years.
     for period in [max(periods, key=lambda p: date.fromisoformat(p["end"]))]:
         asset_rows.append([f"Assets & Depreciation — {period['label']}"])
@@ -557,7 +702,7 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
             if asset.get("status") in {"draft", "cancel"}:
                 warnings.append(f"Excluded unposted asset: {asset['asset_name']}")
                 continue
-            if asset["asset_purchase_date"] > period["end"]:
+            if str(asset.get("asset_purchase_date", "")) > period["end"]:
                 continue
             result = verify_asset(asset, item["history"], start=period["start"], end=period["end"])
             reclass = None if config.get("asset_opening_source") == "ledger" else config.get("asset_opening_reclassifications", {}).get(result.asset_id)
@@ -587,7 +732,7 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
             if prior_period is None:
                 raise ValueError("Ledger asset opening requires the preceding year-end report")
             prior_report = sources["reports"][prior_period["label"]]["balancesheet"]
-            ledger_accounts = {str(n["account_id"]): n for n, path in nodes(prior_report[KEYS["balancesheet"]])
+            ledger_accounts = {str(n["account_id"]): n for n, path in nodes(cast(Sequence[Mapping[str, object]], prior_report[KEYS["balancesheet"]]))
                                if n.get("account_id") and "a. Fixed Assets" in path}
             dep_map = config.get("asset_accumulated_depreciation_accounts", {})
             depreciation_ids = [str(a) for ids in dep_map.values() for a in ids]
@@ -619,7 +764,7 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
             for account_id, node in ledger_accounts.items():
                 if account_id in accounts or account_id in depreciation_ids:
                     continue
-                if node["name"].startswith("Accumulated Depreciation"):
+                if str(node["name"]).startswith("Accumulated Depreciation"):
                     if amount(node["total"]):
                         raise ValueError(f"Unassigned opening accumulated depreciation: {node['name']}")
                     continue
@@ -631,7 +776,7 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
                 raise ValueError("Ledger-only asset overlaps the register or lacks prior year")
             balances = []
             for label in (prior_period["label"], period["label"]):
-                matches = [n for n, path in nodes(sources["reports"][label]["balancesheet"][KEYS["balancesheet"]])
+                matches = [n for n, path in nodes(cast(Sequence[Mapping[str, object]], sources["reports"][label]["balancesheet"][KEYS["balancesheet"]]))
                            if str(n.get("account_id")) == account_id and "a. Fixed Assets" in path]
                 if len(matches) != 1:
                     raise ValueError(f"Missing ledger-only fixed asset: {entry['name']}")
@@ -691,18 +836,24 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
                                float(next(iter(rates))) if len(rates) == 1 else "Mixed rates"])
         asset_checks[period["label"]] = tuple(results)
         last_row = len(asset_rows)
-        total = ["Total"] + [""] * 11
+        total: list[object] = ["Total"] + [""] * 11
         for col in "BCDEFGHIJK":
             total[ord(col) - ord("A")] = f"=SUM({col}{first_row}:{col}{last_row})" if last_row >= first_row else "=0"
         total_row = len(asset_rows) + 1
+        dep_path = config["checks"]["depreciation_path"]
         dep_inputs = [d for d in config["direct_inputs"] if d["report"] == "profitandloss" and
-                      d["path"] == config["checks"]["depreciation_path"]]
+                      d["path"] == dep_path]
         if len(dep_inputs) != 1:
             raise ValueError("A unique P&L depreciation destination is required")
         pnl_column = "C" if period["label"] == labels[0] else "D"
         pnl_link = "=" + qualified(config["sheets"][dep_inputs[0]["statement"]], f"{pnl_column}{dep_inputs[0]['row']}")
-        asset_rows.extend([total, ["P&L depreciation expense", "", "", "", "", pnl_link],
-                           ["Difference vs P&L", "", "", "", "", f"=ROUND(F{total_row}-F{total_row + 1},2)"], []])
+        extra_rows: list[list[object]] = [
+            total,
+            ["P&L depreciation expense", "", "", "", "", pnl_link],
+            ["Difference vs P&L", "", "", "", "", f"=ROUND(F{total_row}-F{total_row + 1},2)"],
+            [],
+        ]
+        asset_rows.extend(extra_rows)
         posted = sum((r.posted for r in results), Decimal(0))
         pnl_depreciation = section(sources["reports"][period["label"]]["profitandloss"], "profitandloss",
                                    config["checks"]["depreciation_path"])
@@ -722,20 +873,25 @@ def build_schedule_plan(sources: Mapping[str, Any], config: Mapping[str, Any]) -
     last_column = "O"
     if layout == "reviewed_statement":
         period = max(periods, key=lambda p: date.fromisoformat(p["end"]))
-        for row in config.get("reviewed_asset_statement", {}).get("rows", []):
-            account_id = row.get("opening_account_id")
+        rev_stmt = config.get("reviewed_asset_statement") or {}
+        raw_rows = rev_stmt.get("rows")
+        rev_rows = raw_rows if isinstance(raw_rows, list) else []
+        for row in rev_rows:
+            account_id = str(row.get("opening_account_id") or "")
             if account_id:
-                identity = row.get("opening_asset_id")
+                identity = str(row.get("opening_asset_id") or "")
                 if not identity or asset_accounts.get(identity) != account_id:
                     raise ValueError(f"Reviewed opening account mapping differs: {row['name']}")
                 warnings.append(f"{period['label']}: reviewed {row['name']} maps to {accounts[account_id][0]} account ({account_id}).")
-        review = reviewed_statement_with_additions(config.get("reviewed_asset_statement", {}),
+        review = reviewed_statement_with_additions(rev_stmt,
                                                   period, asset_checks[period["label"]])
         asset_rows = reviewed_asset_table(review, period)
-        reviewed_dep = sum((amount(row["depreciation"]) for row in review["rows"]), Decimal(0))
+        review_rows = review.get("rows")
+        review_rows_list = review_rows if isinstance(review_rows, list) else []
+        reviewed_dep = sum((amount(row["depreciation"]) for row in review_rows_list), Decimal(0))
         reviewed_closing = sum((amount(row["opening"]) + amount(row.get("before_cutoff", 0)) +
                                amount(row.get("after_cutoff", 0)) - amount(row["depreciation"])
-                              for row in review["rows"]), Decimal(0))
+                              for row in review_rows_list), Decimal(0))
         current = checks[period["label"]]
         current["reviewed_asset_depreciation"] = str(money(reviewed_dep))
         current["reviewed_asset_closing_wdv"] = str(money(reviewed_closing))

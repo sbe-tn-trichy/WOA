@@ -2,15 +2,16 @@
 """Upsert active, inventory-tracked Neoseal items into the Flat Zoho Sheet tab."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 import sys
 from collections.abc import Sequence
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_inventory_client, get_sheet_client
 from workflows.runtime.config import Config

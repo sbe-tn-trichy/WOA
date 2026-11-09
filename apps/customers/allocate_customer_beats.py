@@ -4,14 +4,16 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 
 if __package__:
     from . import _bootstrap
 else:
-    import _bootstrap  # type: ignore[no-redef]
+    _bootstrap = importlib.import_module("_bootstrap")
 
 from utils.file_utils import json
 from workflows.runtime.auth import get_books_client, get_creator_client
@@ -35,9 +37,10 @@ def make_handler(service: CreatorBeatAllocationService, token: str) -> type[Base
             self.wfile.write(body)
 
         def _allowed_host(self) -> bool:
+            port = getattr(self.server, "server_port", 0)
             return self.headers.get("Host") in {
-                f"127.0.0.1:{self.server.server_port}",
-                f"localhost:{self.server.server_port}",
+                f"127.0.0.1:{port}",
+                f"localhost:{port}",
             }
 
         def do_GET(self) -> None:
@@ -95,7 +98,7 @@ def main() -> None:
     args = parser.parse_args()
     service = CreatorBeatAllocationService(
         get_books_client(), get_creator_client(), Config.PAYMENT_CREATOR_APP_LINK_NAME,
-        Config.PAYMENT_CREATOR_REPORTS.get("customer", "All_Customers1"),
+        str(Config.PAYMENT_CREATOR_REPORTS.get("customer", "All_Customers1")),
     )
     server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(service, secrets.token_urlsafe(32)))
     print(f"Beat allocation UI: http://127.0.0.1:{args.port}", flush=True)

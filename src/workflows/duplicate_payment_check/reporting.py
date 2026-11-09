@@ -4,70 +4,87 @@ from __future__ import annotations
 
 from html import escape
 from collections.abc import Mapping
-from typing import Any
 
 
-def _text(value: Any) -> str:
+def _text(value: object) -> str:
     return escape("" if value is None else str(value))
 
 
-def _markdown_text(value: Any) -> str:
+def _markdown_text(value: object) -> str:
     return str(value or "").replace("\\", "\\\\").replace("`", "\\`").replace("\n", " ").strip()
 
 
-def _display_amount(value: Any) -> str:
+def _display_amount(value: object) -> str:
     try:
-        return f"{float(value):,.2f}"
+        return f"{float(str(value)):,.2f}"
     except (TypeError, ValueError):
         return str(value or "")
 
 
-def render_markdown_report(payload: Mapping[str, Any]) -> str:
+def render_markdown_report(payload: Mapping[str, object]) -> str:
     """Render duplicate payments as customer/date headings and payment bullets."""
-    result = payload["result"]
+    raw_result = payload.get("result")
+    result = raw_result if isinstance(raw_result, Mapping) else {}
     lines = [
         "# Duplicate Customer Payments",
         "",
-        f"Payments scanned: {int(result['payments_scanned']):,}  ",
-        f"Potential duplicate groups: {int(result['duplicate_group_count']):,}  ",
-        f"Payments in flagged groups: {int(result['duplicate_payment_count']):,}",
+        f"Payments scanned: {int(str(result.get('payments_scanned') or 0)):,}  ",
+        f"Potential duplicate groups: {int(str(result.get('duplicate_group_count') or 0)):,}  ",
+        f"Payments in flagged groups: {int(str(result.get('duplicate_payment_count') or 0)):,}",
         "",
     ]
-    for group in result["duplicate_groups"]:
-        customer = _markdown_text(group.get("customer_name")) or _markdown_text(group.get("customer_id"))
-        lines.extend([f"## {customer}, {_markdown_text(group.get('date'))}", ""])
-        for payment in group["payments"]:
-            reference = _markdown_text(payment.get("reference_number")) or "No reference"
-            amount = _display_amount(payment.get("amount", group.get("amount")))
-            lines.append(f"- {reference}, {amount}")
-        lines.append("")
+    groups = result.get("duplicate_groups")
+    if isinstance(groups, list):
+        for group in groups:
+            if not isinstance(group, Mapping):
+                continue
+            customer = _markdown_text(group.get("customer_name")) or _markdown_text(group.get("customer_id"))
+            lines.extend([f"## {customer}, {_markdown_text(group.get('date'))}", ""])
+            payments = group.get("payments")
+            if isinstance(payments, list):
+                for payment in payments:
+                    if not isinstance(payment, Mapping):
+                        continue
+                    reference = _markdown_text(payment.get("reference_number")) or "No reference"
+                    amount = _display_amount(payment.get("amount", group.get("amount")))
+                    lines.append(f"- {reference}, {amount}")
+            lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
 
-def render_html_report(payload: Mapping[str, Any]) -> str:
+def render_html_report(payload: Mapping[str, object]) -> str:
     """Render a standalone, searchable HTML report from a check payload."""
-    result = payload["result"]
+    raw_result = payload.get("result")
+    result = raw_result if isinstance(raw_result, Mapping) else {}
     rows = []
-    for group_number, group in enumerate(result["duplicate_groups"], start=1):
-        for payment in group["payments"]:
-            search = " ".join(
-                str(value or "")
-                for value in (
-                    group.get("customer_name"), group.get("customer_id"), group.get("date"),
-                    group.get("amount"), payment.get("payment_number"),
-                    payment.get("reference_number"), payment.get("payment_mode"),
-                )
-            ).lower()
-            rows.append(
-                f'<tr data-search="{_text(search)}">'
-                f'<td>{group_number}</td><td>{_text(group["date"])}</td>'
-                f'<td><strong>{_text(group.get("customer_name"))}</strong><small>{_text(group["customer_id"])}</small></td>'
-                f'<td class="amount">{_text(group["amount"])}</td><td>{group["payment_count"]}</td>'
-                f'<td>{_text(payment.get("payment_number"))}</td>'
-                f'<td>{_text(payment.get("reference_number"))}</td>'
-                f'<td>{_text(payment.get("payment_mode"))}</td>'
-                f'<td class="id">{_text(payment.get("payment_id"))}</td></tr>'
-            )
+    groups = result.get("duplicate_groups")
+    if isinstance(groups, list):
+        for group_number, group in enumerate(groups, start=1):
+            if not isinstance(group, Mapping):
+                continue
+            payments = group.get("payments")
+            if isinstance(payments, list):
+                for payment in payments:
+                    if not isinstance(payment, Mapping):
+                        continue
+                    search = " ".join(
+                        str(value or "")
+                        for value in (
+                            group.get("customer_name"), group.get("customer_id"), group.get("date"),
+                            group.get("amount"), payment.get("payment_number"),
+                            payment.get("reference_number"), payment.get("payment_mode"),
+                        )
+                    ).lower()
+                    rows.append(
+                        f'<tr data-search="{_text(search)}">'
+                        f'<td>{group_number}</td><td>{_text(group.get("date"))}</td>'
+                        f'<td><strong>{_text(group.get("customer_name"))}</strong><small>{_text(group.get("customer_id"))}</small></td>'
+                        f'<td class="amount">{_text(group.get("amount"))}</td><td>{group.get("payment_count")}</td>'
+                        f'<td>{_text(payment.get("payment_number"))}</td>'
+                        f'<td>{_text(payment.get("reference_number"))}</td>'
+                        f'<td>{_text(payment.get("payment_mode"))}</td>'
+                        f'<td class="id">{_text(payment.get("payment_id"))}</td></tr>'
+                    )
 
     duplicate_groups = int(result["duplicate_group_count"])
     duplicate_payments = int(result["duplicate_payment_count"])

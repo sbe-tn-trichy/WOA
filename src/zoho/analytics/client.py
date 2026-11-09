@@ -1,7 +1,10 @@
-from typing import Any
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping, Sequence
 
 from zoho.core_sdk.auth import HttpTokenProvider
 from zoho.core_sdk.base_client import BaseZohoClient
+from zoho.core_sdk.identifiers import OrganizationId
 
 from .custom import Metadata, Queries, Views
 from .openapi import AnalyticsResources
@@ -10,12 +13,14 @@ from .openapi import AnalyticsResources
 class ZohoAnalyticsAPI(BaseZohoClient):
     """Client for Zoho Analytics v2 and its export and metadata helpers."""
 
+    organization_id: OrganizationId
+
     def __init__(
         self,
         access_token: str,
-        organization_id: str,
+        organization_id: OrganizationId | str,
         domain: str = "in",
-        token_refresh_callback: Any | None = None,
+        token_refresh_callback: Callable[[BaseZohoClient], None] | Callable[[], str] | None = None,
     ):
         if not organization_id:
             raise ValueError("organization_id is required.")
@@ -27,7 +32,7 @@ class ZohoAnalyticsAPI(BaseZohoClient):
             token_refresh_callback=token_refresh_callback,
             default_timeout=60,
         )
-        self.organization_id = organization_id
+        self.organization_id = OrganizationId(organization_id)
         self.views = Views(self)
         self.metadata = Metadata(self)
         self.queries = Queries(self)
@@ -37,10 +42,10 @@ class ZohoAnalyticsAPI(BaseZohoClient):
     def from_token_provider(
         cls,
         token_url: str = "http://localhost:3000/server/new/tokens",
-        organization_id: str | None = None,
+        organization_id: OrganizationId | str | None = None,
         domain: str = "in",
         token_service_key: str = "zoho_analytics_conn",
-        token_refresh_callback: Any | None = None,
+        token_refresh_callback: Callable[[BaseZohoClient], None] | Callable[[], str] | None = None,
     ) -> "ZohoAnalyticsAPI":
         """Create a client using an access token from an HTTP token broker."""
         token = HttpTokenProvider(
@@ -58,17 +63,17 @@ class ZohoAnalyticsAPI(BaseZohoClient):
         self,
         method: str,
         endpoint: str,
-        json: dict[str, Any] | None = None,
-        data: dict[str, Any] | None = None,
-        params: dict[str, Any] | None = None,
-        headers: dict[str, Any] | None = None,
-        files: dict[str, Any] | None = None,
+        json: Mapping[str, object] | Sequence[object] | None = None,
+        data: Mapping[str, object] | str | bytes | None = None,
+        params: Mapping[str, object] | None = None,
+        headers: Mapping[str, str] | None = None,
+        files: Mapping[str, object] | None = None,
         stream: bool = False,
         override_url: str | None = None,
         is_mutation: bool | None = None,
         timeout: int | None = None,
-    ) -> Any:
-        request_headers = {"ZANALYTICS-ORGID": self.organization_id}
+    ) -> object:
+        request_headers: dict[str, str] = {"ZANALYTICS-ORGID": str(self.organization_id)}
         if headers:
             request_headers.update(headers)
         return super().request(

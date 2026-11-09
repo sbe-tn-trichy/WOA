@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from collections.abc import Mapping, Sequence
-from typing import Any
 
 
 @dataclass(frozen=True)
@@ -30,7 +29,7 @@ class BalanceSheetDifference:
     books_source: str
 
 
-def _amount(value: Any, label: str) -> Decimal:
+def _amount(value: object, label: str) -> Decimal:
     try:
         amount = Decimal(str(value).replace(",", ""))
     except (InvalidOperation, TypeError, ValueError) as exc:
@@ -40,7 +39,7 @@ def _amount(value: Any, label: str) -> Decimal:
     return amount
 
 
-def _report_nodes(report: Mapping[str, Any], to_date: str) -> list[Mapping[str, Any]]:
+def _report_nodes(report: Mapping[str, object], to_date: str) -> list[Mapping[str, object]]:
     if report.get("code") != 0:
         raise ValueError(f"Books balance sheet failed: {report.get('message', report.get('code'))}")
     context = report.get("page_context")
@@ -49,14 +48,14 @@ def _report_nodes(report: Mapping[str, Any], to_date: str) -> list[Mapping[str, 
     nodes = report.get("balance_sheet")
     if not isinstance(nodes, list):
         raise ValueError("Books balance_sheet rows are missing")
-    return nodes
+    return [n for n in nodes if isinstance(n, Mapping)]
 
 
-def _index_nodes(nodes: Sequence[Mapping[str, Any]]) -> tuple[dict[str, tuple[Decimal, str]], dict[tuple[str, ...], Decimal]]:
+def _index_nodes(nodes: Sequence[Mapping[str, object]]) -> tuple[dict[str, tuple[Decimal, str]], dict[tuple[str, ...], Decimal]]:
     accounts: dict[str, tuple[Decimal, str]] = {}
     paths: dict[tuple[str, ...], Decimal] = {}
 
-    def visit(children: Sequence[Mapping[str, Any]], parent: tuple[str, ...]) -> None:
+    def visit(children: Sequence[Mapping[str, object]], parent: tuple[str, ...]) -> None:
         for node in children:
             name = str(node.get("name") or "")
             path = (*parent, name)
@@ -71,14 +70,14 @@ def _index_nodes(nodes: Sequence[Mapping[str, Any]]) -> tuple[dict[str, tuple[De
             descendants = node.get("account_transactions") or []
             if not isinstance(descendants, list):
                 raise ValueError(f"Invalid Books children at {' / '.join(path)}")
-            visit(descendants, path)
+            visit([d for d in descendants if isinstance(d, Mapping)], path)
 
     visit(nodes, ())
     return accounts, paths
 
 
 def compare_balance_sheet(
-    report: Mapping[str, Any], *, to_date: str, filed_cells: Mapping[str, Any],
+    report: Mapping[str, object], *, to_date: str, filed_cells: Mapping[str, object],
     lines: Sequence[BalanceSheetLine], tolerance: Decimal = Decimal("1.00"),
 ) -> list[BalanceSheetDifference]:
     """Compare reviewed cell mappings; unclassified lines remain explicit."""
@@ -122,7 +121,7 @@ def compare_balance_sheet(
         else:
             source = "; ".join(sources)
         difference = books - filed if books is not None else None
-        status = "UNMAPPED" if books is None else ("MATCH" if abs(difference) <= tolerance else "DIFFERENCE")
+        status = "UNMAPPED" if books is None or difference is None else ("MATCH" if abs(difference) <= tolerance else "DIFFERENCE")
         result.append(BalanceSheetDifference(line.label, line.filed_cell, filed, books, difference, status, source))
     return result
 

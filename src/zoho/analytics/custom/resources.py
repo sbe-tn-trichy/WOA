@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 import csv
 import io
-from utils.file_utils import json
 import time
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING
 
+from utils.file_utils import json
 from ..exceptions import ZohoAnalyticsError
+
+if TYPE_CHECKING:
+    from zoho.core_sdk.base_client import BaseZohoClient
 
 
 _TABULAR_RESPONSE_FORMATS = {"csv", "json"}
@@ -21,34 +26,36 @@ def _response_format(value: str) -> str:
     return normalized
 
 
-def _rows(payload: Any, response_format: str = "csv") -> list[dict[str, Any]]:
+def _rows(payload: object, response_format: str = "csv") -> list[dict[str, object]]:
     response_format = _response_format(response_format)
     if isinstance(payload, bytes):
         text = payload.decode("utf-8-sig")
         if response_format == "csv":
-            return list(csv.DictReader(io.StringIO(text)))
+            return [dict(row) for row in csv.DictReader(io.StringIO(text))]
         try:
             payload = json.loads(text)
         except json.JSONDecodeError as exc:
             raise ZohoAnalyticsError("Analytics returned malformed JSON export data.") from exc
     if isinstance(payload, list):
-        return payload
+        return [row for row in payload if isinstance(row, dict)]
     if not isinstance(payload, dict):
         return []
     result = payload.get("result")
     result_rows = result.get("data") if isinstance(result, dict) else None
     rows = payload.get("data") or payload.get("rows") or result_rows or []
-    return rows if isinstance(rows, list) else []
+    if isinstance(rows, list):
+        return [row for row in rows if isinstance(row, dict)]
+    return []
 
 
 def _download_export(
-    client: Any,
+    client: BaseZohoClient,
     base: str,
     job_id: str,
     poll_interval: float,
     max_attempts: int,
     response_format: str = "csv",
-) -> list[dict[str, Any]]:
+) -> list[dict[str, object]]:
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1.")
     if poll_interval < 0:
@@ -60,9 +67,9 @@ def _download_export(
         data = status.get("data", {}) if isinstance(status, dict) else {}
         job_code = str(data.get("jobCode", ""))
         if job_code == "1004" or data.get("jobStatus") == "JOB COMPLETED":
-            download_url = data.get("downloadUrl") or (
+            download_url = str(data.get("downloadUrl") or (
                 f"{client.base_url}/{base}/exportjobs/{job_id}/data"
-            )
+            ))
             break
         if job_code in {"1003", "1005"} or data.get("jobStatus") in {
             "JOB FAILED",
@@ -81,7 +88,7 @@ def _download_export(
 
 
 class Views:
-    def __init__(self, client: Any):
+    def __init__(self, client: BaseZohoClient):
         self.client = client
 
     def create_query_table(self, workspace_id: str, name: str, sql_query: str, description: str = "") -> str:
@@ -95,7 +102,7 @@ class Views:
         )
         if not isinstance(result, dict) or result.get("status") != "success":
             raise ZohoAnalyticsError(f"Analytics Query Table creation failed: {result}")
-        view_id = result.get("data", {}).get("viewId")
+        view_id = result.get("data", {}).get("viewId") if isinstance(result.get("data"), dict) else None
         if not view_id:
             raise ZohoAnalyticsError("Analytics Query Table creation returned no view ID")
         return str(view_id)
@@ -115,8 +122,8 @@ class Views:
     @staticmethod
     def _config(
         response_format: str,
-        config: dict[str, Any] | None = None,
-        **required: Any,
+        config: Mapping[str, object] | None = None,
+        **required: object,
     ) -> dict[str, str]:
         response_format = _response_format(response_format)
         export_config = dict(config or {})
@@ -129,8 +136,8 @@ class Views:
         workspace_id: str,
         view_id: str,
         response_format: str = "csv",
-        config: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        config: Mapping[str, object] | None = None,
+    ) -> list[dict[str, object]]:
         payload = self.client.request(
             "GET",
             f"workspaces/{workspace_id}/views/{view_id}/data",
@@ -145,8 +152,8 @@ class Views:
         poll_interval: float = 2.0,
         max_attempts: int = 12,
         response_format: str = "csv",
-        config: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        config: Mapping[str, object] | None = None,
+    ) -> list[dict[str, object]]:
         try:
             return self.export_data(
                 workspace_id,
@@ -173,8 +180,8 @@ class Views:
         poll_interval: float = 2.0,
         max_attempts: int = 12,
         response_format: str = "csv",
-        config: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        config: Mapping[str, object] | None = None,
+    ) -> list[dict[str, object]]:
         base = f"bulk/workspaces/{workspace_id}"
         created = self.client.request(
             "GET",
@@ -196,8 +203,8 @@ class Views:
         poll_interval: float = 2.0,
         max_attempts: int = 12,
         response_format: str = "csv",
-        config: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        config: Mapping[str, object] | None = None,
+    ) -> list[dict[str, object]]:
         """Execute a dynamic SQL SELECT query through ZA's asynchronous export API."""
         if not sql_query or not sql_query.strip():
             raise ValueError("sql_query is required.")
@@ -217,13 +224,13 @@ class Views:
     def _poll_export(
         self,
         workspace_id: str,
-        created: Any,
+        created: object,
         poll_interval: float,
         max_attempts: int,
         response_format: str,
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, object]]:
         base = f"bulk/workspaces/{workspace_id}"
-        job_id = created.get("data", {}).get("jobId") if isinstance(created, dict) else None
+        job_id = created.get("data", {}).get("jobId") if isinstance(created, dict) and isinstance(created.get("data"), dict) else None
         if not job_id:
             raise ZohoAnalyticsError("Analytics bulk export did not return a job ID.")
 
@@ -240,7 +247,7 @@ class Views:
 class Queries:
     """Execute dynamic read queries through Analytics bulk SQL exports."""
 
-    def __init__(self, client: Any):
+    def __init__(self, client: BaseZohoClient):
         self.client = client
 
     def execute(
@@ -249,17 +256,17 @@ class Queries:
         sql_query: str,
         poll_interval: float = 2.0,
         max_attempts: int = 12,
-        config: Mapping[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        config: Mapping[str, object] | None = None,
+    ) -> list[dict[str, object]]:
         if not workspace_id:
             raise ValueError("workspace_id is required.")
         if not isinstance(sql_query, str) or not sql_query.strip():
             raise ValueError("sql_query is required.")
 
-        export_config = dict(config or {})
+        export_config: dict[str, object] = dict(config or {})
         export_config["sqlQuery"] = sql_query
         export_config.setdefault("responseFormat", "json")
-        if export_config["responseFormat"].lower() == "json":
+        if str(export_config.get("responseFormat", "")).lower() == "json":
             export_config.setdefault("keyValueFormat", True)
 
         base = f"bulk/workspaces/{workspace_id}"
@@ -268,7 +275,7 @@ class Queries:
             f"{base}/data",
             params={"CONFIG": json.dumps(export_config)},
         )
-        job_id = created.get("data", {}).get("jobId") if isinstance(created, dict) else None
+        job_id = created.get("data", {}).get("jobId") if isinstance(created, dict) and isinstance(created.get("data"), dict) else None
         if not job_id:
             raise ZohoAnalyticsError("Analytics SQL export did not return a job ID.")
 

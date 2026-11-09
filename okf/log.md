@@ -1,6 +1,24 @@
 # Knowledge Change Log
 
+## 2026-11-09
+
+- Completed Phase 5 type safety across all CLI and server applications in `apps/` and finalized the distribution milestone, adding PEP 561 marker `src/zoho/py.typed` and expanding `[tool.ty.src].include` to full `"src"` and `"apps"` coverage at 0 diagnostics. See the [project entry](../CHANGELOG.md#complete-phase-5-applications-and-distribution-milestone-type-safety-migration-chk-51-to-chk-53).
+
+- Completed Phase 4 strict type safety across all financial and operational domain workflows in `src/workflows/`, eliminating `Any` types, defining strict `TypedDict` and caller `Protocol` boundaries, and promoting all 32 workflow packages to `[tool.ty.src].include` (447 total files covered at 0 diagnostics). See the [project entry](../CHANGELOG.md#complete-phase-4-financial-and-operational-workflows-and-chk-50-apps-bootstrap-standardization).
+
 ## 2026-11-08
+
+- Strictly typed Zoho Books custom client modules and Zoho Inventory resources, defined covariant error classes on `BaseResource`, added nominal `PurchaseAccountId` and `OrganizationId` types, and expanded the `ty` check gate. See the [project entry](../CHANGELOG.md#strictly-type-books-custom-and-inventory-modules-chk-22).
+
+- Strictly typed shared helper modules across formatting, operations, catalog, and reports, defined caller Protocols for Books, Inventory, Analytics, and WorkDrive client interactions, and expanded the ty gate to cover all of `src/helpers/`. See the [project entry](../CHANGELOG.md#strictly-type-shared-helpers-and-expand-ty-gate-to-srchelpers).
+
+- Documented [customer search and financial lookup cardinality](architecture.md#search-result-cardinality). See the [project entry](../CHANGELOG.md#check-search-cardinality-before-financial-writes).
+
+- Removed the pass-through `helpers.formatting.sequences` module in favor of direct imports from `utils.general_utils.sequences.parse_doc_number` (re-exported by `helpers` and `helpers.formatting`) in [architecture](architecture.md#layer-boundaries) and [workflow helpers](workflow-helpers.md#shared-workflow-mechanics). See the [project entry](../CHANGELOG.md#remove-redundant-sequence-parser-wrapper-from-helpersformatting).
+
+- Moved remaining hardcoded Analytics workspace/view IDs and Books account, location, and item defaults into [configuration](configuration.md#explicit-deployment-identifiers-helper-002) (HELPER-002), keeping `src/helpers/` free of tenant defaults and workflow imports. See the [project entry](../CHANGELOG.md#move-hardcoded-workspace-view-and-account-identifiers-to-configuration).
+
+- Recorded the canonical [warehouse bin helper import](architecture.md#layer-boundaries). See the [project entry](../CHANGELOG.md#remove-the-camelcase-bin-stock-alias).
 
 - Documented India-only Zoho routing and shared HTTP transport contracts across SDK clients in [architecture](architecture.md#layer-boundaries). See the [project entry](../CHANGELOG.md#enforce-india-only-zoho-routing-and-shared-http-contracts-for-mail-workdrive-and-analytics).
 

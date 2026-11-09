@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from workflows.runtime.exceptions import ReconciliationError
@@ -25,7 +25,7 @@ from ..core.matching import (
 )
 from workflows.collection_payments.identifiers import identifier as _identifier, identifiers as _identifiers
 from workflows.collection_payments.payments import customer_payment_payload
-from workflows.collection_payments.types import BankStatementRecord, BankTransferProposal
+from workflows.collection_payments.types import BankStatementRecord, BankTransferProposal, InvoiceAllocation
 from .bank_transfers import bank_line_identity, transfer_proposals, post_transfer
 from .preview_cache import PreviewCache
 from workflows.collection_payments.allocator import CLOSED_INVOICE_STATUSES as _CLOSED_INVOICE_STATUSES, allocate_invoices_oldest_due_first, fetch_open_invoices
@@ -162,7 +162,8 @@ class OnlinePaymentReviewService:
         with self._lock:
             if not self.config.state_path.exists():
                 return self._empty_batch()
-            return json.loads(self.config.state_path.read_text(encoding="utf-8"))
+            data = json.loads(self.config.state_path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else self._empty_batch()
 
     def refresh(self, *, force_refresh: bool = False) -> dict[str, Any]:
         """Read live Creator/Books data and rebuild proposals without writing to Zoho."""
@@ -179,8 +180,10 @@ class OnlinePaymentReviewService:
             }
             # Each client stays on one worker; only independent services overlap.
             with ThreadPoolExecutor(max_workers=2) as executor:
-                payment_read = executor.submit(copy_context().run, self._all_creator_payments)
-                bank_read = executor.submit(copy_context().run, self._all_uncategorized_bank_transactions)
+                ctx_payment = copy_context()
+                ctx_bank = copy_context()
+                payment_read = executor.submit(lambda: ctx_payment.run(self._all_creator_payments))
+                bank_read = executor.submit(lambda: ctx_bank.run(self._all_uncategorized_bank_transactions))
                 payments = payment_read.result()
                 bank_transactions = bank_read.result()
             customer_key = (id(self.creator), self.config.creator_app_link_name,
@@ -254,7 +257,7 @@ class OnlinePaymentReviewService:
             customer_finder_rows = self._preview_customer_finder(sorted(all_tokens))
             customer_finder = CustomerFinderIndex(customer_finder_rows)
 
-            invoice_cache: dict[str, list[Mapping[str, Any]]] = {}
+            invoice_cache: dict[str, list[dict[str, object]]] = {}
             entries = []
             for entry in raw_entries:
                 for candidate in entry["ambiguous_candidates"]:
@@ -1201,11 +1204,12 @@ class OnlinePaymentReviewService:
         self,
         payment: Mapping[str, Any],
         customer_ids: Mapping[str, str],
-        bank_transactions: Sequence[Mapping[str, Any]],
+        bank_transactions: Sequence[Mapping[str, Any]] | _BankCandidateIndex,
         used_transaction_ids: set,
     ) -> dict[str, Any]:
         creator_id = _text(payment.get("ID"))
-        lookup = payment.get("Customer_Name") if isinstance(payment.get("Customer_Name"), dict) else {}
+        raw_cust = payment.get("Customer_Name")
+        lookup: Mapping[str, Any] = raw_cust if isinstance(raw_cust, Mapping) else {}
         creator_customer_id = _text(lookup.get("ID"))
         normalized = {
             "date": _text(
@@ -1321,7 +1325,7 @@ class OnlinePaymentReviewService:
     def _find_transaction_details(
         self,
         payment: Mapping[str, Any],
-        transactions: Sequence[Mapping[str, Any]],
+        transactions: Sequence[Mapping[str, Any]] | _BankCandidateIndex,
         used_transaction_ids: set,
     ) -> tuple[
         Mapping[str, Any] | None,
@@ -1494,7 +1498,7 @@ class OnlinePaymentReviewService:
             invoices=allocations,
         )
 
-    def _open_invoices(self, books_customer_id: str) -> list[Mapping[str, Any]]:
+    def _open_invoices(self, books_customer_id: str) -> list[dict[str, object]]:
         return fetch_open_invoices(self.books, books_customer_id)
 
     def _invoice_allocations(
@@ -1502,14 +1506,14 @@ class OnlinePaymentReviewService:
         books_customer_id: str,
         payment_amount: Any,
         invoices: Sequence[Mapping[str, Any]] | None = None,
-    ) -> tuple[list[dict[str, Any]], Decimal]:
+    ) -> tuple[list[InvoiceAllocation], Decimal]:
         open_invoices = list(invoices) if invoices is not None else self._open_invoices(books_customer_id)
         return allocate_invoices_oldest_due_first(payment_amount, open_invoices)
 
     def _attach_invoice_preview(
         self,
         entry: dict[str, Any],
-        invoice_cache: dict[str, list[Mapping[str, Any]]],
+        invoice_cache: dict[str, list[dict[str, object]]],
     ) -> None:
         customer_id = _text(entry.get("creator", {}).get("books_customer_id"))
         if not entry.get("bank") or not customer_id:

@@ -16,6 +16,14 @@ def _money(value: object) -> Decimal:
     return Decimal(str(value)).quantize(Decimal("0.01"))
 
 
+def _get_entity(response: object, key: str) -> dict[str, Any]:
+    if isinstance(response, Mapping):
+        entity = response.get(key)
+        if isinstance(entity, Mapping):
+            return dict(entity)
+    return {}
+
+
 @dataclass(frozen=True)
 class BillUpdateResult:
     bill_id: str
@@ -92,6 +100,8 @@ def _allocations(payment: Mapping[str, Any], bill_id: str, target_amount: Decima
         if str(entry["bill_id"]) == bill_id and target_amount is None:
             continue
         amount = target_amount if str(entry["bill_id"]) == bill_id else _money(entry["amount_applied"])
+        if amount is None:
+            continue
         result.append({
             "bill_id": str(entry["bill_id"]),
             "bill_payment_id": str(entry["bill_payment_id"]),
@@ -115,7 +125,7 @@ def update_bill_with_payment_reallocation(
     becomes unapplied vendor payment credit. The caller must supply the expected
     new total, since Books alone calculates the final tax and rounding.
     """
-    original = books.bills.get(bill_id)["bill"]
+    original = _get_entity(books.bills.get(bill_id), "bill")
     old_total = _money(original["total"])
     expected_total = _money(expected_total)
     if expected_total < 0:
@@ -123,7 +133,7 @@ def update_bill_with_payment_reallocation(
     payment_refs = original.get("payments", [])
     payments = []
     for reference in payment_refs:
-        payment = books.vendor_payments.get(str(reference["payment_id"]))["vendorpayment"]
+        payment = _get_entity(books.vendor_payments.get(str(reference["payment_id"])), "vendorpayment")
         if str(payment["vendor_id"]) != str(original["vendor_id"]):
             raise ValueError("Payment vendor does not match bill vendor")
         targets = [row for row in payment["bills"] if str(row["bill_id"]) == bill_id]
@@ -150,7 +160,7 @@ def update_bill_with_payment_reallocation(
                     _payment_payload(payment, _allocations(payment, bill_id, Decimal("0.00"))),
                 )
                 detached.append(payment)
-                checked = books.vendor_payments.get(str(payment["payment_id"]))["vendorpayment"]
+                checked = _get_entity(books.vendor_payments.get(str(payment["payment_id"])), "vendorpayment")
                 checked_applied = sum(
                     (_money(row["amount_applied"]) for row in checked["bills"]
                      if str(row["bill_id"]) == bill_id), Decimal("0.00")
@@ -168,11 +178,11 @@ def update_bill_with_payment_reallocation(
                 )
             raise
 
-        updated_bill = books.bills.get(bill_id)["bill"]
+        updated_bill = _get_entity(books.bills.get(bill_id), "bill")
         remaining = _money(updated_bill["total"])
         for payment, amount in payments:
             applied = min(amount, remaining)
-            current = books.vendor_payments.get(str(payment["payment_id"]))["vendorpayment"]
+            current = _get_entity(books.vendor_payments.get(str(payment["payment_id"])), "vendorpayment")
             rows = _allocations(current, bill_id, None)
             if applied:
                 rows.append({"bill_id": bill_id, "amount_applied": float(applied)})
@@ -181,7 +191,7 @@ def update_bill_with_payment_reallocation(
             )
             remaining -= applied
 
-    refreshed = books.bills.get(bill_id)["bill"]
+    refreshed = _get_entity(books.bills.get(bill_id), "bill")
     actual_total = _money(refreshed["total"])
     if actual_total != expected_total:
         raise RuntimeError(f"Bill total is {actual_total}, expected {expected_total}")

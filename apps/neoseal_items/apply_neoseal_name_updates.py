@@ -5,6 +5,7 @@ Default behavior is DRY-RUN. To mutate Inventory items, pass --apply explicitly.
 """
 
 from __future__ import annotations
+import importlib
 
 import argparse
 import csv
@@ -16,13 +17,14 @@ from pathlib import Path
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:  # Direct script execution.
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from zoho.inventory import ZohoInventoryAPI
 from workflows.runtime.auth import get_inventory_client
+from workflows.runtime.config import Config
 from workflows.neoseal_audit import (
     KNOWN_DUPLICATE_MAP,
     compute_item_update,
@@ -30,7 +32,7 @@ from workflows.neoseal_audit import (
 )
 
 logger = logging.getLogger("apply_neoseal_name_updates")
-DEFAULT_PURCHASE_ACCOUNT_ID = "1094368000034919918"
+DEFAULT_PURCHASE_ACCOUNT_ID = Config.NEOSEAL_PURCHASE_ACCOUNT_ID
 
 
 def load_items_from_csv(csv_path: Path) -> list[dict[str, Any]]:

@@ -13,7 +13,7 @@ from workflows.payment_renumbering import build_renumber_plan, execute_renumberi
 from workflows.sales_order_import import create_sales_order_from_yaml, parse_invoice_yaml, SalesOrderImportError
 from zoho.books import ZohoBooksAPI
 from zoho.core_sdk.exceptions import ZohoBooksError
-from helpers.formatting.sequences import parse_doc_number
+from utils.general_utils.sequences import parse_doc_number
 
 
 @pytest.mark.parametrize("value", ["25-26", "2025-26", "2025-2026", "25/26", "2025/2026", "2526", "2025"])
@@ -181,19 +181,19 @@ def test_yaml_legacy_false_key_and_flat_items():
 
 def test_yaml_exact_sku_scope_and_fallback():
     books, inventory = Mock(), Mock()
-    inventory.items.list.return_value = {"items": [{"sku": "SKU", "item_id": "item", "name": "Fan"}]}
+    inventory.items.list_all.return_value = [{"sku": "SKU", "item_id": "item", "name": "Fan"}]
     books.sales_orders.create.side_effect = [ZohoBooksError("number", error_code=4097), {"code": 0, "salesorder": {}}]
     create_sales_order_from_yaml(books, ORDER, "customer", inventory_client=inventory, purchase_account_id="purchase")
-    inventory.items.list.assert_called_once_with(params={"sku": "SKU", "purchase_account_id": "purchase"})
+    inventory.items.list_all.assert_called_once_with(params={"sku": "SKU", "purchase_account_id": "purchase"}, resource_key="items")
     assert "salesorder_number" not in books.sales_orders.create.call_args.args[0]
-    inventory.items.list.return_value = {"items": [{"sku": "SKU-OTHER", "item_id": "wrong"}]}
+    inventory.items.list_all.return_value = [{"sku": "SKU-OTHER", "item_id": "wrong"}]
     with pytest.raises(ValueError, match="not found"):
         create_sales_order_from_yaml(books, ORDER, "customer", inventory_client=inventory)
 
 
 def test_yaml_partial_item_creation_exposes_ids():
     books, inventory = Mock(), Mock()
-    inventory.items.list.return_value = {"items": []}
+    inventory.items.list_all.return_value = []
     inventory.items.create.return_value = {"item": {"item_id": "created", "sku": "SKU"}}
     books.sales_orders.create.side_effect = RuntimeError("order failed")
     with pytest.raises(SalesOrderImportError) as error:

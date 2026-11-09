@@ -1,16 +1,16 @@
 """Google Sheets API client."""
 from __future__ import annotations
 
-from utils.file_utils import json
-from pathlib import Path
 import re
 from collections.abc import Mapping, Sequence
-from typing import Any
+from pathlib import Path
+from typing import Protocol, cast
 
 from google.auth.credentials import Credentials as BaseCredentials
 from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 
+from utils.file_utils import json
 from .auth import DEFAULT_SCOPES, create_credentials
 from .exceptions import (
     GoogleSheetsError,
@@ -19,6 +19,74 @@ from .exceptions import (
 )
 
 SPREADSHEET_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+class HttpRequestProtocol(Protocol):
+    def execute(self) -> dict[str, object]: ...
+
+
+class SpreadsheetValuesResourceProtocol(Protocol):
+    def get(
+        self,
+        *,
+        spreadsheetId: str,
+        range: str,
+        valueRenderOption: str = ...,
+        dateTimeRenderOption: str = ...,
+    ) -> HttpRequestProtocol: ...
+
+    def batchGet(
+        self,
+        *,
+        spreadsheetId: str,
+        ranges: list[str],
+        valueRenderOption: str = ...,
+        dateTimeRenderOption: str = ...,
+    ) -> HttpRequestProtocol: ...
+
+    def update(
+        self,
+        *,
+        spreadsheetId: str,
+        range: str,
+        valueInputOption: str = ...,
+        body: Mapping[str, object] = ...,
+    ) -> HttpRequestProtocol: ...
+
+    def batchUpdate(
+        self,
+        *,
+        spreadsheetId: str,
+        body: Mapping[str, object] = ...,
+    ) -> HttpRequestProtocol: ...
+
+    def append(
+        self,
+        *,
+        spreadsheetId: str,
+        range: str,
+        valueInputOption: str = ...,
+        insertDataOption: str = ...,
+        body: Mapping[str, object] = ...,
+    ) -> HttpRequestProtocol: ...
+
+    def clear(
+        self,
+        *,
+        spreadsheetId: str,
+        range: str,
+        body: Mapping[str, object] = ...,
+    ) -> HttpRequestProtocol: ...
+
+
+class SpreadsheetsResourceProtocol(Protocol):
+    def get(self, **kwargs: object) -> HttpRequestProtocol: ...
+    def batchUpdate(self, **kwargs: object) -> HttpRequestProtocol: ...
+    def values(self) -> SpreadsheetValuesResourceProtocol: ...
+
+
+class GoogleSheetsResourceProtocol(Protocol):
+    def spreadsheets(self) -> SpreadsheetsResourceProtocol: ...
 
 
 class GoogleSheetsClient:
@@ -32,10 +100,10 @@ class GoogleSheetsClient:
         self,
         credentials: BaseCredentials | None = None,
         *,
-        service: Resource | None = None,
+        service: GoogleSheetsResourceProtocol | Resource | None = None,
         access_token: str | None = None,
         service_account_file: str | Path | None = None,
-        service_account_info: Mapping[str, Any] | None = None,
+        service_account_info: Mapping[str, object] | None = None,
         scopes: Sequence[str] | None = None,
     ) -> None:
         """Initialize Google Sheets client.
@@ -49,7 +117,7 @@ class GoogleSheetsClient:
             scopes: OAuth 2.0 scopes (defaults to full spreadsheets scope).
         """
         if service is not None:
-            self._service = service
+            self._service: GoogleSheetsResourceProtocol = cast(GoogleSheetsResourceProtocol, service)
             self._credentials = credentials
             return
 
@@ -62,15 +130,16 @@ class GoogleSheetsClient:
             )
 
         self._credentials = credentials
-        self._service = build(
+        raw_service = build(
             "sheets",
             "v4",
             credentials=credentials,
             cache_discovery=False,
         )
+        self._service = cast(GoogleSheetsResourceProtocol, raw_service)
 
     @property
-    def service(self) -> Resource:
+    def service(self) -> GoogleSheetsResourceProtocol:
         """The underlying googleapiclient discovery Resource."""
         return self._service
 
@@ -90,14 +159,19 @@ class GoogleSheetsClient:
     def _handle_http_error(self, exc: HttpError, spreadsheet_id: str = "") -> None:
         """Translate Google API HttpError into SDK exceptions."""
         status = exc.resp.status if hasattr(exc, "resp") and hasattr(exc.resp, "status") else None
-        error_details: dict[str, Any] = {}
+        error_details: dict[str, object] = {}
         error_message = str(exc)
 
         try:
             if hasattr(exc, "content") and exc.content:
                 parsed = json.loads(exc.content.decode("utf-8"))
-                error_details = parsed.get("error", {})
-                error_message = error_details.get("message", error_message)
+                if isinstance(parsed, Mapping):
+                    raw_details = parsed.get("error")
+                    if isinstance(raw_details, Mapping):
+                        error_details = dict(raw_details)
+                        raw_msg = error_details.get("message")
+                        if isinstance(raw_msg, str):
+                            error_message = raw_msg
         except Exception:
             pass
 
@@ -120,7 +194,7 @@ class GoogleSheetsClient:
         *,
         fields: str | None = None,
         include_grid_data: bool = False,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Fetch metadata for a spreadsheet.
 
         Args:
@@ -132,7 +206,7 @@ class GoogleSheetsClient:
             Spreadsheet resource dict.
         """
         sid = self._validate_spreadsheet_id(spreadsheet_id)
-        kwargs: dict[str, Any] = {
+        kwargs: dict[str, object] = {
             "spreadsheetId": sid,
             "includeGridData": include_grid_data,
         }
@@ -156,11 +230,15 @@ class GoogleSheetsClient:
         """
         meta = self.get_spreadsheet(spreadsheet_id, fields="sheets.properties")
         sheets = meta.get("sheets", [])
-        return {
-            sheet["properties"]["title"]: int(sheet["properties"]["sheetId"])
-            for sheet in sheets
-            if "properties" in sheet and "title" in sheet["properties"] and "sheetId" in sheet["properties"]
-        }
+        if not isinstance(sheets, list):
+            return {}
+        result: dict[str, int] = {}
+        for sheet in sheets:
+            if isinstance(sheet, Mapping):
+                props = sheet.get("properties")
+                if isinstance(props, Mapping) and "title" in props and "sheetId" in props:
+                    result[str(props["title"])] = int(props["sheetId"])
+        return result
 
     def get_values(
         self,
@@ -169,7 +247,7 @@ class GoogleSheetsClient:
         *,
         value_render_option: str = "FORMATTED_VALUE",
         date_time_render_option: str = "SERIAL_NUMBER",
-    ) -> list[list[Any]]:
+    ) -> list[list[object]]:
         """Fetch cell values from a single range.
 
         Args:
@@ -194,7 +272,10 @@ class GoogleSheetsClient:
                 )
                 .execute()
             )
-            return response.get("values", [])
+            raw_values = response.get("values", [])
+            if isinstance(raw_values, list):
+                return [list(row) if isinstance(row, list) else [row] for row in raw_values]
+            return []
         except HttpError as exc:
             self._handle_http_error(exc, sid)
             raise
@@ -206,7 +287,7 @@ class GoogleSheetsClient:
         *,
         value_render_option: str = "FORMATTED_VALUE",
         date_time_render_option: str = "SERIAL_NUMBER",
-    ) -> dict[str, list[list[Any]]]:
+    ) -> dict[str, list[list[object]]]:
         """Fetch cell values from multiple ranges in a single request.
 
         Args:
@@ -234,9 +315,19 @@ class GoogleSheetsClient:
                 )
                 .execute()
             )
-            result: dict[str, list[list[Any]]] = {}
-            for value_range in response.get("valueRanges", []):
-                result[value_range.get("range", "")] = value_range.get("values", [])
+            result: dict[str, list[list[object]]] = {}
+            raw_ranges = response.get("valueRanges", [])
+            if isinstance(raw_ranges, list):
+                for value_range in raw_ranges:
+                    if isinstance(value_range, Mapping):
+                        rng = str(value_range.get("range", ""))
+                        vals = value_range.get("values", [])
+                        row_list: list[list[object]] = (
+                            [list(r) if isinstance(r, list) else [r] for r in vals]
+                            if isinstance(vals, list)
+                            else []
+                        )
+                        result[rng] = row_list
             return result
         except HttpError as exc:
             self._handle_http_error(exc, sid)
@@ -246,10 +337,10 @@ class GoogleSheetsClient:
         self,
         spreadsheet_id: str,
         range_name: str,
-        values: Sequence[Sequence[Any]],
+        values: Sequence[Sequence[object]],
         *,
         value_input_option: str = "RAW",
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Write values to a single range.
 
         Args:
@@ -285,10 +376,10 @@ class GoogleSheetsClient:
     def batch_update_values(
         self,
         spreadsheet_id: str,
-        data: Sequence[dict[str, Any]] | Mapping[str, Sequence[Sequence[Any]]],
+        data: Sequence[Mapping[str, object]] | Mapping[str, Sequence[Sequence[object]]],
         *,
         value_input_option: str = "RAW",
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Write values to multiple ranges in a single request.
 
         Args:
@@ -302,7 +393,7 @@ class GoogleSheetsClient:
         """
         sid = self._validate_spreadsheet_id(spreadsheet_id)
 
-        value_ranges: list[dict[str, Any]] = []
+        value_ranges: list[dict[str, object]] = []
         if isinstance(data, Mapping):
             for address, rows in data.items():
                 value_ranges.append({
@@ -311,9 +402,10 @@ class GoogleSheetsClient:
                 })
         else:
             for item in data:
+                raw_values = item.get("values", [])
                 value_ranges.append({
-                    "range": item["range"],
-                    "values": [list(row) for row in item.get("values", [])],
+                    "range": str(item.get("range", "")),
+                    "values": [list(row) for row in raw_values] if isinstance(raw_values, Sequence) else [],
                 })
 
         body = {
@@ -339,11 +431,11 @@ class GoogleSheetsClient:
         self,
         spreadsheet_id: str,
         range_name: str,
-        values: Sequence[Sequence[Any]],
+        values: Sequence[Sequence[object]],
         *,
         value_input_option: str = "RAW",
         insert_data_option: str = "INSERT_ROWS",
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Append values to a sheet.
 
         Args:
@@ -382,7 +474,7 @@ class GoogleSheetsClient:
         self,
         spreadsheet_id: str,
         range_name: str,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Clear values in a range.
 
         Args:
@@ -411,10 +503,10 @@ class GoogleSheetsClient:
     def batch_update(
         self,
         spreadsheet_id: str,
-        requests: Sequence[dict[str, Any]],
+        requests: Sequence[Mapping[str, object]],
         *,
         include_spreadsheet_in_response: bool = False,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Execute a batch of update requests (e.g. formatting, updateCells, addSheet).
 
         Args:
@@ -427,7 +519,7 @@ class GoogleSheetsClient:
         """
         sid = self._validate_spreadsheet_id(spreadsheet_id)
         body = {
-            "requests": list(requests),
+            "requests": [dict(r) for r in requests],
             "includeSpreadsheetInResponse": include_spreadsheet_in_response,
         }
         try:

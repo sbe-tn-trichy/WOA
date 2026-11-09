@@ -40,7 +40,10 @@ def audit_stockcount_formulas(
             batch = cells[start:start + 12]
             expression = "=" + '&"♦"&'.join(f'IFERROR(FORMULA({cell});"")' for cell in batch)
             response = sheet.set_cell(workbook, "StockCount", 1, 12, expression)
-            value = response.get("cell", {}).get("cell_value")
+            res = response if isinstance(response, dict) else {}
+            cell_raw = res.get("cell")
+            cell_data = cell_raw if isinstance(cell_raw, dict) else {}
+            value = cell_data.get("cell_value")
             if not isinstance(value, str):
                 raise ValueError(f"Formula audit missing text at {batch[0]}")
             parts = value.split("♦")

@@ -6,8 +6,9 @@ import logging
 import mimetypes
 import os
 import re
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Protocol
 
 from utils.http_utils.http import write_response_to_file
 from zoho.core_sdk.security import resolve_output_path
@@ -15,8 +16,38 @@ from zoho.core_sdk.security import resolve_output_path
 logger = logging.getLogger("helpers.operations.files")
 
 
+class BooksFileClient(Protocol):
+    def request(
+        self,
+        method: str,
+        endpoint: str,
+        json: dict[str, object] | None = None,
+        data: dict[str, object] | None = None,
+        params: dict[str, object] | None = None,
+        headers: dict[str, object] | None = None,
+        files: Mapping[str, object] | None = None,
+        stream: bool = False,
+        override_url: str | None = None,
+        is_mutation: bool | None = None,
+        timeout: int | None = None,
+    ) -> object: ...
+
+
+class WorkDriveFilesResource(Protocol):
+    def upload(
+        self,
+        folder_id: str,
+        file_path: str,
+        file_name: str | None = None,
+    ) -> dict[str, object]: ...
+
+
+class WorkDriveFileClient(Protocol):
+    files: WorkDriveFilesResource
+
+
 def download_books_document(
-    books_client: Any, resource_name: str, resource_id: str, document_id: str,
+    books_client: BooksFileClient, resource_name: str, resource_id: str, document_id: str,
     save_path: str,
 ) -> str:
     """Download a specific Books document; relative paths are confined to output/."""
@@ -32,11 +63,11 @@ def download_books_document(
 
 
 def workdrive_upload_file(
-    wd_client: Any,
+    wd_client: WorkDriveFileClient,
     folder_id: str,
     file_path: str,
     file_name: str | None = None,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Upload a local file to a Zoho WorkDrive folder."""
     path = Path(file_path)
     if not path.exists():
@@ -44,16 +75,17 @@ def workdrive_upload_file(
 
     upload_name = file_name or path.name
     logger.info(f"Uploading '{upload_name}' to WorkDrive folder '{folder_id}'")
-    return wd_client.files.upload(folder_id=folder_id, file_path=str(path), file_name=upload_name)
+    res = wd_client.files.upload(folder_id=folder_id, file_path=str(path), file_name=upload_name)
+    return dict(res) if isinstance(res, Mapping) else {}
 
 
 def attach_file_to_books_resource(
-    books_client: Any,
+    books_client: BooksFileClient,
     resource_name: str,
     resource_id: str,
     file_path: str,
     file_name: str | None = None,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Attach a local file to a Zoho Books transaction (e.g., invoices, salesorders, bills)."""
     path = Path(file_path)
     if not path.exists():
@@ -69,18 +101,19 @@ def attach_file_to_books_resource(
 
     with open(path, "rb") as f:
         files = {"attachment": (name, f, content_type)}
-        return books_client.request("POST", endpoint, files=files)
+        res = books_client.request("POST", endpoint, files=files)
+        return dict(res) if isinstance(res, Mapping) else {}
 
 
 def workdrive_upload_and_attach(
-    wd_client: Any,
-    books_client: Any,
+    wd_client: WorkDriveFileClient,
+    books_client: BooksFileClient,
     folder_id: str,
     file_path: str,
     resource_name: str,
     resource_id: str,
     file_name: str | None = None,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Upload a file to WorkDrive and attach it to a Books resource in a single composite call."""
     wd_res = workdrive_upload_file(wd_client, folder_id, file_path, file_name=file_name)
     books_res = attach_file_to_books_resource(

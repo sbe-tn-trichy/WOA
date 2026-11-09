@@ -29,13 +29,13 @@ ERP v1/v3 resources generated from the supplied OpenAPI definitions.
 ##### `ZohoERPAPI.__init__`
 
 ```python
-def __init__(self, access_token: Any, organization_id: str, domain: str = 'in', on_request_completed: Callable[..., None] | None = None, token_refresh_callback: Callable[[], str] | None = None) -> None
+def __init__(self, access_token: str, organization_id: str, domain: str = 'in', on_request_completed: Callable[..., None] | None = None, token_refresh_callback: Callable[[BaseZohoClient], None] | Callable[[], str] | None = None) -> None
 ```
 
 ##### `ZohoERPAPI.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, files: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
+def request(self, method: str, endpoint: str, json: Mapping[str, object] | Sequence[object] | None = None, data: Mapping[str, object] | str | bytes | None = None, params: Mapping[str, object] | None = None, headers: Mapping[str, str] | None = None, files: Mapping[str, object] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> object
 ```
 
 ---

@@ -29,16 +29,37 @@ profiles:
       org_id: <your-zoho-organization-id>
       # Analytics organization ID; configure separately from Books.
       analytics_org_id: <your-analytics-organization-id>
+      # Analytics workspace ID for this profile.
+      analytics_workspace_id: <your-analytics-workspace-id>
       # Zoho data-center suffix, for example in or com.
       domain: in
       # Default Books branch/location ID for scoped operations.
       expected_location_id: <location-id>
       # Human-readable name of that branch/location.
       expected_location_name: <branch-name>
+      # Books branch/location ID excluded from filtered P&L, AIS, and inter-branch reports.
+      excluded_location_id: <excluded-location-id>
+      # Root Sales account ID for P&L and AIS comparisons.
+      sales_account_id: <sales-account-id>
+      # Unearned revenue liability account ID for unused customer payment checks.
+      unearned_revenue_account_id: <unearned-revenue-account-id>
+      # Inter-branch ledger account ID.
+      inter_branch_account_id: <inter-branch-account-id>
       # Books tax-settings identifier.
       zoho_tax_settings_id: <books-tax-settings-id>
       # Books zero/out-of-scope tax identifier.
       zoho_gst0_tax_id: <books-tax-id>
+
+    # Zoho Analytics view IDs for operational checks and reports.
+    analytics:
+      analytics_date_mismatch_view_id: <date-mismatch-view-id>
+      analytics_bank_statement_view_id: <bank-statement-view-id>
+      analytics_customer_finder_view_id: <customer-finder-view-id>
+      analytics_detailed_gl_view_id: <detailed-gl-view-id>
+      analytics_undeposited_candidates_view_id: <undeposited-candidates-view-id>
+      analytics_undeposited_report_view_id: <undeposited-report-view-id>
+      inter_location_contra_view_id: <inter-location-contra-view-id>
+      inter_location_diff_view_id: <inter-location-diff-view-id>
 
     # Choose which workflows appear in the local operations dashboard.
     dashboard:
@@ -72,6 +93,16 @@ profiles:
       gstr2_location_gstin_map:
         <recipient-gstin>:
         - <books-location-id>
+      gstr2_default_json_path: <optional-default-gstr2-json-path>
+      gst_cash_ledger_account_ids: []
+
+    # Inter-location clearing account and payment location proposal settings.
+    inter_location:
+      inter_location_clearing_account_id: <clearing-account-id>
+      location_payment_prefixes: {}
+      inter_location_excluded_payment_ids: []
+      inter_location_handled_split_payment_ids: []
+      selected_vendor_payment_moves: {}
 
     # GSTR-1: explicitly confirmed financial credit-note exceptions.
     gstr1:
@@ -97,6 +128,7 @@ profiles:
     neoseal:
       # Inventory purchase-account filter; prevents cross-vendor item matches.
       neoseal_purchase_account_id: <neoseal-purchase-account-id>
+      neoseal_duplicate_map: {}
       neoseal_price_list_google_sheet_id: <google-sheet-id>
       neoseal_stock_count_sheet_id: <zoho-sheet-workbook-id>
       neoseal_stock_count_worksheet: StockCount
@@ -110,6 +142,10 @@ profiles:
       rso_customer_id: <customer-contact-id>
       zoho_rso_cn_item_id: <books-item-id>
       zoho_scheme_cn_item_id: <books-item-id>
+      polycab_rma_item_id: <books-item-id>
+      polycab_rma_account_id: <rma-expense-account-id>
+      polycab_clearing_account_id: <clearing-account-id>
+      polycab_scheme_account_id: <polycab-scheme-account-id>
       # Directory containing Polycab credit-note source PDFs.
       files_dir: input_files/polycab/cn
       polycab_ledger_path: input_files/polycab/ledger/reconciliation-ledger.xls

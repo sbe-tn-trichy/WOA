@@ -1,14 +1,14 @@
 """Payload-free completed SDK request counts for local review operations."""
+from __future__ import annotations
 
+import logging
 from collections import Counter
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-import logging
 from threading import Lock
 from time import monotonic
-from collections.abc import Iterator, Mapping
-from typing import Any
 
 
 @dataclass
@@ -16,7 +16,7 @@ class HttpAttemptMetrics:
     """Physical attempts, including retries and transport failures; no record IDs."""
 
     requests: Counter[str] = field(default_factory=Counter)
-    http_seconds: Counter[str] = field(default_factory=Counter)
+    http_seconds: dict[str, float] = field(default_factory=dict)
     statuses: Counter[str] = field(default_factory=Counter)
     _lock: Lock = field(default_factory=Lock, repr=False)
 
@@ -36,7 +36,7 @@ class HttpAttemptMetrics:
         key = f"{service}/{resource}"
         with self._lock:
             self.requests[key] += 1
-            self.http_seconds[key] += elapsed
+            self.http_seconds[key] = self.http_seconds.get(key, 0.0) + elapsed
             self.statuses[f"{service}/{status if status is not None else 'error'}"] += 1
 
 
@@ -58,19 +58,19 @@ class RequestMetrics:
             "review_request_counts", default=None
         )
 
-    def attach(self, client: Any, service: str) -> None:
-        previous = client.on_request_completed
+    def attach(self, client: object, service: str) -> None:
+        previous = getattr(client, "on_request_completed", None)
 
-        def completed(method: str, endpoint: str, payload: Any,
-                      status: int, body: Any) -> None:
+        def completed(method: str, endpoint: str, payload: object,
+                      status: int, body: object) -> None:
             counts = self._current.get()
             if counts is not None:
                 with counts.lock:
                     counts[service] += 1
-            if previous is not None:
+            if callable(previous):
                 previous(method, endpoint, payload, status, body)
 
-        client.on_request_completed = completed
+        setattr(client, "on_request_completed", completed)
         previous_attempt = getattr(client, "on_http_attempt", None)
 
         def attempted(actual_service: str, method: str, endpoint: str,
@@ -78,10 +78,10 @@ class RequestMetrics:
             counts = self._current.get()
             if counts is not None:
                 counts.http.on_attempt(service, method, endpoint, elapsed, status)
-            if previous_attempt is not None:
+            if callable(previous_attempt):
                 previous_attempt(actual_service, method, endpoint, elapsed, status)
 
-        client.on_http_attempt = attempted
+        setattr(client, "on_http_attempt", attempted)
 
     def cache_hit(self, name: str, count: int = 1) -> None:
         counts = self._current.get()
@@ -90,7 +90,7 @@ class RequestMetrics:
                 counts.cache_hits[name] += count
 
     @contextmanager
-    def operation(self, name: str) -> Iterator[OperationCounts]:
+    def operation(self, name: str) -> Generator[OperationCounts, None, None]:
         counts = OperationCounts()
         token = self._current.set(counts)
         try:

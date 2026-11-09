@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
-from helpers.formatting.sequences import parse_doc_number
+from utils.general_utils.sequences import parse_doc_number
 from .hsn import check_credit_note_hsn, load_hsn_evidence
 from helpers import (
     get_financial_year_range,
@@ -87,10 +87,14 @@ class GSTR1Verifier:
 
     def __init__(self, books_client: Any = None, config: GSTR1VerificationConfig | None = None,
                  *, analytics_client: Any = None,
-                 analytics_workspace_id: str = "264324000000002043"):
+                 analytics_workspace_id: str | None = None):
+        from workflows.runtime.config import Config
+
         self.books = books_client
         self.analytics = analytics_client
-        self.analytics_workspace_id = analytics_workspace_id
+        self.analytics_workspace_id = (
+            Config.ANALYTICS_WORKSPACE_ID if analytics_workspace_id is None else analytics_workspace_id
+        )
         self.config = config or GSTR1VerificationConfig()
 
     def run(self, month: str | None = None, as_of: date | None = None,
@@ -122,9 +126,9 @@ class GSTR1Verifier:
             sequence_credit_notes = load_records(self.analytics, self.analytics_workspace_id, "credit_notes",
                                                  fetch_errors, fy_start, fy_end)
             target_invoices = [row for row in sequence_invoices
-                               if start <= _parse_date(row["date"]) <= end]
+                               if (d := _parse_date(row["date"])) is not None and start <= d <= end]
             target_credit_notes = [row for row in sequence_credit_notes
-                                   if start <= _parse_date(row["date"]) <= end]
+                                   if (d := _parse_date(row["date"])) is not None and start <= d <= end]
 
         if force_refresh:
             self._load_amounts(target_invoices, self.books.invoices, "invoice", fetch_errors)
@@ -527,7 +531,7 @@ class GSTR1Verifier:
         occupied_sequences: dict[str, set[int]] = {}
 
         for doc in universe_docs:
-            prefix, sequence, width = parse_doc_number(doc.get("number"))
+            prefix, sequence, width = parse_doc_number(str(doc.get("number") or ""))
             in_target = doc.get("id") in target_ids or doc.get("number") in target_numbers
             if sequence <= 0:
                 if in_target:
@@ -625,7 +629,7 @@ class GSTR1Verifier:
             "missing", "duplicates", "out_of_chronology", "unparseable_numbers",
             "invalid_dates", "inconsistent_width",
         )
-        merged = {key: [item for result in results for item in result[key]] for key in keys}
+        merged: dict[str, Any] = {key: [item for result in results for item in result[key]] for key in keys}
         merged["passed"] = all(result["passed"] for result in results)
         return merged
 
@@ -747,7 +751,7 @@ def verify_gstr1(
     config: GSTR1VerificationConfig | None = None,
     *,
     analytics_client: Any = None,
-    analytics_workspace_id: str = "264324000000002043",
+    analytics_workspace_id: str | None = None,
     force_refresh: bool = False,
 ) -> dict[str, Any]:
     """Convenience wrapper for :class:`GSTR1Verifier`."""

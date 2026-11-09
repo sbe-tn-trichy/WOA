@@ -8,8 +8,11 @@ from utils.file_utils import json
 import keyword
 from pathlib import Path
 import re
+from typing import Any, cast
 
 from utils.file_utils import yaml
+
+from zoho.core_sdk.base_client import BaseZohoClient
 
 ROOT = Path(__file__).resolve().parents[2]
 METHODS = {'get', 'post', 'put', 'patch', 'delete', 'head', 'options'}
@@ -148,7 +151,7 @@ def identifier(value: str) -> str:
     return value
 
 
-def resolve(document: dict, value: dict) -> dict:
+def resolve(document: dict[str, Any], value: dict[str, Any]) -> dict[str, Any]:
     seen = set()
     while '$ref' in value:
         ref = value['$ref']
@@ -166,7 +169,7 @@ def route_key(method: str, path: str) -> tuple[str, str]:
     return method, re.sub(r'\{[^}]+\}', '{}', '/' + path.strip('/'))
 
 
-def custom_route_owners(definitions: dict[str, dict]) -> dict[tuple[str, str], tuple[str, str]]:
+def custom_route_owners(definitions: dict[str, dict[str, Any]]) -> dict[tuple[str, str], tuple[str, str]]:
     """Discover existing route implementations without issuing HTTP requests.
 
     Include inherited CRUD/actions, even when an override adds response checks.
@@ -179,18 +182,20 @@ def custom_route_owners(definitions: dict[str, dict]) -> dict[tuple[str, str], t
     from types import SimpleNamespace
     from zoho.books.base import BaseResource
 
-    owners = {}
+    owners: dict[tuple[str, str], tuple[str, str]] = {}
     # Existing owners take precedence over generic CRUD on newly added resources.
     for resource in sorted(definitions, key=lambda n: (n not in LEGACY, n)):
         if resource in LEGACY:
             module, cls = LEGACY[resource]
             resource_type = getattr(importlib.import_module(f'zoho.books.custom.{module}'), cls)
-            instance = resource_type(SimpleNamespace())
+            instance = resource_type(cast(BaseZohoClient, SimpleNamespace()))
         else:
-            endpoint = next(iter(definitions[resource]['paths'])).strip('/').split('/')[0]
+            raw_paths = definitions[resource].get('paths', {})
+            paths = raw_paths if isinstance(raw_paths, dict) else {}
+            endpoint = next(iter(paths), '').strip('/').split('/')[0]
             if '{' in endpoint:
                 continue
-            instance = BaseResource(SimpleNamespace(), endpoint)
+            instance = BaseResource(cast(BaseZohoClient, SimpleNamespace()), endpoint)
             resource_type = type(instance)
         for base in reversed(resource_type.__mro__):
             for name, member in vars(base).items():
@@ -248,17 +253,20 @@ def generate(source: Path, destination: Path) -> dict:
     imports = []
     manifest = {}
     registry = []
-    definitions = {}
+    definitions: dict[str, dict[str, Any]] = {}
     for source_file in sorted(source.glob('*.yml')):
         if source_file.stem != 'items':
             key = identifier(source_file.stem)
-            definitions[ALIASES.get(key, key)] = yaml.safe_load(source_file.read_bytes())
+            loaded_def = yaml.safe_load(source_file.read_bytes())
+            if isinstance(loaded_def, dict):
+                definitions[ALIASES.get(key, key)] = loaded_def
     owners = custom_route_owners(definitions)
     for path in sorted(source.glob('*.yml')):
         if path.stem == 'items':
             continue  # Item operations belong to Inventory, not Books.
         raw = path.read_bytes()
-        document = yaml.safe_load(raw)
+        raw_doc = yaml.safe_load(raw)
+        document: dict[str, Any] = raw_doc if isinstance(raw_doc, dict) else {}
         name = identifier(path.stem)
         name = ALIASES.get(name, name)
         if name in manifest:
@@ -268,7 +276,9 @@ def generate(source: Path, destination: Path) -> dict:
         bases = f'Legacy{legacy[1]}, BooksOperationResource' if legacy else 'BooksOperationResource'
         lines = [f'class {cls}({bases}):', f'    """{name} Books API operations."""']
         if not legacy:
-            endpoint = next(iter(document.get('paths', {})), '').strip('/').split('/')[0]
+            raw_paths = document.get('paths', {})
+            paths = raw_paths if isinstance(raw_paths, dict) else {}
+            endpoint = next(iter(paths), '').strip('/').split('/')[0]
             lines.extend(['    def __init__(self, client: Any) -> None:',
                           f'        super().__init__(client, {endpoint!r})', ''])
         operations = []

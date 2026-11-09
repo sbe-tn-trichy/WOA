@@ -53,26 +53,8 @@ extra-paths = ["src"]
 
 [tool.ty.src]
 include = [
-    "src/utils",
-    "src/zoho/core_sdk",
-    "src/zoho/__init__.py",
-    "src/workflows/core/sequences.py",
-    "src/workflows/core/dates.py",
-    "src/workflows/core/checkpoint.py",
-    "src/workflows/core/payments.py",
-    "src/workflows/collection_payments/allocator.py",
-    "src/workflows/collection_payments/types.py",
-    "src/workflows/collection_payments/identifiers.py",
-    "src/workflows/collection_payments/transaction_index.py",
-    "src/workflows/stock_transfer",
-    "src/helpers/formatting/sequences.py",
-    "src/helpers/formatting/dates.py",
-    "src/workflows/payment_renumbering",
-    "src/workflows/vendor_customer_offset/__init__.py",
-    "src/workflows/vendor_customer_offset/contracts.py",
-    "src/workflows/vendor_customer_offset/processor.py",
-    "apps/payments/renumber_sbe2627_payments.py",
-    "apps/tools/analyze_project.py",
+    "src",
+    "apps",
     "tests/typecheck/renumber_contracts.py",
 ]
 
@@ -80,6 +62,7 @@ include = [
 where = ["src"]
 
 [tool.setuptools.package-data]
+"zoho" = ["py.typed"]
 "zoho.analytics.openapi" = ["manifest.json"]
 "zoho.erp.openapi" = ["manifest.json"]
 "zoho.books.openapi" = ["manifest.json"]

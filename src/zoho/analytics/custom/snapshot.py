@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 from utils.file_utils import json
 import json as legacy_json
@@ -5,8 +7,9 @@ import sqlite3
 import zlib
 from datetime import datetime, timezone
 from pathlib import Path
-from collections.abc import Iterable
-from typing import Any, Literal, NotRequired, TypedDict
+from collections.abc import Iterable, Mapping
+from types import TracebackType
+from typing import Literal, NotRequired, TypedDict
 
 
 SCHEMA_VERSION = 5
@@ -20,22 +23,24 @@ class WorkflowViewUsage(TypedDict):
     notes: NotRequired[str]
 
 
-def _compact_json(value: Any) -> str:
+def _compact_json(value: object) -> str:
     # Existing on-disk hashes depend on the standard library float/escape spelling.
     return legacy_json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-def _pack_json(value: Any) -> bytes:
+def _pack_json(value: object) -> bytes:
     return zlib.compress(_compact_json(value).encode("utf-8"), level=9)
 
 
-def _unpack_json(value: Any) -> Any:
+def _unpack_json(value: bytes | str) -> dict[str, object]:
     if isinstance(value, bytes):
-        return json.loads(zlib.decompress(value).decode("utf-8"))
-    return json.loads(value)
+        raw = json.loads(zlib.decompress(value).decode("utf-8"))
+    else:
+        raw = json.loads(value)
+    return raw if isinstance(raw, dict) else {}
 
 
-def _text(value: Any) -> str:
+def _text(value: object) -> str:
     return "" if value in (None, "null") else str(value)
 
 
@@ -43,14 +48,14 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _json_hash(value: Any) -> str:
+def _json_hash(value: object) -> str:
     return hashlib.sha256(_compact_json(value).encode("utf-8")).hexdigest()
 
 
 class WorkspaceMetadataStore:
     """Indexed, single-file storage for a Zoho Analytics workspace snapshot."""
 
-    def __init__(self, path: Any, workspace_id: str | None = None):
+    def __init__(self, path: str | Path, workspace_id: str | None = None):
         self.path = Path(path).expanduser().resolve()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         exists = self.path.exists()
@@ -151,7 +156,12 @@ class WorkspaceMetadataStore:
     def __enter__(self) -> "WorkspaceMetadataStore":
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self.close()
 
     def close(self) -> None:
@@ -183,7 +193,7 @@ class WorkspaceMetadataStore:
                     AS used_by_workflows FROM views v;
         """)
 
-    def put_query_table(self, view_id: str, definition: dict[str, Any],
+    def put_query_table(self, view_id: str, definition: Mapping[str, object],
                         source_modified_time: str = "") -> bool:
         sql = definition.get("sqlQuery")
         if not isinstance(sql, str) or not sql.strip():
@@ -204,7 +214,7 @@ class WorkspaceMetadataStore:
             """, (view_id, sql, digest, source_modified_time, _utc_now(), _pack_json(definition)))
         return not previous or previous["definition_hash"] != digest
 
-    def get_query_table(self, view_id: str) -> dict[str, Any]:
+    def get_query_table(self, view_id: str) -> dict[str, object]:
         row = self.connection.execute(
             "SELECT * FROM query_tables WHERE view_id = ?", (view_id,)
         ).fetchone()
@@ -229,15 +239,15 @@ class WorkspaceMetadataStore:
                 "INSERT INTO workflow_view_usage VALUES (?, ?, ?, ?, ?)", rows
             )
 
-    def workflow_impact(self, view_id: str) -> list[dict[str, Any]]:
+    def workflow_impact(self, view_id: str) -> list[dict[str, object]]:
         """Find direct consumers and consumers of transitively dependent views."""
         affected = {view_id}
         pending = [view_id]
         while pending:
             for edge in self.get_relationships("view:" + pending.pop()):
-                source, target = edge["source_id"], edge["target_id"]
-                dependent = None
-                if edge["relationship_type"] == "view_uses_view" and target[5:] in affected:
+                source, target = str(edge.get("source_id", "")), str(edge.get("target_id", ""))
+                dependent: str | None = None
+                if str(edge.get("relationship_type", "")) == "view_uses_view" and target[5:] in affected:
                     dependent = source
                 if dependent and dependent.startswith("view:") and dependent[5:] not in affected:
                     affected.add(dependent[5:])
@@ -353,7 +363,7 @@ class WorkspaceMetadataStore:
         self._create_design_schema()
         self.set_info("schema_version", str(SCHEMA_VERSION))
 
-    def set_info(self, key: str, value: Any) -> None:
+    def set_info(self, key: str, value: object) -> None:
         self.connection.execute(
             "INSERT OR REPLACE INTO snapshot_info(key, value) VALUES (?, ?)",
             (key, _text(value)),
@@ -366,7 +376,7 @@ class WorkspaceMetadataStore:
         ).fetchone()
         return row["value"] if row else default
 
-    def put_workspace(self, workspace: dict[str, Any], workspace_id: str) -> None:
+    def put_workspace(self, workspace: Mapping[str, object], workspace_id: str) -> None:
         self.connection.execute(
             "INSERT OR REPLACE INTO workspaces(workspace_id, name, raw_json) VALUES (?, ?, ?)",
             (
@@ -377,7 +387,7 @@ class WorkspaceMetadataStore:
         )
         self.connection.commit()
 
-    def replace_folders(self, workspace_id: str, folders: Iterable[dict[str, Any]]) -> None:
+    def replace_folders(self, workspace_id: str, folders: Iterable[Mapping[str, object]]) -> None:
         with self.connection:
             self.connection.execute("DELETE FROM folders WHERE workspace_id = ?", (workspace_id,))
             self.connection.executemany(
@@ -395,7 +405,7 @@ class WorkspaceMetadataStore:
             )
 
     def replace_datasources(
-        self, workspace_id: str, datasources: Iterable[dict[str, Any]]
+        self, workspace_id: str, datasources: Iterable[Mapping[str, object]]
     ) -> None:
         rows = []
         for item in datasources:
@@ -418,7 +428,7 @@ class WorkspaceMetadataStore:
                 rows,
             )
 
-    def replace_views(self, workspace_id: str, views: Iterable[dict[str, Any]]) -> None:
+    def replace_views(self, workspace_id: str, views: Iterable[Mapping[str, object]]) -> None:
         views = list(views)
         current_ids = [str(item["viewId"]) for item in views if item.get("viewId")]
         existing_ids = {
@@ -487,7 +497,7 @@ class WorkspaceMetadataStore:
     def put_view_details(
         self,
         view_id: str,
-        details: dict[str, Any],
+        details: Mapping[str, object],
         source_modified_time: str = "",
     ) -> bool:
         content_hash = _json_hash(details)
@@ -512,7 +522,7 @@ class WorkspaceMetadataStore:
             self._mark_completed("view", view_id)
         return changed
 
-    def get_view_details(self, view_id: str) -> dict[str, Any]:
+    def get_view_details(self, view_id: str) -> dict[str, object]:
         row = self.connection.execute(
             "SELECT details_json FROM views WHERE view_id = ?", (view_id,)
         ).fetchone()
@@ -533,7 +543,7 @@ class WorkspaceMetadataStore:
     def put_table_metadata(
         self,
         view_id: str,
-        metadata: dict[str, Any],
+        metadata: Mapping[str, object],
         source_modified_time: str = "",
     ) -> bool:
         content_hash = _json_hash(metadata)
@@ -542,7 +552,9 @@ class WorkspaceMetadataStore:
         ).fetchone()
         changed = not existing or existing["metadata_hash"] != content_hash
         rows = []
-        for index, column in enumerate(metadata.get("columns", [])):
+        raw_cols = metadata.get("columns", [])
+        cols = raw_cols if isinstance(raw_cols, list) else []
+        for index, column in enumerate(cols):
             if not isinstance(column, dict) or not column.get("columnId"):
                 continue
             rows.append(
@@ -587,7 +599,7 @@ class WorkspaceMetadataStore:
             self._mark_completed("table", view_id)
         return changed
 
-    def get_table_metadata(self, view_id: str) -> dict[str, Any]:
+    def get_table_metadata(self, view_id: str) -> dict[str, object]:
         metadata_row = self.connection.execute(
             "SELECT raw_json FROM table_metadata WHERE view_id = ?", (view_id,)
         ).fetchone()
@@ -645,7 +657,7 @@ class WorkspaceMetadataStore:
                 self.connection.execute("DELETE FROM column_dependents")
 
     def put_column_dependents(
-        self, view_id: str, column_id: str, dependents: dict[str, Any]
+        self, view_id: str, column_id: str, dependents: Mapping[str, object]
     ) -> None:
         with self.connection:
             self.connection.execute(
@@ -654,7 +666,7 @@ class WorkspaceMetadataStore:
             )
             self._mark_completed("dependent", "%s:%s" % (view_id, column_id))
 
-    def get_column_dependents(self, view_id: str, column_id: str) -> dict[str, Any]:
+    def get_column_dependents(self, view_id: str, column_id: str) -> dict[str, object]:
         row = self.connection.execute(
             "SELECT raw_json FROM column_dependents WHERE view_id = ? AND column_id = ?",
             (view_id, column_id),
@@ -682,12 +694,12 @@ class WorkspaceMetadataStore:
             )
         ]
 
-    def replace_relationships(self, edges: Iterable[dict[str, Any]]) -> None:
-        edges = list(edges)
+    def replace_relationships(self, edges: Iterable[Mapping[str, object]]) -> None:
+        edges_list = list(edges)
         entity_keys = sorted(
             {
                 _text(edge.get(key))
-                for edge in edges
+                for edge in edges_list
                 for key in ("source", "target")
                 if _text(edge.get(key))
             }
@@ -704,7 +716,7 @@ class WorkspaceMetadataStore:
             for row in self.connection.execute("SELECT entity_id, entity_key FROM entities")
         }
         rows = []
-        for edge in edges:
+        for edge in edges_list:
             known = {
                 "source", "target", "type", "resolved",
                 "targetTableName", "targetColumnName",
@@ -733,7 +745,7 @@ class WorkspaceMetadataStore:
                 rows,
             )
 
-    def replace_errors(self, errors: Iterable[dict[str, Any]]) -> None:
+    def replace_errors(self, errors: Iterable[Mapping[str, object]]) -> None:
         with self.connection:
             self.connection.execute("DELETE FROM errors")
             self.connection.executemany(
@@ -751,9 +763,9 @@ class WorkspaceMetadataStore:
 
     def find_views(
         self, name: str | None = None, view_type: str | None = None
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, object]]:
         clauses = []
-        parameters: list[Any] = []
+        parameters: list[str] = []
         if name:
             clauses.append("name LIKE ? COLLATE NOCASE")
             parameters.append("%%%s%%" % name)
@@ -766,7 +778,7 @@ class WorkspaceMetadataStore:
         sql += " ORDER BY name, view_id"
         return [dict(row) for row in self.connection.execute(sql, parameters)]
 
-    def get_columns(self, view_id: str) -> list[dict[str, Any]]:
+    def get_columns(self, view_id: str) -> list[dict[str, object]]:
         return [
             dict(row)
             for row in self.connection.execute(
@@ -781,7 +793,7 @@ class WorkspaceMetadataStore:
 
     def get_relationships(
         self, entity_id: str, direction: str = "both"
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, object]]:
         if direction not in {"both", "incoming", "outgoing"}:
             raise ValueError("direction must be 'both', 'incoming', or 'outgoing'.")
         if direction == "incoming":
@@ -824,7 +836,7 @@ class WorkspaceMetadataStore:
         )
         return result
 
-    def write_summary(self, path: Any) -> None:
+    def write_summary(self, path: str | Path) -> None:
         counts = self.counts()
         workspace = self.connection.execute(
             "SELECT workspace_id, name FROM workspaces LIMIT 1"

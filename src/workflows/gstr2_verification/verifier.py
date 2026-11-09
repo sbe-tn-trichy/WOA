@@ -10,7 +10,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 from helpers import get_month_range, parse_date
 from helpers.formatting.gst import normalize_gstin
@@ -235,7 +235,10 @@ class GSTR2Verifier:
         if not path.is_file():
             raise FileNotFoundError(f"GSTR-2 file not found: {path}")
         with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+            raw = json.load(f)
+            if not isinstance(raw, Mapping):
+                raise ValueError(f"Expected JSON object in {path}, got {type(raw).__name__}")
+            return cast(Mapping[str, Any], raw)
 
     def _parse_portal_documents(self, portal_data: Mapping[str, Any]) -> list[dict[str, Any]]:
         """Parse b2b and cdnr documents from GSTR-2B JSON."""
@@ -650,8 +653,8 @@ class GSTR2Verifier:
                 "vendor_id": str(merged.get("vendor_id") or ""),
                 "vendor_name": str(merged.get("vendor_name") or merged.get("merchant_name") or "").strip(),
                 "gst_no": normalize_gstin(merged.get("gst_no")),
-                "sub_total": _to_float(merged.get("sub_total")) or max(total - tax_amount, 0.0),
-                "tax_total": reverse_charge_tax if reverse_charge_tax > 0.0 else tax_amount,
+                "sub_total": _to_float(merged.get("sub_total")) or max(total - (tax_amount or 0.0), 0.0),
+                "tax_total": reverse_charge_tax if reverse_charge_tax > 0.0 else (tax_amount or 0.0),
                 "reverse_charge": reverse_charge_tax > 0.0,
                 "total": total,
                 "status": status,
@@ -1176,10 +1179,12 @@ class GSTR2Verifier:
         vendor_map: dict[str, dict[str, Any]] = {}
 
         for doc in gstr2_docs:
-            key = doc["supplier_gstin"] or doc["supplier_name"]
+            key = str(doc.get("supplier_gstin") or doc.get("supplier_name") or "")
+            if not key:
+                continue
             v = vendor_map.setdefault(key, {
-                "gstin": doc["supplier_gstin"],
-                "name": doc["supplier_name"],
+                "gstin": doc.get("supplier_gstin"),
+                "name": doc.get("supplier_name"),
                 "gstr2_count": 0,
                 "gstr2_taxable": 0.0,
                 "gstr2_tax": 0.0,
@@ -1194,7 +1199,9 @@ class GSTR2Verifier:
             v["gstr2_tax"] += doc["tax_total"]
 
         for b in books_bills:
-            key = b.get("gst_no") or b.get("vendor_name")
+            key = str(b.get("gst_no") or b.get("vendor_name") or "")
+            if not key:
+                continue
             v = vendor_map.setdefault(key, {
                 "gstin": b.get("gst_no"),
                 "name": b.get("vendor_name"),

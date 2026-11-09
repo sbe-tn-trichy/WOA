@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 from collections.abc import Iterable, Mapping
-from typing import Any
+from typing import Protocol
 
 from helpers import parse_date, unwrap_record
 from workflows.core.matching import to_finite_decimal
@@ -15,15 +15,29 @@ from workflows.core.matching import to_finite_decimal
 DuplicateKey = tuple[str, date, Decimal]
 
 
-def _date(value: Any) -> date | None:
+class _CustomerPaymentsResource(Protocol):
+    def list_all(
+        self,
+        params: dict[str, object] | None = None,
+        resource_key: str | None = None,
+    ) -> list[dict[str, object]]: ...
+    def get(self, resource_id: str, params: dict[str, object] | None = None) -> object: ...
+
+
+class BooksCustomerPaymentsClient(Protocol):
+    @property
+    def customer_payments(self) -> _CustomerPaymentsResource: ...
+
+
+def _date(value: object) -> date | None:
     return parse_date(value)
 
 
-def _payment_id(payment: Mapping[str, Any]) -> str:
+def _payment_id(payment: Mapping[str, object]) -> str:
     return str(payment.get("payment_id") or payment.get("customer_payment_id") or "").strip()
 
 
-def _summary(payment: Mapping[str, Any]) -> dict[str, Any]:
+def _summary(payment: Mapping[str, object]) -> dict[str, object]:
     return {
         "payment_id": _payment_id(payment),
         "payment_number": payment.get("payment_number"),
@@ -40,7 +54,7 @@ def _summary(payment: Mapping[str, Any]) -> dict[str, Any]:
 class DuplicatePaymentChecker:
     """Check Books customer payments without mutating any Books data."""
 
-    def __init__(self, books_client: Any):
+    def __init__(self, books_client: BooksCustomerPaymentsClient):
         self.books = books_client
 
     def run(
@@ -49,7 +63,7 @@ class DuplicatePaymentChecker:
         customer_id: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         start = _date(from_date) if from_date else None
         end = _date(to_date) if to_date else None
         if from_date and not start:
@@ -59,7 +73,7 @@ class DuplicatePaymentChecker:
         if start and end and start > end:
             raise ValueError("from_date cannot be later than to_date.")
 
-        params: dict[str, Any] = {}
+        params: dict[str, object] = {}
         if customer_id:
             params["customer_id"] = customer_id
         if from_date:
@@ -75,13 +89,13 @@ class DuplicatePaymentChecker:
 
     def check(
         self,
-        payments: Iterable[Mapping[str, Any]],
+        payments: Iterable[Mapping[str, object]],
         *,
         from_date: date | None = None,
         to_date: date | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         payment_list = list(payments)
-        grouped: dict[DuplicateKey, list[Mapping[str, Any]]] = defaultdict(list)
+        grouped: dict[DuplicateKey, list[Mapping[str, object]]] = defaultdict(list)
         skipped: list[dict[str, str]] = []
         considered = 0
 
@@ -104,7 +118,7 @@ class DuplicatePaymentChecker:
             if not customer_id and payment_id:
                 try:
                     response = self.books.customer_payments.get(payment_id)
-                    detail = unwrap_record(response, ("payment", "customerpayment"))
+                    detail = unwrap_record(response if isinstance(response, Mapping) else {}, ("payment", "customerpayment"))
                     payment.update(detail)
                     customer_id = str(payment.get("customer_id") or "").strip()
                 except Exception as exc:
@@ -124,7 +138,7 @@ class DuplicatePaymentChecker:
             considered += 1
             grouped[(customer_id, paid_on, amount)].append(payment)
 
-        duplicate_groups: list[dict[str, Any]] = []
+        duplicate_groups: list[dict[str, object]] = []
         for (customer_id, paid_on, amount), matches in grouped.items():
             if len(matches) < 2:
                 continue
@@ -138,24 +152,24 @@ class DuplicatePaymentChecker:
                 "payments": [_summary(item) for item in ordered],
             })
 
-        duplicate_groups.sort(key=lambda item: (item["date"], item["customer_id"], Decimal(item["amount"])))
+        duplicate_groups.sort(key=lambda item: (str(item.get("date")), str(item.get("customer_id")), Decimal(str(item.get("amount")))))
         return {
             "payments_scanned": len(payment_list),
             "payments_considered": considered,
             "duplicate_group_count": len(duplicate_groups),
-            "duplicate_payment_count": sum(item["payment_count"] for item in duplicate_groups),
+            "duplicate_payment_count": sum(int(str(item.get("payment_count") or 0)) for item in duplicate_groups),
             "duplicate_groups": duplicate_groups,
             "skipped": skipped,
         }
 
 
 def check_duplicate_payments(
-    books_client: Any,
+    books_client: BooksCustomerPaymentsClient,
     *,
     customer_id: str | None = None,
     from_date: str | None = None,
     to_date: str | None = None,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Convenience entry point for exact customer/date/amount duplicate checks."""
     return DuplicatePaymentChecker(books_client).run(
         customer_id=customer_id,

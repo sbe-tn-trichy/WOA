@@ -1,17 +1,19 @@
 """Compare audited XLSX statements with accrual Zoho Books reports (read-only)."""
 from __future__ import annotations
+import importlib
 
 import argparse
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from decimal import InvalidOperation
 from utils.file_utils import json
 import os
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.audited_financials import (
     ComparisonPeriod, compare_audited_financials, fetch_comparison_reports,
@@ -40,12 +42,16 @@ def main(argv: list[str] | None = None) -> int:
         period = ComparisonPeriod(args.from_date, args.to_date)
         mapping = load_accounting_mapping(args.mapping)
         sheets = read_audited_workbook(args.source)
+        reports: dict[str, Mapping[str, object]]
         if args.saved:
             if args.exclude_location is not None or args.firm is not None or args.firm_config is not None:
                 raise ValueError("Saved mode uses original snapshot scope; location overrides require a live run")
             names = ("profitandloss", "balancesheet", "trialbalance",
                      "profitandloss-all-locations", "balancesheet-all-locations")
-            reports = {name: json.loads((args.snapshots / f"{name}.json").read_text(encoding="utf-8-sig")) for name in names}
+            reports = {}
+            for name in names:
+                raw_snap = json.loads((args.snapshots / f"{name}.json").read_text(encoding="utf-8-sig"))
+                reports[name] = raw_snap if isinstance(raw_snap, Mapping) else {}
             description = "saved API responses; original retrieval times are in each snapshot page_context"
         else:
             excluded = args.exclude_location

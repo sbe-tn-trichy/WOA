@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Inspect Creator fields or register a customer in Books and Creator."""
+import importlib
 import argparse
 from dataclasses import asdict
 from utils.file_utils import json
 from typing import Any
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client, get_creator_client
 from workflows.customer_registration import register_customer
@@ -18,7 +19,8 @@ def inspect_form(
     app_link_name: str = "order-management-new",
     form_link_name: str = "Customer_Registration",
 ) -> dict[str, Any]:
-    return get_creator_client().get_fields(app_link_name, form_link_name)
+    res = get_creator_client().get_fields(app_link_name, form_link_name)
+    return res if isinstance(res, dict) else {}
 
 
 def create_customer_record(

@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from workflows.runtime.config import Config
+
 
 @dataclass(frozen=True)
 class WorkflowViewReference:
@@ -26,29 +28,23 @@ DEFAULT_REFERENCES = (
                  ("Customers (Zoho Books)", "Customer Addresses (Zoho Books)",
                   "Customer Contact Persons (Zoho Books)")),
     WorkflowViewReference("bank_statement_check", "Bank Statements (Zoho Books)",
-                          "src/workflows/bank_statement_check.py", view_id="264324000005829009",
+                          "src/workflows/bank_statement_check.py", view_id=Config.ANALYTICS_BANK_STATEMENT_VIEW_ID,
                           notes="Read-only HDFC CSV completeness comparison; configurable view ID requires an explicit runtime reference."),
     *_references("unearned_revenue", "src/workflows/unearned_revenue.py",
                  ("Customer Payments (Zoho Books)", "Customers (Zoho Books)",
                   "Accrual Transactions (Zoho Books)", "Accounts (Zoho Books)")),
     WorkflowViewReference("detailed_general_ledger", "detailed general ledger",
-                          "okf/analytics-metadata.md", view_id="264324000008493010",
+                          "okf/analytics-metadata.md", view_id=Config.ANALYTICS_DETAILED_GL_VIEW_ID,
                           notes="FY 2025-26 accrual postings joined to account name and account type."),
     WorkflowViewReference("undeposited_deposit_report", "Undeposited Funds - Deposits and Payment Candidates",
-                          "okf/analytics-metadata.md", view_id="264324000008503027",
-                          notes="Deposit summary for account 1094368000000000456; inferred payment candidates, not confirmed associations."),
+                          "okf/analytics-metadata.md", view_id=Config.ANALYTICS_UNDEPOSITED_CANDIDATES_VIEW_ID,
+                          notes="Deposit summary for Undeposited Funds; inferred payment candidates, not confirmed associations."),
     WorkflowViewReference("undeposited_deposit_report", "Undeposited Funds - Deposit Report",
-                          "okf/analytics-metadata.md", view_id="264324000008503041",
-                          notes="Summary report consuming the deposit candidate query table."),
-    WorkflowViewReference("undeposited_deposit_report", "Undeposited Funds - Deposits and Payment Candidates",
-                          "okf/analytics-metadata.md", view_id="264324000008503027",
-                          notes="Deposit summary for account 1094368000000000456; inferred payment candidates, not confirmed associations."),
-    WorkflowViewReference("undeposited_deposit_report", "Undeposited Funds - Deposit Report",
-                          "okf/analytics-metadata.md", view_id="264324000008503041",
+                          "okf/analytics-metadata.md", view_id=Config.ANALYTICS_UNDEPOSITED_REPORT_VIEW_ID,
                           notes="Summary report consuming the deposit candidate query table."),
     WorkflowViewReference("customer_payment_date_check", "Customer Payment vs Applied Date Mismatch",
                           "src/workflows/customer_payment_date_check/checker.py",
-                          view_id="264324000008269008", notes="Default ID; supply an override for custom deployments."),
+                          view_id=Config.ANALYTICS_DATE_MISMATCH_VIEW_ID, notes="Default ID; supply an override for custom deployments."),
     *_references("collection_reconciliation", "src/workflows/collection_reconciliation/reconciler.py",
                  ("Bank Transactions", "Customer Master")),
     *_references("payment_review", "src/workflows/collection_reconciliation/review.py",
@@ -72,11 +68,11 @@ DEFAULT_REFERENCES = (
     *_references("monthly_gst_analytics", "apps/gst/check_monthly_gst_analytics.py",
                  ("Accounts (Zoho Books)", "Accrual Transactions (Zoho Books)")),
     WorkflowViewReference("inter_location_analytics_report", "", "src/workflows/inter_location_analytics_report.py",
-                          "update", "264324000008274019", "Default managed query table."),
+                          "update", Config.INTER_LOCATION_CONTRA_VIEW_ID, "Default managed query table."),
     WorkflowViewReference("inter_location_contra", "", "apps/inter_location_ops/review_inter_location_contra.py",
-                          view_id="264324000006990003", notes="Default location-difference evidence view."),
+                          view_id=Config.INTER_LOCATION_DIFF_VIEW_ID, notes="Default location-difference evidence view."),
     WorkflowViewReference("inter_location_payment_proposals", "", "apps/vendor_payments/propose_inter_location_payment_updates.py",
-                          view_id="264324000008274019"),
+                          view_id=Config.INTER_LOCATION_CONTRA_VIEW_ID),
     WorkflowViewReference("inter_location_contra", "", "apps/inter_location_ops/propose_inter_location_updates.py",
-                          view_id="264324000008274019"),
+                          view_id=Config.INTER_LOCATION_CONTRA_VIEW_ID),
 )

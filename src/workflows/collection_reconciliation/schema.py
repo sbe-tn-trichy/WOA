@@ -92,8 +92,10 @@ def _creator_field_type(field: Mapping[str, Any]) -> Any:
     value = field.get("type")
     if isinstance(value, dict):
         value = value.get("id") or value.get("value")
+    if value is None:
+        return None
     try:
-        return int(value)
+        return int(str(value))
     except (TypeError, ValueError):
         return value
 

@@ -1,14 +1,19 @@
-from utils.file_utils import json
+from __future__ import annotations
+
 import logging
 import random
 import re
 import time
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path
-from collections.abc import Iterable
-from typing import Any
+from typing import TYPE_CHECKING
 
+from utils.file_utils import json
 from ..exceptions import ZohoAnalyticsError
 from .snapshot import SCHEMA_VERSION, WorkspaceMetadataStore
+
+if TYPE_CHECKING:
+    from zoho.core_sdk.base_client import BaseZohoClient
 
 
 logger = logging.getLogger("zoho.analytics.metadata")
@@ -21,21 +26,25 @@ _RATE_LIMIT_PATTERN = re.compile(
 )
 
 
-def _json_config(config: dict[str, Any] | None = None) -> dict[str, str]:
+def _json_config(config: Mapping[str, object] | None = None) -> dict[str, str]:
     return {"CONFIG": json.dumps(config or {})}
 
 
-def _as_text(value: Any) -> str:
+def _as_text(value: object) -> str:
     return "" if value in (None, "null") else str(value)
 
 
-def _data(payload: Any, key: str | None = None) -> Any:
+def _data(payload: object, key: str | None = None) -> object:
     if not isinstance(payload, dict):
         raise ZohoAnalyticsError("Analytics metadata API returned a non-object response.")
     if str(payload.get("status", "")).lower() == "failure":
         error_data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
-        code = error_data.get("errorCode")
-        message = error_data.get("errorMessage") or payload.get("summary") or "Metadata request failed."
+        code = error_data.get("errorCode") if isinstance(error_data, dict) else None
+        message = (
+            (error_data.get("errorMessage") if isinstance(error_data, dict) else None)
+            or payload.get("summary")
+            or "Metadata request failed."
+        )
         raise ZohoAnalyticsError(f"Analytics metadata error (code={code}): {message}")
     result = payload.get("data", {})
     if key is None:
@@ -46,7 +55,7 @@ def _data(payload: Any, key: str | None = None) -> Any:
     return value
 
 
-def _write_json(path: Path, payload: Any) -> None:
+def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(
@@ -56,7 +65,7 @@ def _write_json(path: Path, payload: Any) -> None:
     temporary.replace(path)
 
 
-def _read_json(path: Path, default: Any) -> Any:
+def _read_json(path: Path, default: object) -> object:
     if not path.exists():
         return default
     try:
@@ -65,7 +74,7 @@ def _read_json(path: Path, default: Any) -> Any:
         return default
 
 
-def _iter_dicts(value: Any) -> Iterable[dict[str, Any]]:
+def _iter_dicts(value: object) -> Iterable[dict[str, object]]:
     if isinstance(value, dict):
         yield value
         for child in value.values():
@@ -75,7 +84,7 @@ def _iter_dicts(value: Any) -> Iterable[dict[str, Any]]:
             yield from _iter_dicts(child)
 
 
-def _ids(value: Any, key: str) -> set[str]:
+def _ids(value: object, key: str) -> set[str]:
     found: set[str] = set()
     for item in _iter_dicts(value):
         candidate = item.get(key)
@@ -94,9 +103,9 @@ class _RequestController:
         requests_per_minute: float,
         max_retries: int,
         show_progress: bool,
-        sleep: Any | None = None,
-        clock: Any | None = None,
-        jitter: Any | None = None,
+        sleep: Callable[[float], None] | None = None,
+        clock: Callable[[], float] | None = None,
+        jitter: Callable[[float, float], float] | None = None,
     ):
         if requests_per_minute <= 0:
             raise ValueError("requests_per_minute must be greater than zero.")
@@ -139,7 +148,7 @@ class _RequestController:
 class Metadata:
     """Read-only Zoho Analytics metadata APIs and workspace snapshot collector."""
 
-    def __init__(self, client: Any):
+    def __init__(self, client: BaseZohoClient):
         self.client = client
         self._controller: _RequestController | None = None
 
@@ -149,7 +158,7 @@ class Metadata:
             _RATE_LIMIT_PATTERN.search(str(error))
         )
 
-    def _request(self, endpoint: str, params: dict[str, Any] | None = None) -> Any:
+    def _request(self, endpoint: str, params: Mapping[str, object] | None = None) -> object:
         controller = self._controller
         recovered_from_rate_limit = False
         retry_index = 0
@@ -192,42 +201,42 @@ class Metadata:
                 )
             return payload
 
-    def get_workspace(self, workspace_id: str) -> dict[str, Any]:
+    def get_workspace(self, workspace_id: str) -> dict[str, object]:
         workspace = _data(
             self._request(f"workspaces/{workspace_id}"),
             "workspaces",
         )
         return workspace if isinstance(workspace, dict) else {}
 
-    def list_folders(self, workspace_id: str) -> list[dict[str, Any]]:
+    def list_folders(self, workspace_id: str) -> list[dict[str, object]]:
         folders = _data(self._request(f"workspaces/{workspace_id}/folders"), "folders")
-        return folders if isinstance(folders, list) else []
+        return [f for f in folders if isinstance(f, dict)] if isinstance(folders, list) else []
 
-    def list_datasources(self, workspace_id: str) -> list[dict[str, Any]]:
+    def list_datasources(self, workspace_id: str) -> list[dict[str, object]]:
         sources = _data(
             self._request(f"workspaces/{workspace_id}/datasources"),
             "dataSources",
         )
-        return sources if isinstance(sources, list) else []
+        return [s for s in sources if isinstance(s, dict)] if isinstance(sources, list) else []
 
     def list_all_views(
         self,
         workspace_id: str,
         page_size: int = 200,
-        view_types: list[int] | None = None,
-    ) -> list[dict[str, Any]]:
+        view_types: Sequence[int] | None = None,
+    ) -> list[dict[str, object]]:
         if page_size <= 0:
             raise ValueError("page_size must be greater than zero.")
-        views: list[dict[str, Any]] = []
+        views: list[dict[str, object]] = []
         start_index = 1
         seen_ids: set[str] = set()
         while True:
-            config: dict[str, Any] = {
+            config: dict[str, object] = {
                 "startIndex": start_index,
                 "noOfResult": page_size,
             }
             if view_types is not None:
-                config["viewTypes"] = view_types
+                config["viewTypes"] = list(view_types)
             page = _data(
                 self._request(
                     f"workspaces/{workspace_id}/views",
@@ -237,7 +246,7 @@ class Metadata:
             )
             if not isinstance(page, list):
                 page = []
-            new_items = []
+            new_items: list[dict[str, object]] = []
             for view in page:
                 if not isinstance(view, dict):
                     continue
@@ -257,7 +266,7 @@ class Metadata:
         self,
         view_id: str,
         include_involved: bool = True,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         details = _data(
             self._request(
                 f"views/{view_id}",
@@ -267,25 +276,27 @@ class Metadata:
         )
         return details if isinstance(details, dict) else {}
 
-    def get_table_metadata(self, workspace_id: str, view_id: str) -> dict[str, Any]:
-        return _data(
+    def get_table_metadata(self, workspace_id: str, view_id: str) -> dict[str, object]:
+        result = _data(
             self._request(f"workspaces/{workspace_id}/views/{view_id}/metadata")
         )
+        return result if isinstance(result, dict) else {}
 
     def get_column_dependents(
         self,
         workspace_id: str,
         view_id: str,
         column_id: str,
-    ) -> dict[str, Any]:
-        return _data(
+    ) -> dict[str, object]:
+        result = _data(
             self._request(
                 f"workspaces/{workspace_id}/views/{view_id}/columns/"
                 f"{column_id}/dependents"
             )
         )
+        return result if isinstance(result, dict) else {}
 
-    def get_query_table(self, workspace_id: str, view_id: str) -> dict[str, Any]:
+    def get_query_table(self, workspace_id: str, view_id: str) -> dict[str, object]:
         """Read the complete saved SQL definition of a query table."""
         definition = _data(self._request(f"workspaces/{workspace_id}/querytables/{view_id}"))
         if not isinstance(definition, dict) or not isinstance(definition.get("sqlQuery"), str) or not definition["sqlQuery"].strip():
@@ -295,14 +306,14 @@ class Metadata:
     def download_workspace(
         self,
         workspace_id: str,
-        output_dir: Any,
+        output_dir: str | Path,
         include_column_dependents: bool = False,
         requests_per_minute: float = 50,
         max_retries: int = 5,
         resume: bool = True,
         show_progress: bool = True,
         page_size: int = 200,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Download a resumable metadata snapshot into an indexed SQLite database."""
         if not workspace_id or not str(workspace_id).strip():
             raise ValueError("workspace_id is required.")
@@ -316,8 +327,8 @@ class Metadata:
         completed_views = set(store.completed_ids("view"))
         completed_tables = set(store.completed_ids("table"))
         completed_dependents = set(store.completed_ids("dependent"))
-        errors: list[dict[str, Any]] = []
-        manifest: dict[str, Any] = {
+        errors: list[dict[str, object]] = []
+        manifest: dict[str, object] = {
             "schemaVersion": SCHEMA_VERSION,
             "workspaceId": str(workspace_id),
             "startedAt": store.get_info("started_at")
@@ -381,9 +392,9 @@ class Metadata:
             store.replace_datasources(str(workspace_id), datasources)
             store.replace_views(str(workspace_id), views)
 
-            view_details: dict[str, dict[str, Any]] = {}
-            table_metadata: dict[str, dict[str, Any]] = {}
-            dependent_metadata: dict[str, dict[str, Any]] = {}
+            view_details: dict[str, dict[str, object]] = {}
+            table_metadata: dict[str, dict[str, object]] = {}
+            dependent_metadata: dict[str, dict[str, object]] = {}
             table_views = [
                 view for view in views
                 if str(view.get("viewType", "")).strip().lower() in _TABLE_VIEW_TYPES
@@ -477,12 +488,13 @@ class Metadata:
                     save_state()
 
             if include_column_dependents:
-                columns = [
-                    (view_id, column)
-                    for view_id, metadata in table_metadata.items()
-                    for column in metadata.get("columns", [])
-                    if isinstance(column, dict) and column.get("columnId")
-                ]
+                columns: list[tuple[str, dict[str, object]]] = []
+                for view_id, metadata in table_metadata.items():
+                    raw_cols = metadata.get("columns", [])
+                    if isinstance(raw_cols, list):
+                        for column in raw_cols:
+                            if isinstance(column, dict) and column.get("columnId"):
+                                columns.append((view_id, column))
                 for index, (view_id, column) in enumerate(columns, start=1):
                     column_id = str(column["columnId"])
                     dependent_id = f"{view_id}:{column_id}"
@@ -520,7 +532,9 @@ class Metadata:
                     # Query-table endpoint also carries authoritative involved views.
                     details = view_details.setdefault(view_id, {})
                     details = dict(details)
-                    details["involvedViews"] = query["definition"].get("involvedViews", [])
+                    q_def = query.get("definition")
+                    if isinstance(q_def, dict):
+                        details["involvedViews"] = q_def.get("involvedViews", [])
                     view_details[view_id] = details
             relationships = self._build_relationships(
                 workspace_id,
@@ -531,7 +545,10 @@ class Metadata:
                 table_metadata,
                 dependent_metadata,
             )
-            store.replace_relationships(relationships["edges"])
+            raw_edges = relationships.get("edges", [])
+            store.replace_relationships(
+                [e for e in raw_edges if isinstance(e, dict)] if isinstance(raw_edges, list) else []
+            )
             store.replace_errors(errors)
             manifest["counts"] = store.counts()
             manifest["sync"] = sync_counts
@@ -553,13 +570,13 @@ class Metadata:
     def sync_workspace(
         self,
         workspace_id: str,
-        output_dir: Any,
+        output_dir: str | Path,
         include_column_dependents: bool = False,
         requests_per_minute: float = 50,
         max_retries: int = 5,
         show_progress: bool = True,
         page_size: int = 200,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Incrementally refresh only new or modified workspace metadata."""
         return self.download_workspace(
             workspace_id=workspace_id,
@@ -573,10 +590,11 @@ class Metadata:
         )
 
     @staticmethod
-    def migrate_json_snapshot(source_dir: Any, output_path: Any | None = None) -> dict[str, int]:
+    def migrate_json_snapshot(source_dir: str | Path, output_path: str | Path | None = None) -> dict[str, int]:
         """Convert a legacy expanded JSON snapshot to the indexed SQLite format."""
         root = Path(source_dir).expanduser().resolve()
-        workspace = _read_json(root / "workspace.json", {})
+        raw_ws = _read_json(root / "workspace.json", {})
+        workspace = raw_ws if isinstance(raw_ws, dict) else {}
         workspace_id = str(workspace.get("workspaceId") or "")
         if not workspace_id:
             raise ValueError("Legacy snapshot does not contain a workspaceId.")
@@ -587,12 +605,18 @@ class Metadata:
         )
         if destination.exists():
             destination.unlink()
-        folders = _read_json(root / "folders.json", [])
-        datasources = _read_json(root / "datasources.json", [])
-        views = _read_json(root / "views.json", [])
-        manifest = _read_json(root / "manifest.json", {})
-        errors = _read_json(root / "errors.json", manifest.get("errors", []))
-        relationships = _read_json(root / "relationships.json", {"edges": []})
+        raw_folders = _read_json(root / "folders.json", [])
+        folders = [f for f in raw_folders if isinstance(f, dict)] if isinstance(raw_folders, list) else []
+        raw_datasources = _read_json(root / "datasources.json", [])
+        datasources = [d for d in raw_datasources if isinstance(d, dict)] if isinstance(raw_datasources, list) else []
+        raw_views = _read_json(root / "views.json", [])
+        views = [v for v in raw_views if isinstance(v, dict)] if isinstance(raw_views, list) else []
+        raw_manifest = _read_json(root / "manifest.json", {})
+        manifest = raw_manifest if isinstance(raw_manifest, dict) else {}
+        raw_errors = _read_json(root / "errors.json", manifest.get("errors", []))
+        errors = [e for e in raw_errors if isinstance(e, dict)] if isinstance(raw_errors, list) else []
+        raw_rel = _read_json(root / "relationships.json", {"edges": []})
+        relationships = raw_rel if isinstance(raw_rel, dict) else {}
 
         with WorkspaceMetadataStore(destination, workspace_id) as store:
             store.put_workspace(workspace, workspace_id)
@@ -604,8 +628,11 @@ class Metadata:
                 detail_path = root / "views" / (view_id + ".json")
                 if view_id and detail_path.exists():
                     source_modified_time = _as_text(view.get("lastModifiedTime"))
+                    raw_detail = _read_json(detail_path, {})
                     store.put_view_details(
-                        view_id, _read_json(detail_path, {}), source_modified_time
+                        view_id,
+                        raw_detail if isinstance(raw_detail, dict) else {},
+                        source_modified_time,
                     )
             table_dir = root / "tables"
             if table_dir.exists():
@@ -614,9 +641,10 @@ class Metadata:
                         (item for item in views if str(item.get("viewId")) == table_path.stem),
                         {},
                     )
+                    raw_table = _read_json(table_path, {})
                     store.put_table_metadata(
                         table_path.stem,
-                        _read_json(table_path, {}),
+                        raw_table if isinstance(raw_table, dict) else {},
                         _as_text(view.get("lastModifiedTime")),
                     )
             dependent_dir = root / "dependents"
@@ -624,10 +652,16 @@ class Metadata:
                 for dependent_path in dependent_dir.glob("*.json"):
                     parts = dependent_path.stem.split("_", 1)
                     if len(parts) == 2:
+                        raw_dep = _read_json(dependent_path, {})
                         store.put_column_dependents(
-                            parts[0], parts[1], _read_json(dependent_path, {})
+                            parts[0],
+                            parts[1],
+                            raw_dep if isinstance(raw_dep, dict) else {},
                         )
-            store.replace_relationships(relationships.get("edges", []))
+            raw_edges = relationships.get("edges", [])
+            store.replace_relationships(
+                [e for e in raw_edges if isinstance(e, dict)] if isinstance(raw_edges, list) else []
+            )
             store.replace_errors(errors)
             store.set_info("started_at", manifest.get("startedAt", ""))
             store.set_info("updated_at", manifest.get("updatedAt", ""))
@@ -640,44 +674,45 @@ class Metadata:
 
     @staticmethod
     def _build_catalog(
-        workspace: dict[str, Any],
-        folders: list[dict[str, Any]],
-        datasources: list[dict[str, Any]],
-        views: list[dict[str, Any]],
-        view_details: dict[str, dict[str, Any]],
-        table_metadata: dict[str, dict[str, Any]],
-    ) -> dict[str, Any]:
-        catalog_views = []
+        workspace: Mapping[str, object],
+        folders: Sequence[Mapping[str, object]],
+        datasources: Sequence[Mapping[str, object]],
+        views: Sequence[Mapping[str, object]],
+        view_details: Mapping[str, Mapping[str, object]],
+        table_metadata: Mapping[str, Mapping[str, object]],
+    ) -> dict[str, object]:
+        catalog_views: list[dict[str, object]] = []
         for view in views:
             item = dict(view)
             view_id = str(view.get("viewId", ""))
             if view_id in view_details:
                 item["details"] = view_details[view_id]
             if view_id in table_metadata:
-                item["columns"] = table_metadata[view_id].get("columns", [])
+                raw_cols = table_metadata[view_id].get("columns", [])
+                item["columns"] = raw_cols if isinstance(raw_cols, list) else []
             catalog_views.append(item)
         return {
             "schemaVersion": 1,
-            "workspace": workspace,
-            "folders": folders,
-            "datasources": datasources,
+            "workspace": dict(workspace),
+            "folders": [dict(f) for f in folders],
+            "datasources": [dict(d) for d in datasources],
             "views": catalog_views,
         }
 
     @staticmethod
     def _build_relationships(
         workspace_id: str,
-        folders: list[dict[str, Any]],
-        datasources: list[dict[str, Any]],
-        views: list[dict[str, Any]],
-        view_details: dict[str, dict[str, Any]],
-        table_metadata: dict[str, dict[str, Any]],
-        dependent_metadata: dict[str, dict[str, Any]],
-    ) -> dict[str, Any]:
-        nodes: list[dict[str, Any]] = [
+        folders: Sequence[Mapping[str, object]],
+        datasources: Sequence[Mapping[str, object]],
+        views: Sequence[Mapping[str, object]],
+        view_details: Mapping[str, Mapping[str, object]],
+        table_metadata: Mapping[str, Mapping[str, object]],
+        dependent_metadata: Mapping[str, Mapping[str, object]],
+    ) -> dict[str, object]:
+        nodes: list[dict[str, object]] = [
             {"id": f"workspace:{workspace_id}", "type": "workspace", "zohoId": workspace_id}
         ]
-        edges: list[dict[str, Any]] = []
+        edges: list[dict[str, object]] = []
         view_by_name: dict[str, list[str]] = {}
         column_by_name: dict[str, dict[str, list[str]]] = {}
 
@@ -734,7 +769,9 @@ class Metadata:
 
         for view_id, metadata in table_metadata.items():
             names: dict[str, list[str]] = {}
-            for column in metadata.get("columns", []):
+            raw_cols = metadata.get("columns", [])
+            cols = raw_cols if isinstance(raw_cols, list) else []
+            for column in cols:
                 if not isinstance(column, dict) or not column.get("columnId"):
                     continue
                 column_id = str(column["columnId"])
@@ -771,7 +808,9 @@ class Metadata:
             column_by_name[view_id] = names
 
         for view_id, metadata in table_metadata.items():
-            for column in metadata.get("columns", []):
+            raw_cols = metadata.get("columns", [])
+            cols = raw_cols if isinstance(raw_cols, list) else []
+            for column in cols:
                 if not isinstance(column, dict) or not column.get("columnId"):
                     continue
                 table_name = str(column.get("pkTableName", "")).strip()
@@ -785,7 +824,7 @@ class Metadata:
                     if target_view_id else []
                 )
                 target_column_id = target_column_ids[0] if len(target_column_ids) == 1 else None
-                edge = {
+                edge: dict[str, object] = {
                     "type": "column_looks_up_column",
                     "source": f"column:{column['columnId']}",
                     "targetTableName": table_name,
@@ -842,7 +881,7 @@ class Metadata:
                     "target": f"view:{target_view_id}",
                 })
 
-        unique_edges: list[dict[str, Any]] = []
+        unique_edges: list[dict[str, object]] = []
         seen_edges: set[str] = set()
         for edge in edges:
             marker = json.dumps(edge, sort_keys=True)

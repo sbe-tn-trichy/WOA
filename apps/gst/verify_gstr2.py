@@ -2,6 +2,7 @@
 """Cross-check GSTR-2 / GSTR-2B JSON returns against Zoho Books purchases."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 import csv
@@ -14,10 +15,10 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 from zoneinfo import ZoneInfo
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:  # Direct script execution.
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_analytics_client, get_books_client
 from workflows.runtime.config import Config
@@ -42,7 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "json_file",
         nargs="?",
-        default=r"C:\Users\VAK\Downloads\returns_R2B_33AATFB2164K1Z9_042025.json",
+        default=Config.GSTR2_DEFAULT_JSON_PATH or None,
         help="Path to the GSTR-2 / GSTR-2B JSON file",
     )
     parser.add_argument(
@@ -58,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--year",
         help="Fiscal year 'YYYY-YY' (April to March); requires all twelve JSON returns",
     )
-    parser.add_argument("--analytics-workspace-id", default="264324000000002043",
+    parser.add_argument("--analytics-workspace-id", default=Config.ANALYTICS_WORKSPACE_ID,
                         help="Zoho Analytics workspace containing Bills and Vendors tables")
     parser.add_argument("--include-rcm", action="store_true",
                         help="Include reverse-charge purchases (excluded by default)")
@@ -386,23 +387,42 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("Error: --year requires a directory of twelve monthly JSON returns.", file=sys.stderr)
         return 1
 
-    mappings = ()
+    mappings: tuple[AggregatePurchaseMapping, ...] = ()
     if args.aggregate_map.is_file():
         try:
             entries = json.loads(args.aggregate_map.read_text(encoding="utf-8"))
-            mappings = tuple(AggregatePurchaseMapping(
-                **{**entry, "supplier_gstins": tuple(entry["supplier_gstins"])}
-            ) for entry in entries)
+            if isinstance(entries, Sequence):
+                mappings = tuple(
+                    AggregatePurchaseMapping(
+                        month=str(entry.get("month", "")),
+                        bill_id=str(entry.get("bill_id", "")),
+                        bill_number=str(entry.get("bill_number", "")),
+                        portal_doc_type=str(entry.get("portal_doc_type", "")),
+                        portal_doc_date=str(entry.get("portal_doc_date", "")),
+                        portal_doc_number_pattern=str(entry.get("portal_doc_number_pattern", "")),
+                        supplier_gstins=tuple(str(g) for g in entry.get("supplier_gstins", ())),
+                        expected_count=int(entry.get("expected_count", 0)),
+                        expected_taxable=float(entry.get("expected_taxable", 0.0)),
+                        expected_tax=float(entry.get("expected_tax", 0.0)),
+                        expected_total=float(entry.get("expected_total", 0.0)),
+                    )
+                    for entry in entries
+                    if isinstance(entry, Mapping)
+                )
         except (OSError, ValueError, TypeError, KeyError) as exc:
             print(f"Error loading aggregate map: {exc}", file=sys.stderr)
             return 1
 
+    location_gstin_map = {
+        str(k): [str(x) for x in v] if isinstance(v, (list, tuple)) else ()
+        for k, v in Config.GSTR2_LOCATION_GSTIN_MAP.items()
+    }
     config = GSTR2VerificationConfig(
         amount_tolerance=args.tolerance,
         include_drafts=args.include_drafts,
         exclude_reverse_charge=not args.include_rcm,
         aggregate_mappings=mappings,
-        location_gstin_map=Config.GSTR2_LOCATION_GSTIN_MAP,
+        location_gstin_map=location_gstin_map,
     )
 
     # Collect items/files to process
@@ -452,8 +472,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         by_month: dict[str, tuple[str, Path | Mapping[str, Any]]] = {}
         for label, source in items_to_process:
             data = json.loads(source.read_text(encoding="utf-8")) if isinstance(source, Path) else source
-            payload = data.get("data", data)
-            period = str(payload.get("rtnprd") or "")
+            payload = data.get("data", data) if isinstance(data, Mapping) else {}
+            period = str(payload.get("rtnprd") or "") if isinstance(payload, Mapping) else ""
             if len(period) != 6 or not period.isdigit() or not 1 <= int(period[:2]) <= 12:
                 print(f"Error: invalid return period in {label}.", file=sys.stderr)
                 return 1

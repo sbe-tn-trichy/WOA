@@ -4,13 +4,20 @@ from __future__ import annotations
 from utils.file_utils import json
 import sqlite3
 import time
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Protocol, TypedDict, cast
 
+from zoho.core_sdk.base_client import BaseZohoClient
 from zoho.core_sdk.base_resource import BaseResource
 
 MODULES = {'sales_persons': 'cm_user', 'beats': 'cm_beat'}
+
+
+class BooksCustomModuleClient(Protocol):
+    @property
+    def organization_id(self) -> str: ...
 
 
 class ModuleDownloadResult(TypedDict):
@@ -23,7 +30,7 @@ def _quote(value: str) -> str:
     return '"' + value.replace('"', '""') + '"'
 
 
-def module_record_json(db: sqlite3.Connection, *, table: str, record_id: str) -> dict[str, Any]:
+def module_record_json(db: sqlite3.Connection, *, table: str, record_id: str) -> dict[str, object]:
     """Reconstruct an editable record with its original JSON types and key presence."""
     if table not in MODULES:
         raise ValueError(f'Unsupported module table: {table}')
@@ -36,8 +43,9 @@ def module_record_json(db: sqlite3.Connection, *, table: str, record_id: str) ->
                            (table, record_id)).fetchone()
     if values is None or saved is None:
         raise ValueError(f'Unknown {table} record: {record_id}')
-    original = json.loads(saved[0])
-    result = {}
+    raw_loaded = json.loads(saved[0])
+    original = raw_loaded if isinstance(raw_loaded, Mapping) else {}
+    result: dict[str, object] = {}
     for column, value in zip(cursor.description, values):
         key = column[0]
         if key not in original and value is None:
@@ -55,32 +63,36 @@ def module_record_json(db: sqlite3.Connection, *, table: str, record_id: str) ->
     return result
 
 
-def download_books_custom_modules(books: Any, *, database: Path) -> ModuleDownloadResult:
+def download_books_custom_modules(books: BooksCustomModuleClient, *, database: Path) -> ModuleDownloadResult:
     """Read both modules, then commit a complete organization-scoped local snapshot.
 
     A refresh refuses to overwrite direct table edits. No cloud mutation methods
     are called. All pages use 200 records and include all statuses.
     """
-    downloaded: dict[str, list[dict[str, Any]]] = {}
+    downloaded: dict[str, list[dict[str, object]]] = {}
     for table, module in MODULES.items():
-        records: list[dict[str, Any]] = []
+        records: list[dict[str, object]] = []
         seen: set[str] = set()
         for page in range(1, 10001):
-            response = BaseResource(books, module).list(params={
+            response = BaseResource(cast(BaseZohoClient, books), module).list(params={
                 'page': page, 'per_page': 200, 'filter_by': 'Status.All'})
-            rows = response.get('module_records')
-            context = response.get('page_context', {})
-            if (not isinstance(rows, list) or type(context.get('has_more_page')) is not bool
-                or context.get('page', page) != page):
+            if not isinstance(response, Mapping):
+                raise ValueError(f'Malformed {module} page {page}; database not updated')
+            raw_rows = response.get('module_records')
+            rows = [r for r in raw_rows if isinstance(r, Mapping)] if isinstance(raw_rows, list) else None
+            context = response.get('page_context')
+            context_map = context if isinstance(context, Mapping) else {}
+            if (rows is None or type(context_map.get('has_more_page')) is not bool
+                or context_map.get('page', page) != page):
                 raise ValueError(f'Malformed {module} page {page}; database not updated')
             for row in rows:
                 rid = row.get('module_record_id')
                 if not isinstance(rid, str) or not rid or rid in seen or row.get('module_api_name') != module:
                     raise ValueError(f'Invalid/duplicate identity in {module} page {page}')
-                datetime.fromisoformat(row['last_modified_time'])
+                datetime.fromisoformat(str(row['last_modified_time']))
                 seen.add(rid)
-                records.append(row)
-            if not context['has_more_page']:
+                records.append(dict(row))
+            if not context_map['has_more_page']:
                 break
             if not rows:
                 raise ValueError(f'Empty intermediate page in {module}')
@@ -144,7 +156,7 @@ def download_books_custom_modules(books: Any, *, database: Path) -> ModuleDownlo
             'synced_at': stamp}
 
 
-def stage_new_beat(database: Path, *, name: str) -> dict[str, Any]:
+def stage_new_beat(database: Path, *, name: str) -> dict[str, object]:
     """Create a local-only beat; its temporary ID must never be sent as a Books ID."""
     from uuid import uuid4
 

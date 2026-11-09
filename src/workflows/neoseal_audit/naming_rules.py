@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
+
+from workflows.runtime.config import Config
 
 
 KNOWN_SKU_OVERRIDES: dict[str, str] = {
@@ -30,20 +32,20 @@ KNOWN_SKU_OVERRIDES: dict[str, str] = {
     "701-260-C": "701-260-CLR",
 }
 
-KNOWN_DUPLICATE_MAP: dict[str, dict[str, str]] = {
+KNOWN_DUPLICATE_MAP: dict[str, dict[str, str]] = cast(dict[str, dict[str, str]], Config.NEOSEAL_DUPLICATE_MAP) or {
     "701-260-B": {
         "master_sku": "701-260-BLK",
-        "master_id": "1094368000059488298",
+        "master_id": "",
         "reason": "Zero-stock duplicate of active 701-260-BLK with 62 stock",
     },
     "701-260-W": {
         "master_sku": "701-260-WHT",
-        "master_id": "1094368000059471316",
+        "master_id": "",
         "reason": "Zero-stock duplicate of active 701-260-WHT with 42 stock",
     },
     "105-500-PVC-CLR-TIN": {
         "master_sku": "105-500-PVC-TIN",
-        "master_id": "1094368000059821380",
+        "master_id": "",
         "reason": "Zero-stock duplicate of active 105-500-PVC-TIN with 35 stock",
     },
 }

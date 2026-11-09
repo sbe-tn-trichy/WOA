@@ -11,9 +11,14 @@ def _quote(name: str) -> str:
 
 
 def effective_record(row: sqlite3.Row) -> dict[str, Any]:
-    record = json.loads(row['cloud_json'])
-    record.update(json.loads(row['detail_json'] or '{}'))
-    record.update(json.loads(row['local_json'] or '{}'))
+    raw_cloud = json.loads(row['cloud_json'])
+    record: dict[str, Any] = dict(raw_cloud) if isinstance(raw_cloud, dict) else {}
+    raw_detail = json.loads(row['detail_json'] or '{}')
+    if isinstance(raw_detail, dict):
+        record.update(raw_detail)
+    raw_local = json.loads(row['local_json'] or '{}')
+    if isinstance(raw_local, dict):
+        record.update(raw_local)
     return record
 
 
@@ -56,7 +61,8 @@ def customer_json(db: sqlite3.Connection, contact_id: str) -> dict[str, Any]:
                            (contact_id,)).fetchone()
     if row is None or shape_row is None:
         raise ValueError(f'Unknown customer: {contact_id}')
-    shape = json.loads(shape_row[0])
+    raw_shape = json.loads(shape_row[0])
+    shape: dict[str, Any] = dict(raw_shape) if isinstance(raw_shape, dict) else {}
     result = {}
     values = {**dict(row), **_constant_values(db)}
     for key, value in values.items():

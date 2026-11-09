@@ -7,10 +7,10 @@ import importlib
 import sys
 from collections.abc import Sequence
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 
 SUBCOMMANDS = {

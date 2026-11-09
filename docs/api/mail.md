@@ -7,6 +7,7 @@ Zoho Mail client for managing email accounts, folders, and sending/listing email
 
 - [`zoho.mail.client`](#zoho-mail-client)
   - [Class `ZohoMailAPI`](#zoho-mail-client-zohomailapi)
+  - [Class `AccountScope`](#zoho-mail-client-accountscope)
 - [`zoho.mail.base`](#zoho-mail-base)
   - [Class `BaseResource`](#zoho-mail-base-baseresource)
 - [`zoho.mail.resources.accounts`](#zoho-mail-resources-accounts)
@@ -34,7 +35,7 @@ Main Zoho Mail API Client.
 ##### `ZohoMailAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, domain: str = 'in', token_refresh_callback: Any | None = None)
+def __init__(self, access_token: str, domain: str = 'in', token_refresh_callback: Callable[[BaseZohoClient], None] | Callable[[], str] | None = None)
 ```
 
 Initialize the Zoho Mail API client.
@@ -42,7 +43,7 @@ Initialize the Zoho Mail API client.
 ##### `ZohoMailAPI.account`
 
 ```python
-def account(self, account_id: str)
+def account(self, account_id: str) -> AccountScope
 ```
 
 Returns a helper object to access account-specific resources.
@@ -50,10 +51,20 @@ Returns a helper object to access account-specific resources.
 ##### `ZohoMailAPI.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, files: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
+def request(self, method: str, endpoint: str, json: Mapping[str, object] | Sequence[object] | None = None, data: Mapping[str, object] | str | bytes | None = None, params: Mapping[str, object] | None = None, headers: Mapping[str, str] | None = None, files: Mapping[str, object] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> object
 ```
 
 Internal HTTP request handler with logging.
+
+### Class `AccountScope`
+
+#### Methods
+
+##### `AccountScope.__init__`
+
+```python
+def __init__(self, client: BaseZohoClient, acc_id: str)
+```
 
 ---
 
@@ -69,21 +80,21 @@ Base class for Zoho Mail modules providing standard CRUD operations.
 
 | Attribute | Type | Default Value | Notes |
 |---|---|---|---|
-| `required_fields` | `list[str]` | `[]` | - |
-| `defaults` | `dict[str, Any]` | `{}` | - |
+| `required_fields` | `ClassVar[builtins.list[str]]` | `[]` | - |
+| `defaults` | `ClassVar[dict[str, object]]` | `{}` | - |
 
 #### Methods
 
 ##### `BaseResource.__init__`
 
 ```python
-def __init__(self, client: Any, endpoint: str)
+def __init__(self, client: BaseZohoClient, endpoint: str)
 ```
 
 ##### `BaseResource._prepare_payload`
 
 ```python
-def _prepare_payload(self, data: dict[str, Any], check_required: bool = True) -> dict[str, Any]
+def _prepare_payload(self, data: Mapping[str, object], check_required: bool = True) -> dict[str, object]
 ```
 
 Merge defaults (if creating) and check if all required fields are present.
@@ -91,37 +102,37 @@ Merge defaults (if creating) and check if all required fields are present.
 ##### `BaseResource.list`
 
 ```python
-def list(self, params: dict[str, Any] | None = None) -> dict[str, Any]
+def list(self, params: Mapping[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource.get`
 
 ```python
-def get(self, resource_id: str, params: dict[str, Any] | None = None) -> dict[str, Any]
+def get(self, resource_id: str, params: Mapping[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource.create`
 
 ```python
-def create(self, data: dict[str, Any], params: dict[str, Any] | None = None, files: dict[str, Any] | None = None) -> dict[str, Any]
+def create(self, data: Mapping[str, object], params: Mapping[str, object] | None = None, files: Mapping[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource.update`
 
 ```python
-def update(self, resource_id: str, data: dict[str, Any], params: dict[str, Any] | None = None, files: dict[str, Any] | None = None) -> dict[str, Any]
+def update(self, resource_id: str, data: Mapping[str, object], params: Mapping[str, object] | None = None, files: Mapping[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource.delete`
 
 ```python
-def delete(self, resource_id: str, params: dict[str, Any] | None = None) -> dict[str, Any]
+def delete(self, resource_id: str, params: Mapping[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource._action`
 
 ```python
-def _action(self, method: str, resource_id: str | None, action: str, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None) -> dict[str, Any]
+def _action(self, method: str, resource_id: str | None, action: str, data: Mapping[str, object] | None = None, params: Mapping[str, object] | None = None) -> object
 ```
 
 Helper for action endpoints.
@@ -154,7 +165,7 @@ Helper for action endpoints.
 ##### `Accounts.__init__`
 
 ```python
-def __init__(self, client)
+def __init__(self, client: BaseZohoClient)
 ```
 
 ---
@@ -185,19 +196,33 @@ def __init__(self, client)
 ##### `Folders.__init__`
 
 ```python
-def __init__(self, client, account_id: str)
+def __init__(self, client: BaseZohoClient, account_id: str)
 ```
 
 ##### `Folders.create`
 
 ```python
-def create(self, folder_name: str, parent_folder_id: str | None = None) -> dict[str, Any]
+@overload
+def create(self, folder_name: str, parent_folder_id: str | None = None, *, params: Mapping[str, object] | None = None, files: Mapping[str, object] | None = None) -> object
+```
+
+##### `Folders.create`
+
+```python
+@overload
+def create(self, data: Mapping[str, object], params: Mapping[str, object] | None = None, files: Mapping[str, object] | None = None) -> object
+```
+
+##### `Folders.create`
+
+```python
+def create(self, *args: object, **kwargs: object) -> object
 ```
 
 ##### `Folders.rename`
 
 ```python
-def rename(self, folder_id: str, new_name: str) -> dict[str, Any]
+def rename(self, folder_id: str, new_name: str) -> object
 ```
 
 ---
@@ -228,13 +253,27 @@ def rename(self, folder_id: str, new_name: str) -> dict[str, Any]
 ##### `Messages.__init__`
 
 ```python
-def __init__(self, client, account_id: str)
+def __init__(self, client: BaseZohoClient, account_id: str)
 ```
 
 ##### `Messages.list`
 
 ```python
-def list(self, folder_id: str | None = None, page: int = 1, limit: int = 50, params: dict[str, Any] | None = None) -> dict[str, Any]
+@overload
+def list(self, folder_id: str | None = None, page: int = 1, limit: int = 50, params: Mapping[str, object] | None = None) -> object
+```
+
+##### `Messages.list`
+
+```python
+@overload
+def list(self, params: Mapping[str, object] | None = None) -> object
+```
+
+##### `Messages.list`
+
+```python
+def list(self, *args: object, **kwargs: object) -> object
 ```
 
 List messages summary.
@@ -246,7 +285,7 @@ List messages summary.
 ##### `Messages.get_content`
 
 ```python
-def get_content(self, message_id: str) -> dict[str, Any]
+def get_content(self, message_id: str) -> object
 ```
 
 Get full message content.
@@ -254,7 +293,7 @@ Get full message content.
 ##### `Messages.send`
 
 ```python
-def send(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> dict[str, Any]
+def send(self, from_address: str, to_address: str, subject: str, content: str, **kwargs: object) -> object
 ```
 
 Send an email.
@@ -262,7 +301,7 @@ Send an email.
 ##### `Messages.save_draft`
 
 ```python
-def save_draft(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> dict[str, Any]
+def save_draft(self, from_address: str, to_address: str, subject: str, content: str, **kwargs: object) -> object
 ```
 
 Save a draft email.
@@ -270,7 +309,7 @@ Save a draft email.
 ##### `Messages.mark_as_read`
 
 ```python
-def mark_as_read(self, message_id: str) -> dict[str, Any]
+def mark_as_read(self, message_id: str) -> object
 ```
 
 Mark message as read.
@@ -278,7 +317,7 @@ Mark message as read.
 ##### `Messages.mark_as_unread`
 
 ```python
-def mark_as_unread(self, message_id: str) -> dict[str, Any]
+def mark_as_unread(self, message_id: str) -> object
 ```
 
 Mark message as unread.
@@ -286,7 +325,7 @@ Mark message as unread.
 ##### `Messages.get_attachments_info`
 
 ```python
-def get_attachments_info(self, folder_id: str, message_id: str) -> dict[str, Any]
+def get_attachments_info(self, folder_id: str, message_id: str) -> object
 ```
 
 Get attachment information for a message.
@@ -311,7 +350,7 @@ Returns the final file path.
 ##### `Messages.list_iter`
 
 ```python
-def list_iter(self, folder_id: str | None = None, start: int = 1, limit: int = 50)
+def list_iter(self, folder_id: str | None = None, start: int = 1, limit: int = 50, params: dict[str, object] | None = None, resource_key: str | None = None, per_page: int = 200) -> Iterator[dict[str, object]]
 ```
 
 Iterator for messages in a folder.
@@ -319,7 +358,7 @@ Iterator for messages in a folder.
 ##### `Messages.message_has_attachment`
 
 ```python
-def message_has_attachment(self, message: dict[str, Any]) -> bool
+def message_has_attachment(self, message: Mapping[str, object]) -> bool
 ```
 
 Return True when a Zoho message summary indicates attachments.
@@ -327,7 +366,7 @@ Return True when a Zoho message summary indicates attachments.
 ##### `Messages.extract_attachments`
 
 ```python
-def extract_attachments(self, response: dict[str, Any]) -> list[dict[str, Any]]
+def extract_attachments(self, response: object) -> builtins.list[dict[str, object]]
 ```
 
 Normalize Zoho attachment metadata response shapes.
@@ -343,7 +382,7 @@ Return a collision-safe path for an attachment in the target directory.
 ##### `Messages.download_folder_attachments`
 
 ```python
-def download_folder_attachments(self, folder_id: str, download_dir: str, filename: str | None = None) -> list[str]
+def download_folder_attachments(self, folder_id: str, download_dir: str, filename: str | None = None) -> builtins.list[str]
 ```
 
 Downloads all attachments from all messages in a specific folder.

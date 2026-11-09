@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from collections.abc import Callable, Sequence
-from typing import Any
+from collections.abc import Callable, Mapping, Sequence
 
 from google_sheets import GoogleSheetsClient
 from zoho import HttpTokenProvider
@@ -197,7 +196,7 @@ def get_workdrive_client(
 def get_google_sheets_client(
     token: str | None = None,
     service_account_file: str | Path | None = None,
-    service_account_info: dict[str, Any] | None = None,
+    service_account_info: Mapping[str, object] | None = None,
     scopes: Sequence[str] | None = None,
 ) -> GoogleSheetsClient:
     """Create an authenticated Google Sheets client.

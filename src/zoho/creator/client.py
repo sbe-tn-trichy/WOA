@@ -1,8 +1,14 @@
+from __future__ import annotations
+
 import logging
 import os
-from typing import Any
+from collections.abc import Callable, Mapping, Sequence
+from pathlib import Path
 from zoho.core_sdk.base_client import BaseZohoClient
 from .exceptions import ZohoCreatorError
+
+logger = logging.getLogger("zoho.creator.api")
+
 
 class ZohoCreatorAPI(BaseZohoClient):
     """
@@ -16,7 +22,7 @@ class ZohoCreatorAPI(BaseZohoClient):
         domain: str = "in",
         environment: str = "production",
         send_environment_header: bool = True,
-        token_refresh_callback: Any | None = None
+        token_refresh_callback: Callable[[BaseZohoClient], None] | Callable[[], str] | None = None,
     ):
         base_url = f"https://www.zohoapis.{domain or 'in'}/creator/v2.1"
         super().__init__(
@@ -25,7 +31,7 @@ class ZohoCreatorAPI(BaseZohoClient):
             base_url=base_url,
             service_name="creator",
             token_refresh_callback=token_refresh_callback,
-            default_timeout=30
+            default_timeout=30,
         )
         self.account_owner_name = account_owner_name
         self.environment = environment or "production"
@@ -35,17 +41,17 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         method: str,
         endpoint: str,
-        json: dict[str, Any] | None = None,
-        data: dict[str, Any] | None = None,
-        params: dict[str, Any] | None = None,
-        headers: dict[str, Any] | None = None,
-        files: dict[str, Any] | None = None,
+        json: Mapping[str, object] | Sequence[object] | None = None,
+        data: Mapping[str, object] | str | bytes | None = None,
+        params: Mapping[str, object] | None = None,
+        headers: Mapping[str, str] | None = None,
+        files: Mapping[str, object] | None = None,
         stream: bool = False,
         override_url: str | None = None,
         is_mutation: bool | None = None,
         timeout: int | None = None,
-    ) -> Any:
-        req_headers = {}
+    ) -> object:
+        req_headers: dict[str, str] = {}
         if self.send_environment_header:
             req_headers["environment"] = self.environment
         if headers:
@@ -67,19 +73,19 @@ class ZohoCreatorAPI(BaseZohoClient):
     # ==========================================
     # 1. Native Metadata APIs
     # ==========================================
-    def list_applications(self) -> dict[str, Any]:
+    def list_applications(self) -> object:
         """Gets metadata of all applications."""
         return self.request("GET", f"meta/{self.account_owner_name}/applications")
 
-    def list_forms(self, app_link_name: str) -> dict[str, Any]:
+    def list_forms(self, app_link_name: str) -> object:
         """Gets metadata of all forms in an application."""
         return self.request("GET", f"meta/{self.account_owner_name}/{app_link_name}/forms")
 
-    def list_reports(self, app_link_name: str) -> dict[str, Any]:
+    def list_reports(self, app_link_name: str) -> object:
         """Gets metadata of all reports in an application."""
         return self.request("GET", f"meta/{self.account_owner_name}/{app_link_name}/reports")
 
-    def get_fields(self, app_link_name: str, form_link_name: str) -> dict[str, Any]:
+    def get_fields(self, app_link_name: str, form_link_name: str) -> object:
         """Gets metadata of all fields in a form."""
         return self.request("GET", f"meta/{self.account_owner_name}/{app_link_name}/form/{form_link_name}/fields")
 
@@ -90,16 +96,22 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         app_link_name: str,
         report_link_name: str,
-        params: dict[str, Any] | None = None,
-        headers: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+        params: Mapping[str, object] | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> object:
         """Fetches records from a report (up to 1000 records)."""
-        kwargs = {}
-        if params is not None:
-            kwargs["params"] = params
         if headers is not None:
-            kwargs["headers"] = headers
-        return self.request("GET", f"data/{self.account_owner_name}/{app_link_name}/report/{report_link_name}", **kwargs)
+            return self.request(
+                "GET",
+                f"data/{self.account_owner_name}/{app_link_name}/report/{report_link_name}",
+                params=params,
+                headers=headers,
+            )
+        return self.request(
+            "GET",
+            f"data/{self.account_owner_name}/{app_link_name}/report/{report_link_name}",
+            params=params,
+        )
 
     def download_file(
         self,
@@ -107,7 +119,7 @@ class ZohoCreatorAPI(BaseZohoClient):
         report_link_name: str,
         record_id: str,
         field_link_name: str,
-        destination: str,
+        destination: str | Path,
         *,
         filepath: str | None = None,
     ) -> str:
@@ -128,15 +140,15 @@ class ZohoCreatorAPI(BaseZohoClient):
             "GET", f"data/{owner}/{app}/report/{report}/{record}/{field}/download",
             params={"filepath": filepath} if filepath else None, stream=True,
         )
-        return write_response_to_file(response, destination)
+        return write_response_to_file(response, str(destination))
 
     def add_records(
         self,
         app_link_name: str,
         form_link_name: str,
-        payload: dict[str, Any],
-        params: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+        payload: Mapping[str, object],
+        params: Mapping[str, object] | None = None,
+    ) -> object:
         """Adds record(s) to a form (payload format: {"data": [...]})."""
         return self.request("POST", f"data/{self.account_owner_name}/{app_link_name}/form/{form_link_name}", json=payload, params=params)
 
@@ -144,10 +156,10 @@ class ZohoCreatorAPI(BaseZohoClient):
         self,
         app_link_name: str,
         report_link_name: str,
-        payload: dict[str, Any],
+        payload: Mapping[str, object],
         record_id: str | None = None,
-        params: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+        params: Mapping[str, object] | None = None,
+    ) -> object:
         """Updates record(s) in a report by ID or criteria (payload: {"data": {...}})."""
         endpoint = f"data/{self.account_owner_name}/{app_link_name}/report/{report_link_name}"
         if record_id:
@@ -159,8 +171,8 @@ class ZohoCreatorAPI(BaseZohoClient):
         app_link_name: str,
         report_link_name: str,
         record_id: str | None = None,
-        params: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+        params: Mapping[str, object] | None = None,
+    ) -> object:
         """Deletes record(s) in a report by ID or criteria."""
         endpoint = f"data/{self.account_owner_name}/{app_link_name}/report/{report_link_name}"
         if record_id:
@@ -176,64 +188,73 @@ class ZohoCreatorAPI(BaseZohoClient):
         report_link_name: str,
         criteria: str | None = None,
         *,
-        field_config: str | None = None
-    ) -> list[dict[str, Any]]:
+        field_config: str | None = None,
+    ) -> list[dict[str, object]]:
         """
         Custom function: Auto-paginates using record_cursor to fetch all records.
         """
-        all_records = []
-        params = {"max_records": 1000}
+        all_records: list[dict[str, object]] = []
+        params: dict[str, object] = {"max_records": 1000}
         if field_config:
             params["field_config"] = field_config
         if criteria:
             params["criteria"] = criteria
-            
+
         res = self.get_records(app_link_name, report_link_name, params=params)
-        
-        # Check if there is data returned
-        data = res.get("data", [])
-        all_records.extend(data)
-        
+
+        raw_data = res.get("data", []) if isinstance(res, dict) else []
+        if isinstance(raw_data, list):
+            for item in raw_data:
+                if isinstance(item, dict):
+                    all_records.append(item)
+
         # Loop while cursor exists in the response
-        seen_cursors = set()
+        seen_cursors: set[str] = set()
         while True:
-            page_context = res.get("page_context", {})
-            if "has_more_page" in page_context and not page_context["has_more_page"]:
+            page_context = res.get("page_context", {}) if isinstance(res, dict) else {}
+            if isinstance(page_context, dict) and "has_more_page" in page_context and not page_context["has_more_page"]:
                 break
-                
-            cursor = page_context.get("record_cursor") or res.get("record_cursor")
-            if not cursor or cursor in seen_cursors:
+
+            cursor = (page_context.get("record_cursor") if isinstance(page_context, dict) else None) or (res.get("record_cursor") if isinstance(res, dict) else None)
+            if not cursor or not isinstance(cursor, str) or cursor in seen_cursors:
                 break
             seen_cursors.add(cursor)
-            
+
             # Query next page using cursor in header
             headers = {"record_cursor": cursor}
-            page_options = {"params": {"field_config": field_config}} if field_config else {}
-            res = self.get_records(app_link_name, report_link_name, headers=headers, **page_options)
-            data = res.get("data", [])
-            all_records.extend(data)
-            if not data:
+            res = (
+                self.get_records(app_link_name, report_link_name, headers=headers, params={"field_config": field_config})
+                if field_config
+                else self.get_records(app_link_name, report_link_name, headers=headers)
+            )
+            raw_data = res.get("data", []) if isinstance(res, dict) else []
+            if isinstance(raw_data, list):
+                for item in raw_data:
+                    if isinstance(item, dict):
+                        all_records.append(item)
+            if not raw_data:
                 break
-                
+
         return all_records
 
     def add_records_bulk(
         self,
         app_link_name: str,
         form_link_name: str,
-        records: list[dict[str, Any]],
-        skip_workflow: list[str] | None = None
-    ) -> list[dict[str, Any]]:
+        records: Sequence[Mapping[str, object]],
+        skip_workflow: Sequence[str] | None = None,
+    ) -> list[object]:
         """
         Custom function: Bulk adds records by chunking them into batches of 200.
         """
-        responses = []
+        responses: list[object] = []
         # Chunk records in batches of 200
         for i in range(0, len(records), 200):
-            chunk = records[i:i+200]
-            payload = {"data": chunk}
+            chunk = list(records[i:i+200])
+            payload: dict[str, object] = {"data": chunk}
             if skip_workflow:
-                payload["skip_workflow"] = skip_workflow
+                payload["skip_workflow"] = list(skip_workflow)
             res = self.add_records(app_link_name, form_link_name, payload)
             responses.append(res)
         return responses
+

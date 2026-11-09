@@ -4,25 +4,37 @@ from __future__ import annotations
 from utils.file_utils import json
 from pathlib import Path
 from collections.abc import Mapping
-from typing import Any
+from typing import Protocol
 
 from utils.file_utils import yaml
 
 from workflows.runtime.config import Config, get_config
 
 
+class BooksReportsProtocol(Protocol):
+    def trial_balance(
+        self, *, from_date: str, to_date: str, rule: str | None = None,
+        cash_based: bool = False, show_rows: str = "non_zero",
+    ) -> Mapping[str, object]: ...
+
+
+class BooksTrialBalanceClient(Protocol):
+    @property
+    def reports(self) -> BooksReportsProtocol: ...
+
+
 def _normalize(value: str) -> str:
     return " ".join(value.split()).casefold()
 
 
-def _firm_rule(firm: str | None, config_path: Path | None) -> dict[str, Any]:
+def _firm_rule(firm: str | None, config_path: Path | None) -> dict[str, object]:
     path = config_path or Path(get_config(
         "FIRM_REPORT_CONFIG", str(Path(Config.PROJECT_ROOT) / "config/firm-reports.yaml")))
     config = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
     if not isinstance(config, dict) or not isinstance(config.get("firms"), dict) or not config["firms"]:
         raise ValueError("Firm report configuration needs a non-empty firms mapping")
     aliases: dict[str, str] = {}
-    rules: dict[str, dict[str, Any]] = {}
+    rules: dict[str, dict[str, object]] = {}
     for identifier, entry in config["firms"].items():
         if not isinstance(identifier, str) or not identifier.strip() or not isinstance(entry, dict):
             raise ValueError("Firm entries must be named objects")
@@ -53,9 +65,9 @@ def _firm_rule(firm: str | None, config_path: Path | None) -> dict[str, Any]:
 
 
 def fetch_trial_balance_for_firm(
-    books_client: Any, *, from_date: str, to_date: str,
+    books_client: BooksTrialBalanceClient, *, from_date: str, to_date: str,
     firm: str | None = None, show_rows: str = "non_zero", config_path: Path | None = None,
-) -> Mapping[str, Any]:
+) -> Mapping[str, object]:
     """Fetch accrual trial balance using configured firm aliases and location scope.
 
     Omitted firm uses default_firm from YAML. Names, abbreviations and GSTINs
@@ -69,9 +81,9 @@ def fetch_trial_balance_for_firm(
 
 
 def fetch_trial_balance_for_gstin(
-    books_client: Any, *, from_date: str, to_date: str,
+    books_client: BooksTrialBalanceClient, *, from_date: str, to_date: str,
     gstin: str | None = None, show_rows: str = "non_zero", config_path: Path | None = None,
-) -> Mapping[str, Any]:
+) -> Mapping[str, object]:
     """Compatibility wrapper accepting a configured GSTIN or firm alias."""
     return fetch_trial_balance_for_firm(
         books_client, from_date=from_date, to_date=to_date,

@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Export a read-only customer invoice/payment verification report."""
 
+import importlib
 import argparse
 import csv
 from utils.file_utils import json
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
 from workflows.customer_management.invoice_payment_review import review_customer_invoices_payments

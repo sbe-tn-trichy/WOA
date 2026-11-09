@@ -751,7 +751,7 @@ def _raise_for_status(self, response: http_transport.Response, endpoint: str | N
 ##### `BaseZohoClient.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, files: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
+def request(self, method: str, endpoint: str, json: Mapping[str, object] | Sequence[object] | None = None, data: Mapping[str, object] | str | bytes | None = None, params: Mapping[str, object] | None = None, headers: Mapping[str, str] | None = None, files: Mapping[str, object] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
 ```
 
 ---
@@ -768,14 +768,20 @@ Shared base class for Zoho API modules providing standard CRUD and pagination.
 
 | Attribute | Type | Default Value | Notes |
 |---|---|---|---|
-| `required_fields` | `builtins.list[str]` | `[]` | - |
-| `defaults` | `dict[str, object]` | `{}` | - |
-| `line_item_required_fields` | `builtins.list[str]` | `[]` | - |
-| `line_item_defaults` | `dict[str, object]` | `{}` | - |
-| `error_class` | `type[ZohoError]` | `ZohoError` | - |
-| `logger_name` | `str` | `'zoho.api'` | - |
+| `required_fields` | `ClassVar[builtins.list[str]]` | `[]` | - |
+| `defaults` | `ClassVar[dict[str, object]]` | `{}` | - |
+| `line_item_required_fields` | `ClassVar[builtins.list[str]]` | `[]` | - |
+| `line_item_defaults` | `ClassVar[dict[str, object]]` | `{}` | - |
+| `logger_name` | `ClassVar[str]` | `'zoho.api'` | - |
 
 #### Methods
+
+##### `BaseResource.error_class`
+
+```python
+@property
+def error_class(self) -> type[ZohoError]
+```
 
 ##### `BaseResource.__init__`
 
@@ -786,7 +792,7 @@ def __init__(self, client: BaseZohoClient, endpoint: str) -> None
 ##### `BaseResource._prepare_payload`
 
 ```python
-def _prepare_payload(self, data: dict[str, object], check_required: bool = True) -> dict[str, object]
+def _prepare_payload(self, data: Mapping[str, object], check_required: bool = True) -> dict[str, object]
 ```
 
 Merge defaults (if creating) and check if all required fields are present.
@@ -822,13 +828,13 @@ def get(self, resource_id: str, params: dict[str, object] | None = None) -> obje
 ##### `BaseResource.create`
 
 ```python
-def create(self, data: dict[str, object], params: dict[str, object] | None = None, files: dict[str, object] | None = None) -> object
+def create(self, data: Mapping[str, object], params: dict[str, object] | None = None, files: dict[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource.update`
 
 ```python
-def update(self, resource_id: str, data: dict[str, object], params: dict[str, object] | None = None, files: dict[str, object] | None = None) -> object
+def update(self, resource_id: str, data: Mapping[str, object], params: dict[str, object] | None = None, files: dict[str, object] | None = None) -> object
 ```
 
 ##### `BaseResource.delete`
@@ -1040,7 +1046,7 @@ def require_text(value: object, context: str, *, allow_empty: bool = False) -> s
 Nominal identifiers for validated records; these do not validate tenant scope.
 
 **Declared Exports (`__all__`):**
-`PaymentId`, `InvoiceId`, `CustomerId`, `AccountId`, `LocationId`
+`PaymentId`, `InvoiceId`, `CustomerId`, `AccountId`, `LocationId`, `PurchaseAccountId`, `OrganizationId`
 
 ---
 

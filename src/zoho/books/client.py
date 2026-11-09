@@ -1,6 +1,7 @@
 import logging
 import os
-from typing import Any
+from collections.abc import Callable, Mapping, Sequence
+
 from zoho.core_sdk.base_client import BaseZohoClient
 from .custom.contacts import Vendors
 from .custom.sales import SalesReturns
@@ -18,8 +19,8 @@ class ZohoBooksAPI(BaseZohoClient, BooksResources):
         access_token: str,
         organization_id: str,
         domain: str = "in",
-        on_request_completed: Any | None = None,
-        token_refresh_callback: Any | None = None
+        on_request_completed: Callable[..., None] | None = None,
+        token_refresh_callback: Callable[..., str] | None = None,
     ):
         """
         Initialize the Zoho Books API client.
@@ -52,29 +53,29 @@ class ZohoBooksAPI(BaseZohoClient, BooksResources):
         self,
         method: str,
         endpoint: str,
-        json: dict[str, Any] | None = None,
-        data: dict[str, Any] | None = None,
-        params: dict[str, Any] | None = None,
-        headers: dict[str, Any] | None = None,
-        files: dict[str, Any] | None = None,
+        json: Mapping[str, object] | Sequence[object] | None = None,
+        data: Mapping[str, object] | str | bytes | None = None,
+        params: Mapping[str, object] | None = None,
+        headers: Mapping[str, str] | None = None,
+        files: Mapping[str, object] | None = None,
         stream: bool = False,
         override_url: str | None = None,
         is_mutation: bool | None = None,
         timeout: int | None = None,
-    ) -> Any:
+    ) -> object:
         """
         Internal HTTP request handler with logging.
         """
-        params = dict(params or {})
-        if 'organization_id' not in params:
-            params['organization_id'] = self.organization_id
+        params_dict: dict[str, object] = dict(params or {})
+        if 'organization_id' not in params_dict:
+            params_dict['organization_id'] = self.organization_id
             
         return super().request(
             method=method,
             endpoint=endpoint,
             json=json,
             data=data,
-            params=params,
+            params=params_dict,
             headers=headers,
             files=files,
             stream=stream,

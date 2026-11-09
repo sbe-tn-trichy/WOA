@@ -5,12 +5,11 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 from collections.abc import Mapping
-from typing import Any
 
 from helpers import parse_date
 
 
-def parse_any_date(val: Any) -> date | None:
+def parse_any_date(val: object) -> date | None:
     if not val:
         return None
     s = str(val).strip()
@@ -22,10 +21,10 @@ def parse_any_date(val: Any) -> date | None:
     return parse_date(val)
 
 
-def build_update_plan(audit_result_or_rows: Any) -> dict[str, Any]:
+def build_update_plan(audit_result_or_rows: object) -> dict[str, object]:
     """Build update plan to align application date to max(payment_date, invoice_date)."""
-    plan_rows: list[dict[str, Any]] = []
-    by_payment: dict[str, list[dict[str, Any]]] = {}
+    plan_rows: list[dict[str, object]] = []
+    by_payment: dict[str, list[dict[str, object]]] = {}
 
     # Case 1: Structured audit result payload
     if isinstance(audit_result_or_rows, dict):
@@ -55,7 +54,7 @@ def build_update_plan(audit_result_or_rows: Any) -> dict[str, Any]:
                 target_rule = "Payment Date" if target_d == pmt_d else "Invoice Date"
                 days_shift = (target_d - app_d).days
 
-                item = {
+                item: dict[str, object] = {
                     "payment_id": pmt_id,
                     "payment_number": pmt_num,
                     "customer_name": cust_name,
@@ -84,7 +83,10 @@ def build_update_plan(audit_result_or_rows: Any) -> dict[str, Any]:
     # Case 2: List of flat rows
     if isinstance(audit_result_or_rows, list):
         for row in audit_result_or_rows:
-            def _get_val(*keys: str) -> Any:
+            if not isinstance(row, Mapping):
+                continue
+
+            def _get_val(*keys: str) -> object:
                 for k in keys:
                     if k in row and row[k] is not None:
                         return row[k]
@@ -116,7 +118,7 @@ def build_update_plan(audit_result_or_rows: Any) -> dict[str, Any]:
             target_rule = "Payment Date" if target_d == pmt_d else "Invoice Date"
             days_shift = (target_d - app_d).days
 
-            item = {
+            item: dict[str, object] = {
                 "payment_id": pmt_id,
                 "payment_number": pmt_num,
                 "customer_name": cust_name,
@@ -143,25 +145,30 @@ def build_update_plan(audit_result_or_rows: Any) -> dict[str, Any]:
     }
 
 
-def render_plan_markdown(plan: dict[str, Any]) -> str:
+def render_plan_markdown(plan: Mapping[str, object]) -> str:
+    allocations = plan.get("allocations")
+    alloc_list = allocations if isinstance(allocations, list) else []
     lines = [
         "# Invoice Payment Date Update Plan",
         "",
         "> **Formula Applied**: `Target Applied Date = MAX(Payment Date, Invoice Date)`",
-        f"> **Total Allocations to Update**: {plan['total_discrepancies']}",
-        f"> **Distinct Payments**: {plan['distinct_payments_count']}",
+        f"> **Total Allocations to Update**: {plan.get('total_discrepancies', 0)}",
+        f"> **Distinct Payments**: {plan.get('distinct_payments_count', 0)}",
         "",
         "| # | Payment # | Payment Date | Customer | Invoice # | Invoice Date | Current Applied Date | **Target Applied Date** | Basis | Shift | Amount Applied |",
         "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
 
-    for idx, item in enumerate(plan.get("allocations", []), 1):
-        shift = item["days_shift"]
+    for idx, raw_item in enumerate(alloc_list, 1):
+        if not isinstance(raw_item, Mapping):
+            continue
+        item = raw_item
+        shift = item.get("days_shift")
         shift_str = f"{shift}d" if str(shift).startswith("-") else f"+{shift}d"
         lines.append(
-            f"| {idx} | {item['payment_number']} | {item['payment_date']} | {item['customer_name']} | "
-            f"{item['invoice_number']} | {item['invoice_date']} | {item['current_applied_date']} | "
-            f"**{item['target_applied_date']}** | {item['target_date_source']} | {shift_str} | ₹{item['amount_applied']} |"
+            f"| {idx} | {item.get('payment_number')} | {item.get('payment_date')} | {item.get('customer_name')} | "
+            f"{item.get('invoice_number')} | {item.get('invoice_date')} | {item.get('current_applied_date')} | "
+            f"**{item.get('target_applied_date')}** | {item.get('target_date_source')} | {shift_str} | ₹{item.get('amount_applied')} |"
         )
 
     lines.append("")

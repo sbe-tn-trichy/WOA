@@ -494,10 +494,13 @@ def render_erp_summary(erp_generated_file: Path) -> str:
         for entry in node.names
     }
     attributes = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "ERPResources")
-    manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    raw_manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    manifest: dict[str, Any] = raw_manifest if isinstance(raw_manifest, dict) else {}
     resources = []
     for field in attributes.body:
         if not isinstance(field, ast.AnnAssign):
+            continue
+        if not isinstance(field.target, ast.Name) or not isinstance(field.annotation, ast.Name):
             continue
         attribute, cls = field.target.id, field.annotation.id
         path = sources[cls]
@@ -539,7 +542,8 @@ def render_analytics_summary(package: Path) -> str:
     """Build the Analytics domain index from the generated operation manifest."""
     from utils.file_utils import json
 
-    manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    raw_manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    manifest: dict[str, Any] = raw_manifest if isinstance(raw_manifest, dict) else {}
     total = sum(len(domain["operations"]) for domain in manifest.values())
     lines = [
         f"## Generated Analytics API ({len(manifest)} Domains, {total} Operations)",
@@ -708,7 +712,6 @@ SECTIONS: list[SectionSpec] = [
         description="Reusable financial helpers: fiscal-year date parsing, sequence numbering, account transactions, GST validation, item filtering, ledger balances, and record normalization.",
         file_patterns=[
             "src/helpers/formatting/dates.py",
-            "src/helpers/formatting/sequences.py",
             "src/helpers/reports/accounts.py",
             "src/helpers/catalog/bins.py",
             "src/helpers/catalog/contacts.py",

@@ -4,7 +4,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from collections.abc import Mapping, Sequence
-from typing import Any
 
 from google.auth.credentials import Credentials as BaseCredentials
 from google.oauth2.credentials import Credentials as OAuth2Credentials
@@ -20,7 +19,7 @@ def create_credentials(
     *,
     access_token: str | None = None,
     service_account_file: str | Path | None = None,
-    service_account_info: Mapping[str, Any] | None = None,
+    service_account_info: Mapping[str, object] | None = None,
     scopes: Sequence[str] | None = None,
 ) -> BaseCredentials:
     """Create Google credentials from an access token, service account, or environment.

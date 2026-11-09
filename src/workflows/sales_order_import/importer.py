@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from zoho.core_sdk.exceptions import ZohoError
-from helpers.catalog.items import find_item_by_exact_sku
+from helpers.catalog.items import resolve_inventory_sku
 from workflows.core.matching import to_finite_decimal
 
 
@@ -147,14 +147,7 @@ def create_sales_order_from_yaml(
     for line in invoice.lines:
         if line.sku in catalog:
             continue
-        if scope:
-            match = find_item_by_exact_sku(inventory_client, line.sku, scope)
-        else:
-            response = inventory_client.items.list(params={"sku": line.sku})
-            matches = [item for item in response.get("items", [])
-                       if str(item.get("sku") or "").upper() == line.sku.upper()]
-            matches.sort(key=lambda item: item.get("status") != "active")
-            match = matches[0] if matches else None
+        match = resolve_inventory_sku(inventory_client, line.sku, purchase_account_id=scope or None)
         if match is not None and not match.get("item_id"):
             raise ValueError(f"Inventory item lacks item_id: {line.sku}")
         if match is None and not create_missing_items:
@@ -162,31 +155,39 @@ def create_sales_order_from_yaml(
         catalog[line.sku] = match
     created = []
     try:
-        for line in invoice.lines:
-            if catalog[line.sku] is not None:
-                continue
-            payload = {
-                "name": line.name, "sku": line.sku,
-                "hsn_or_sac": item_policy.heater_hsn if "HEATER" in line.name.upper() or "HWH" in line.sku.upper() else item_policy.other_hsn,
-                "rate": float(line.rate),
-                "purchase_rate": purchase_rates[(line.sku, line.rate)],
-                **{key: default_accounts[key] for key in ("account_id", "purchase_account_id", "inventory_account_id")},
-                "item_tax_preferences": [{"tax_name": item_policy.tax_name, "tax_percentage": float(tax)}],
-                "is_taxable": True, "product_type": "goods", "unit": item_policy.unit,
-                "track_inventory": True, "inventory_valuation_method": "fifo",
-                "can_be_sold": True, "can_be_purchased": True,
-            }
-            response = inventory_client.items.create(payload)
-            item = response.get("item") or {}
-            if response.get("code", 0) != 0 or not item.get("item_id"):
-                raise ValueError(f"Inventory did not confirm item creation: {line.sku}")
-            created.append(str(item["item_id"]))
-            catalog[line.sku] = item
+        if create_missing_items:
+            assert default_accounts is not None
+            for line in invoice.lines:
+                if catalog[line.sku] is not None:
+                    continue
+                payload = {
+                    "name": line.name, "sku": line.sku,
+                    "hsn_or_sac": item_policy.heater_hsn if "HEATER" in line.name.upper() or "HWH" in line.sku.upper() else item_policy.other_hsn,
+                    "rate": float(line.rate),
+                    "purchase_rate": purchase_rates[(line.sku, line.rate)],
+                    **{key: default_accounts[key] for key in ("account_id", "purchase_account_id", "inventory_account_id")},
+                    "item_tax_preferences": [{"tax_name": item_policy.tax_name, "tax_percentage": float(tax)}],
+                    "is_taxable": True, "product_type": "goods", "unit": item_policy.unit,
+                    "track_inventory": True, "inventory_valuation_method": "fifo",
+                    "can_be_sold": True, "can_be_purchased": True,
+                }
+                response = inventory_client.items.create(payload)
+                item = response.get("item") or {}
+                if response.get("code", 0) != 0 or not item.get("item_id"):
+                    raise ValueError(f"Inventory did not confirm item creation: {line.sku}")
+                created.append(str(item["item_id"]))
+                catalog[line.sku] = item
+        def _get_item(sku: str) -> dict[str, Any]:
+            it = catalog.get(sku)
+            if not isinstance(it, dict):
+                raise ValueError(f"Missing catalog item for {sku}")
+            return it
+
         payload = {
             "customer_id": customer_id, "salesorder_number": f"SO-{invoice.number}",
             "reference_number": invoice.number, "date": invoice.date,
-            "line_items": [{"item_id": catalog[line.sku]["item_id"],
-                            "name": catalog[line.sku].get("name") or line.name,
+            "line_items": [{"item_id": _get_item(line.sku)["item_id"],
+                            "name": _get_item(line.sku).get("name") or line.name,
                             "quantity": float(line.quantity), "rate": float(line.rate),
                             "description": line.name} for line in invoice.lines],
             "notes": f"Generated automatically from invoice YAML {invoice.number}",

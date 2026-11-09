@@ -26,13 +26,13 @@ Docs: https://www.zoho.com/sheet/help/api/v2/
 ##### `ZohoSheetAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, domain: str = 'in', token_refresh_callback: Any | None = None)
+def __init__(self, access_token: str, domain: str = 'in', token_refresh_callback: Callable[[BaseZohoClient], None] | Callable[[], str] | None = None)
 ```
 
 ##### `ZohoSheetAPI.list_workbooks`
 
 ```python
-def list_workbooks(self) -> list[dict[str, Any]]
+def list_workbooks(self) -> list[dict[str, object]]
 ```
 
 Lists all workbooks in the user's account.
@@ -56,7 +56,7 @@ Return the worksheet ID required by workbook range-format APIs.
 ##### `ZohoSheetAPI.format_ranges`
 
 ```python
-def format_ranges(self, workbook_id: str, formats: list[dict[str, Any]]) -> dict[str, Any]
+def format_ranges(self, workbook_id: str, formats: Sequence[Mapping[str, object]]) -> object
 ```
 
 Apply Zoho Sheet range formats in one workbook request.
@@ -64,7 +64,7 @@ Apply Zoho Sheet range formats in one workbook request.
 ##### `ZohoSheetAPI.delete_rows`
 
 ```python
-def delete_rows(self, workbook_id: str, sheet_name: str, row_indices: list[int]) -> dict[str, Any]
+def delete_rows(self, workbook_id: str, sheet_name: str, row_indices: Sequence[int]) -> object
 ```
 
 Delete specific tabular rows using their Zoho row indices.
@@ -72,7 +72,7 @@ Delete specific tabular rows using their Zoho row indices.
 ##### `ZohoSheetAPI.get_rows`
 
 ```python
-def get_rows(self, workbook_id: str, sheet_name: str, limit: int = 1) -> list[Any]
+def get_rows(self, workbook_id: str, sheet_name: str, limit: int = 1) -> list[object]
 ```
 
 Fetches rows from a specific sheet. Returns empty list if sheet has no records.
@@ -80,7 +80,7 @@ Fetches rows from a specific sheet. Returns empty list if sheet has no records.
 ##### `ZohoSheetAPI.set_content`
 
 ```python
-def set_content(self, workbook_id: str, sheet_name: str, range_addr: str, data: list[list[Any]]) -> dict[str, Any]
+def set_content(self, workbook_id: str, sheet_name: str, range_addr: str, data: Sequence[Sequence[object]]) -> object
 ```
 
 Sets content of a range of cells.
@@ -90,7 +90,7 @@ Use set_cell for individual headers if this fails.
 ##### `ZohoSheetAPI.set_cell`
 
 ```python
-def set_cell(self, workbook_id: str, sheet_name: str, row: int, col: int, content: Any) -> dict[str, Any]
+def set_cell(self, workbook_id: str, sheet_name: str, row: int, col: int, content: object) -> object
 ```
 
 Sets content of a single cell using cell.content.set (guaranteed to work in v2).
@@ -98,7 +98,7 @@ Sets content of a single cell using cell.content.set (guaranteed to work in v2).
 ##### `ZohoSheetAPI.add_sheet`
 
 ```python
-def add_sheet(self, workbook_id: str, sheet_name: str) -> dict[str, Any]
+def add_sheet(self, workbook_id: str, sheet_name: str) -> object
 ```
 
 Adds a new sheet to an existing workbook.
@@ -106,7 +106,7 @@ Adds a new sheet to an existing workbook.
 ##### `ZohoSheetAPI.add_rows`
 
 ```python
-def add_rows(self, workbook_id: str, sheet_name: str, rows_data: Any, header_row: int = 1) -> dict[str, Any]
+def add_rows(self, workbook_id: str, sheet_name: str, rows_data: Sequence[Sequence[object]] | Sequence[Mapping[str, object]], header_row: int = 1) -> object
 ```
 
 Appends rows to a specific sheet using tabular records API.
@@ -115,7 +115,7 @@ rows_data can be a list of lists or a list of dicts.
 ##### `ZohoSheetAPI.update_rows`
 
 ```python
-def update_rows(self, workbook_id: str, sheet_name: str, criteria: str, rows_data: dict[str, Any]) -> dict[str, Any]
+def update_rows(self, workbook_id: str, sheet_name: str, criteria: str, rows_data: Mapping[str, object]) -> object
 ```
 
 Updates rows matching a criteria.
@@ -123,7 +123,7 @@ Updates rows matching a criteria.
 ##### `ZohoSheetAPI.truncate_sheet`
 
 ```python
-def truncate_sheet(self, workbook_id: str, sheet_name: str, criteria: str = '(row_index != 0)') -> dict[str, Any]
+def truncate_sheet(self, workbook_id: str, sheet_name: str, criteria: str = '(row_index != 0)') -> object
 ```
 
 Deletes rows in a sheet based on criteria.
@@ -131,7 +131,7 @@ Deletes rows in a sheet based on criteria.
 ##### `ZohoSheetAPI.clear_range`
 
 ```python
-def clear_range(self, workbook_id: str, sheet_name: str, start_row: int, start_col: int, end_row: int, end_col: int) -> dict[str, Any]
+def clear_range(self, workbook_id: str, sheet_name: str, start_row: int, start_col: int, end_row: int, end_col: int) -> object
 ```
 
 Clears content across a specified range using range.clear.

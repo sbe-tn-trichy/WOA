@@ -2,14 +2,15 @@
 """Manage (preview, create, or update) the inter-location contra Zoho Analytics Query Table."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from collections.abc import Sequence
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_analytics_client
 from workflows.runtime.config import Config
@@ -18,8 +19,8 @@ from workflows.inter_location.analytics_report import sync_inter_location_contra
 
 def build_parser(*, default_view_id: str | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--account-id", default="1094368000002033114")
-    parser.add_argument("--workspace-id", default="264324000000002043")
+    parser.add_argument("--account-id", default=Config.INTER_LOCATION_CLEARING_ACCOUNT_ID)
+    parser.add_argument("--workspace-id", default=Config.ANALYTICS_WORKSPACE_ID)
     parser.add_argument("--view-id", default=default_view_id, help="If provided, updates this existing Query Table")
     parser.add_argument("--name", default="Inter Location Contra FY25-27")
     parser.add_argument("--apply", action="store_true", help="Save/Update the Query Table in Zoho Analytics")

@@ -1,11 +1,12 @@
-from typing import Any
+from __future__ import annotations
+
 
 class DotDict(dict):
     """
     A dictionary subclass that allows dot-notation (attribute) access
     while preserving standard key lookup and dictionary capabilities.
     """
-    def __getattribute__(self, name: str) -> Any:
+    def __getattribute__(self, name: str) -> object:
         # Check if the name is a key in the dictionary first to prioritize keys over dict methods
         if dict.__contains__(self, name):
             value = dict.__getitem__(self, name)
@@ -14,7 +15,7 @@ class DotDict(dict):
                 value = DotDict(value)
                 dict.__setitem__(self, name, value)
             elif isinstance(value, list):
-                wrapped_list = []
+                wrapped_list: list[object] = []
                 for item in value:
                     if isinstance(item, dict) and not isinstance(item, DotDict):
                         wrapped_list.append(DotDict(item))
@@ -36,7 +37,7 @@ class DotDict(dict):
         except AttributeError:
             raise AttributeError(f"'DotDict' object has no attribute '{name}'")
             
-    def __setattr__(self, name: str, value: Any) -> None:
+    def __setattr__(self, name: str, value: object) -> None:
         self[name] = value
 
     def __delattr__(self, name: str) -> None:

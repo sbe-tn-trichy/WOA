@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import builtins
 import logging
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
+from typing import ClassVar
 
 from zoho.core_sdk.base_client import BaseZohoClient
 from zoho.core_sdk.exceptions import ZohoError
@@ -12,20 +13,23 @@ from zoho.core_sdk.validation import require_record, require_records
 class BaseResource:
     """Shared base class for Zoho API modules providing standard CRUD and pagination."""
 
-    required_fields: builtins.list[str] = []
-    defaults: dict[str, object] = {}
-    line_item_required_fields: builtins.list[str] = []
-    line_item_defaults: dict[str, object] = {}
-    error_class: type[ZohoError] = ZohoError
-    logger_name: str = "zoho.api"
+    required_fields: ClassVar[builtins.list[str]] = []
+    defaults: ClassVar[dict[str, object]] = {}
+    line_item_required_fields: ClassVar[builtins.list[str]] = []
+    line_item_defaults: ClassVar[dict[str, object]] = {}
+    logger_name: ClassVar[str] = "zoho.api"
+
+    @property
+    def error_class(self) -> type[ZohoError]:
+        return ZohoError
 
     def __init__(self, client: BaseZohoClient, endpoint: str) -> None:
         self.client = client
         self.endpoint = endpoint
 
-    def _prepare_payload(self, data: dict[str, object], check_required: bool = True) -> dict[str, object]:
+    def _prepare_payload(self, data: Mapping[str, object], check_required: bool = True) -> dict[str, object]:
         """Merge defaults (if creating) and check if all required fields are present."""
-        payload = {**self.defaults, **data} if check_required else data.copy()
+        payload = {**self.defaults, **data} if check_required else dict(data)
 
         logger = logging.getLogger(self.logger_name)
 
@@ -110,7 +114,7 @@ class BaseResource:
 
     def create(
         self,
-        data: dict[str, object],
+        data: Mapping[str, object],
         params: dict[str, object] | None = None,
         files: dict[str, object] | None = None,
     ) -> object:
@@ -121,7 +125,7 @@ class BaseResource:
     def update(
         self,
         resource_id: str,
-        data: dict[str, object],
+        data: Mapping[str, object],
         params: dict[str, object] | None = None,
         files: dict[str, object] | None = None,
     ) -> object:

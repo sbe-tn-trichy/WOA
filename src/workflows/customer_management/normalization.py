@@ -81,21 +81,23 @@ def download_customer_normalization_sources(
     if destination.exists():
         raise FileExistsError(f'Source destination already exists: {destination}')
     with catalog.cached_store() as store:
-        sources = {}
+        sources: dict[str, dict[str, Any]] = {}
         for key, name in SOURCE_NAMES.items():
             matches = [v for v in store.find_views(name) if v['name'] == name]
             if len(matches) != 1:
                 raise ValueError(f'Expected one cached Analytics table named {name!r}')
             view = matches[0]
-            sources[key] = {'view_id': view['view_id'], 'name': name,
-                            'columns': [c['name'] for c in store.get_columns(view['view_id'])]}
+            view_id = str(view['view_id'])
+            view_name = str(view['name'])
+            sources[key] = {'view_id': view_id, 'name': view_name,
+                            'columns': [c['name'] for c in store.get_columns(view_id)]}
         synced_at = store.get_info('last_successful_sync_at')
     # Fetch every source before publishing a complete manifest.
     rows = {key: analytics.views.export_all(catalog.workspace_id, view['view_id'], max_attempts=60)
             for key, view in sources.items()}
     for key, view in sources.items():
         count = analytics.queries.execute(
-            catalog.workspace_id, f'SELECT COUNT(*) AS source_count FROM {_quote(view["name"])}',
+            catalog.workspace_id, f'SELECT COUNT(*) AS source_count FROM {_quote(str(view["name"]))}',
             max_attempts=60)
         if len(count) != 1 or str(count[0].get('source_count')) != str(len(rows[key])):
             raise ValueError(f'Analytics row count differs from exported rows: {view["name"]}; retry the export')
@@ -119,7 +121,10 @@ def _identity(row: dict[str, Any], field: str, source: str) -> str:
 
 
 def _load_sources(source: Path, organization_id: str) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
-    manifest = json.loads((source / 'manifest.json').read_text(encoding='utf-8'))
+    raw_manifest = json.loads((source / 'manifest.json').read_text(encoding='utf-8'))
+    if not isinstance(raw_manifest, dict):
+        raise ValueError('Source manifest must be a JSON object')
+    manifest: dict[str, Any] = raw_manifest
     if manifest.get('organization_id') != organization_id:
         raise ValueError('Source exports belong to a different or unspecified Books organization')
     if not manifest.get('last_metadata_sync'):
@@ -329,7 +334,11 @@ def build_normalized_customers(
             saved_addresses = [json.loads(r[0]) for r in db.execute('SELECT _source_json FROM "Customer Addresses" ORDER BY "Address ID"')]
             if saved_addresses != sorted(sources['addresses'], key=lambda r: r['Address ID']):
                 raise ValueError('Address source preservation check failed')
-            saved_persons = [p for r in db.execute('SELECT _source_contact_persons_json FROM "Customers"') for p in json.loads(r[0])]
+            saved_persons: list[dict[str, Any]] = []
+            for r in db.execute('SELECT _source_contact_persons_json FROM "Customers"'):
+                loaded = json.loads(r[0])
+                if isinstance(loaded, list):
+                    saved_persons.extend(loaded)
             if sorted(saved_persons, key=lambda r: r['Contact Person ID']) != sorted(sources['contact_persons'], key=lambda r: r['Contact Person ID']):
                 raise ValueError('Contact-person source preservation check failed')
         schema = ';\n'.join(r[0] for r in db.execute("SELECT sql FROM sqlite_master WHERE type='table' ORDER BY rowid")) + ';\n'

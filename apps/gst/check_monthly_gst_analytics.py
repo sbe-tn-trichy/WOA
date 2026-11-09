@@ -1,14 +1,17 @@
 """Monthly GST comparison from Zoho Analytics accrual postings."""
+import importlib
 import argparse
+from collections.abc import Mapping, Sequence
 from decimal import Decimal
 from datetime import date, datetime
 from pathlib import Path
 from utils.file_utils import json
-try:
+if __package__:
     from . import _bootstrap
-except ImportError:
-    import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 from workflows.runtime.auth import get_analytics_client
+from workflows.runtime.config import Config
 from workflows.core.matching import parse_currency_amount
 from workflows.core.checkpoint import write_atomic_json, atomic_text_writer
 from workflows.audited_financials.reports import _firm_rule
@@ -20,6 +23,7 @@ def main():
     p.add_argument('--start-month',default='2025-04')
     p.add_argument('--end-month',default='2026-03')
     p.add_argument('--firm',default='BD')
+    p.add_argument('--workspace-id',default=Config.ANALYTICS_WORKSPACE_ID)
     p.add_argument('--output',type=Path,default=Path('output/monthly-gst-analytics-fy25-26'))
     args=p.parse_args()
     start,end=[datetime.strptime(x,'%Y-%m').date() for x in (args.start_month,args.end_month)]
@@ -28,12 +32,16 @@ def main():
     while (y,m)<=(end.year,end.month):
         periods.append((y,m)); y,m=(y+1,1) if m==12 else (y,m+1)
     months=periods+[(y,m)]; final=month_bounds(y,m)[1]
-    scope=_firm_rule(args.firm,None)['columns'][0]
-    ids=scope['value']
+    rule=_firm_rule(args.firm,None)
+    cols=rule.get('columns')
+    scope=cols[0] if isinstance(cols, Sequence) and cols and isinstance(cols[0], Mapping) else {}
+    raw_ids=scope.get('value', [])
+    ids=[str(x) for x in raw_ids] if isinstance(raw_ids, Sequence) else []
     if any(not x.isdigit() for x in ids): raise ValueError('Invalid configured location ID')
-    scope_sql='T."Location ID" '+('NOT IN' if scope['comparator']=='not_in' else 'IN')+' ('+','.join(ids)+')'
-    if scope['comparator']=='not_in': scope_sql='('+scope_sql+' OR T."Location ID" IS NULL)'
-    cash_ids={'1094368000010597013','1094368000010597017','1094368000010597015'}
+    comparator=str(scope.get('comparator', ''))
+    scope_sql='T."Location ID" '+('NOT IN' if comparator=='not_in' else 'IN')+' ('+','.join(ids)+')'
+    if comparator=='not_in': scope_sql='('+scope_sql+' OR T."Location ID" IS NULL)'
+    cash_ids=set(Config.GST_CASH_LEDGER_ACCOUNT_IDS)
     names=[name for tax in ('CGST','SGST','IGST','CESS') for name in (f'Input {tax}',f'Output {tax}',f'Cash Ledger : {tax} Tax')]
     account_list=','.join("'"+n+"'" for n in names)
     sql=f'''SELECT YEAR(T."Transaction Date") AS "Year", MONTH(T."Transaction Date") AS "Month",
@@ -43,13 +51,13 @@ def main():
  WHERE T."Transaction Date">='{start.isoformat()}' AND T."Transaction Date"<='{final}'
  AND A."Account Name" IN ({account_list}) AND {scope_sql}
  GROUP BY YEAR(T."Transaction Date"), MONTH(T."Transaction Date"), A."Account Name", A."Account ID"'''
-    api=get_analytics_client(); workspace='264324000000002043'
+    api=get_analytics_client(); workspace=args.workspace_id
     catalog=api.queries.execute(workspace,f'SELECT "Account Name", "Account ID" FROM "Accounts (Zoho Books)" WHERE "Account Name" IN ({account_list})')
-    known={}
+    known: dict[str, str] = {}
     for c in catalog:
-        n=c['Account Name']
+        n=str(c.get('Account Name', ''))
         if n in known: raise ValueError('Ambiguous GST account: '+n)
-        known[n]=str(c['Account ID'])
+        known[n]=str(c.get('Account ID', ''))
     if set(names)-known.keys(): raise ValueError('Missing GST account catalog entries')
     resolved={n:i for n,i in known.items() if i in cash_ids}
     if set(resolved.values())!=cash_ids or set(resolved)!={f'Cash Ledger : {tax} Tax' for tax in ('CGST','SGST','IGST')}:
@@ -64,9 +72,13 @@ def main():
         first,last=month_bounds(yy,mm)
         amounts={n:[Decimal(0),Decimal(0)] for n in names}
         for r in rows:
-            if int(r['Year'])==yy and int(r['Month'])==mm:
-                amounts[r['Account']][0]+=parse_currency_amount(r['Debit'] or 0)
-                amounts[r['Account']][1]+=parse_currency_amount(r['Credit'] or 0)
+            ry = r.get('Year')
+            rm = r.get('Month')
+            if ry is not None and rm is not None and int(str(ry))==yy and int(str(rm))==mm:
+                acc = str(r.get('Account', ''))
+                if acc in amounts:
+                    amounts[acc][0]+=parse_currency_amount(r.get('Debit') or 0)
+                    amounts[acc][1]+=parse_currency_amount(r.get('Credit') or 0)
         reports[(yy,mm)]={'code':0,'page_context':{'from_date':first,'to_date':last,'cash_based':'false'},'trialbalance':[
             {'name':n,'values':[{'net_debit':str(v[0]),'net_credit':str(v[1])}]} for n,v in amounts.items()]}
     lines=['# Monthly GST check — Zoho Analytics','',f'Firm {args.firm}; GST months {args.start_month} to {args.end_month}. Created {datetime.now().astimezone().isoformat(timespec="seconds")}.','',

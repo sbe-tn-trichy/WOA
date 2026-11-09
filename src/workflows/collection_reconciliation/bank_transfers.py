@@ -87,12 +87,15 @@ def _transfer_detail(books: Any, proposal: BankTransferProposal, transfer_id: st
         raise ReconciliationError('Books returned no bank transfer detail.')
     source, destination = proposal['source'], proposal['destination']
     amount = to_decimal(transaction.get('amount'))
+    source_amount = to_decimal(source['amount'])
     if (to_text(transaction.get('transaction_id')) != transfer_id
             or to_text(transaction.get('transaction_type')) != 'transfer_fund'
             or to_text(transaction.get('from_account_id')) != source['bank_account_id']
             or to_text(transaction.get('to_account_id')) != destination['bank_account_id']
             or parse_date(transaction.get('date')) != parse_date(source['date'])
-            or amount is None or abs(amount) != abs(to_decimal(source['amount']))
+            or amount is None
+            or source_amount is None
+            or abs(amount) != abs(source_amount)
             or to_text(transaction.get('reference_number')).casefold() != source['reference'].casefold()):
         raise ReconciliationError('The saved bank transfer does not match the reviewed banks, date, amount and reference.')
     return transaction
@@ -161,12 +164,16 @@ def post_transfer(books: Any, proposal: BankTransferProposal,
             else:
                 proposal['status'] = 'create_requested'
                 checkpoint()
+                source_date = parse_date(source['date'])
+                source_amount = to_decimal(source['amount'])
+                if source_date is None or source_amount is None:
+                    raise ReconciliationError('Source transfer line has invalid date or amount.')
                 response = books.bank_transactions.create({
                     'from_account_id': source['bank_account_id'],
                     'to_account_id': destination['bank_account_id'],
                     'transaction_type': 'transfer_fund',
-                    'date': parse_date(source['date']).isoformat(),
-                    'amount': float(abs(to_decimal(source['amount']))),
+                    'date': source_date.isoformat(),
+                    'amount': float(abs(source_amount)),
                     'reference_number': source['reference'],
                     'description': f"Internal bank transfer {source['bank_name']} to {destination['bank_name']} {marker}",
                 })

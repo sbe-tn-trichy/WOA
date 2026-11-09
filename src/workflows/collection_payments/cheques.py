@@ -1,26 +1,20 @@
 """Cheque presented-date lookup, normalization, and joining."""
-
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
 from helpers import normalize_cheque_number
 from workflows.core.matching import to_text as _text
 
 
-
 def attach_presented_dates(
-    payments: Sequence[dict[str, Any]],
-    cheque_details: Sequence[Mapping[str, Any]],
+    payments: Sequence[dict[str, object]],
+    cheque_details: Sequence[Mapping[str, object]],
 ) -> None:
     """Join presented dates from Creator All_Cheque_Details onto payment records."""
-    details_by_key: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
+    details_by_key: dict[tuple[str, str], list[Mapping[str, object]]] = {}
     for detail in cheque_details:
-        lookup = (
-            detail.get("Payment_ID.Customer_Name")
-            if isinstance(detail.get("Payment_ID.Customer_Name"), Mapping)
-            else {}
-        )
+        raw_cust = detail.get("Payment_ID.Customer_Name")
+        lookup: Mapping[str, object] = raw_cust if isinstance(raw_cust, Mapping) else {}
         key = (
             normalize_cheque_number(detail.get("Cheque_Number")),
             _text(lookup.get("ID")),
@@ -31,11 +25,8 @@ def attach_presented_dates(
     for payment in payments:
         if _text(payment.get("_review_payment_type")).casefold() != "cheque":
             continue
-        lookup = (
-            payment.get("Customer_Name")
-            if isinstance(payment.get("Customer_Name"), Mapping)
-            else {}
-        )
+        raw_cust = payment.get("Customer_Name")
+        lookup = raw_cust if isinstance(raw_cust, Mapping) else {}
         key = (
             normalize_cheque_number(payment.get("Reference")),
             _text(lookup.get("ID")),

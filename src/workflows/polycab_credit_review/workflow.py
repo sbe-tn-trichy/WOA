@@ -38,12 +38,16 @@ def review_polycab_vendor_credits(
         if credit.get('vendor_id') != policy.vendor_id or credit.get('date') != row.get('date') or credit.get('vendor_credit_number') != row.get('vendor_credit_number'):
             raise ValueError('Credit detail no longer matches selected scope')
         memos, findings = [], []
-        for document in credit.get('documents', []) or []:
+        raw_docs = credit.get('documents')
+        documents = raw_docs if isinstance(raw_docs, list) else []
+        vc_id = str(credit['vendor_credit_id'])
+        for document in documents:
             try:
-                path = root / credit['vendor_credit_id'] / (str(document['document_id']) + '.pdf')
-                saved = download_books_document(books_client, 'vendorcredits', credit['vendor_credit_id'], str(document['document_id']), str(path))
+                doc_id = str(document['document_id'])
+                path = root / vc_id / (doc_id + '.pdf')
+                saved = download_books_document(books_client, 'vendorcredits', vc_id, doc_id, str(path))
                 memo = pdf_reader(Path(saved))
-                memos.append(replace(memo, document_id=str(document['document_id']), source_path=str(Path(saved).resolve())))
+                memos.append(replace(memo, document_id=doc_id, source_path=str(Path(saved).resolve())))
             except Exception as exc:
                 findings.append(CreditFinding('pdf_error', f"Attachment {document.get('document_id')}: {exc}", True))
         try:

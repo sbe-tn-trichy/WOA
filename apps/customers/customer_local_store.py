@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Download Books customers or stage/review local changes; no cloud writes."""
 from __future__ import annotations
+import importlib
 import argparse
 import csv
 from utils.file_utils import json
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 from workflows.runtime.auth import get_books_client
 from workflows.runtime.config import Config
 from workflows.customer_management.table import customer_json, compact_customer_columns
@@ -22,12 +23,13 @@ def main() -> None:
     parser.add_argument('action', choices=['sync', 'stage-mobile', 'export', 'migrate', 'json', 'csv', 'compact', 'normalize'])
     parser.add_argument('--db', type=Path, help='SQLite destination; normalize defaults to a separate four-table database')
     parser.add_argument('--source', type=Path, help='Replay preserved Analytics exports for normalize; otherwise download all three tables')
-    parser.add_argument('--workspace-id', default='264324000000002043')
-    parser.add_argument('--catalog-dir', type=Path, default=Path('workspace_metadata/264324000000002043'))
+    parser.add_argument('--workspace-id', default=Config.ANALYTICS_WORKSPACE_ID)
+    parser.add_argument('--catalog-dir', type=Path)
     parser.add_argument('--plan', type=Path, default=Path('output/customer_cleanup/mobile_empty_preparation/plan.json'))
     parser.add_argument('--output', type=Path, default=Path('output/customer_cleanup/pending_changes.json'))
     parser.add_argument('--contact-id', help='Required for the json action')
     args = parser.parse_args()
+    catalog_dir = args.catalog_dir or Path('workspace_metadata') / args.workspace_id
     if args.action == 'normalize':
         from workflows.analytics_catalog import AnalyticsCatalog
         from workflows.runtime.auth import get_analytics_client
@@ -39,7 +41,7 @@ def main() -> None:
         if source is None:
             stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
             source = download_customer_normalization_sources(
-                get_analytics_client(), AnalyticsCatalog(None, args.workspace_id, args.catalog_dir),
+                get_analytics_client(), AnalyticsCatalog(None, args.workspace_id, catalog_dir),
                 destination.parent / 'sources' / stamp, organization_id=str(Config.ORG_ID))
         result = build_normalized_customers(source, destination, organization_id=str(Config.ORG_ID))
         print(json.dumps(asdict(result), default=str))

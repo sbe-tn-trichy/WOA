@@ -174,7 +174,7 @@ class CreatorCustomerSyncer:
 
         mapping = dict(self.config.field_mapping)
         mapping[self.config.creator_id_field] = self.config.books_id_field
-        changes = []
+        changes: list[dict[str, Any]] = []
         unchanged = 0
         for key, customer in books.items():
             # List responses may omit fields that are only available on the detail endpoint.
@@ -280,7 +280,7 @@ class CreatorCustomerSyncer:
             )
             response = responses[0] if isinstance(responses, list) and len(responses) == 1 else None
             results = response.get("result") if isinstance(response, dict) else None
-            if (not isinstance(results, list) or len(results) != len(batch)):
+            if not isinstance(response, dict) or not isinstance(results, list) or len(results) != len(batch):
                 raise ReconciliationError(f"Unconfirmed Creator create results; inspect {report_path} before retrying.")
             returned_ids = [str(result.get("data", {}).get("ID") or "").strip()
                             if isinstance(result, dict) and isinstance(result.get("data"), dict)

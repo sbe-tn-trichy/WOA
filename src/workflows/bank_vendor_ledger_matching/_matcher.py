@@ -3,8 +3,9 @@
   - An external vendor ledger file on disk (match_bank_with_vendor_ledger)
 """
 import logging
+from collections.abc import Mapping, Sequence
 from datetime import date, timedelta
-from typing import Any
+from typing import Protocol
 
 from helpers import extract_bank_withdrawals
 from ..core.matching import (
@@ -19,18 +20,42 @@ from ..vendor_ledger_reconciliation.cleaner import clean_ledger_file, get_ledger
 logger = logging.getLogger(__name__)
 
 
-def _extract_withdrawals(bank_txs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+class _ListableResource(Protocol):
+    def list_all(
+        self,
+        params: dict[str, object] | None = None,
+        resource_key: str | None = None,
+    ) -> list[dict[str, object]]: ...
+
+
+class BooksBankVendorClient(Protocol):
+    @property
+    def bank_transactions(self) -> _ListableResource: ...
+    @property
+    def vendor_payments(self) -> _ListableResource: ...
+
+
+def _extract_withdrawals(bank_txs: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
     """Filter a list of bank transactions down to outflows (withdrawals / debits)."""
     return extract_bank_withdrawals(bank_txs)
 
 
 
 def _run_three_pass_match(
-    parsed_left: list[dict[str, Any]],
-    parsed_right: list[dict[str, Any]],
+    parsed_left: Sequence[Mapping[str, object]],
+    parsed_right: Sequence[Mapping[str, object]],
     date_tolerance_days: int,
     amount_tolerance: float,
-) -> tuple[Any, ...]:
+) -> tuple[
+    list[tuple[object, object]],
+    list[tuple[object, object]],
+    list[tuple[object, object]],
+    list[dict[str, object]],
+    set[int],
+    set[int],
+    set[int],
+    set[int],
+]:
     """
     Generic 3-pass match between two pre-parsed lists.
     Each item must have date, amount, ref, and raw values. Matching identity is
@@ -61,19 +86,19 @@ def _run_three_pass_match(
 
 
 def match_ledger_entries(
-    books_client: Any,
+    books_client: BooksBankVendorClient,
     bank_account_id: str,
     vendor_id: str,
     date_tolerance_days: int = 7,
     amount_tolerance: float = 0.0,
     start_date: date | None = None,
     end_date: date | None = None,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """
     Matches Bank Account withdrawals with Vendor Payments in Zoho Books.
     Both sides are fetched live from the API.
     """
-    params: dict[str, Any] = {"account_id": bank_account_id}
+    params: dict[str, object] = {"account_id": bank_account_id}
     if start_date and end_date and start_date > end_date:
         raise ValueError("start_date cannot be after end_date")
     if start_date:
@@ -85,7 +110,7 @@ def match_ledger_entries(
     bank_txs = books_client.bank_transactions.list_all(params=params)
     withdrawals = _extract_withdrawals(bank_txs)
 
-    payment_params: dict[str, Any] = {"vendor_id": vendor_id}
+    payment_params: dict[str, object] = {"vendor_id": vendor_id}
     if start_date:
         payment_params["from_date"] = start_date.strftime("%Y-%m-%d")
     if end_date:
@@ -131,7 +156,7 @@ def match_ledger_entries(
 
 
 def match_bank_with_vendor_ledger(
-    books_client: Any,
+    books_client: BooksBankVendorClient,
     bank_account_id: str,
     vendor_ledger_path: str,
     vendor_id: str | None = None,
@@ -139,7 +164,7 @@ def match_bank_with_vendor_ledger(
     end_date: date | None = None,
     date_tolerance_days: int = 4,
     amount_tolerance: float = 0.01,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """
     Matches Bank Account withdrawals (Zoho Books) with receipt entries in a local vendor ledger file.
     The date range is auto-inferred from ledger metadata unless explicitly
@@ -150,7 +175,7 @@ def match_bank_with_vendor_ledger(
     start_date = start_date or parse_date(metadata.get("start_date"))
     end_date = end_date or parse_date(metadata.get("end_date"))
 
-    params: dict[str, Any] = {"account_id": bank_account_id}
+    params: dict[str, object] = {"account_id": bank_account_id}
     if start_date and end_date and start_date > end_date:
         raise ValueError("start_date cannot be after end_date")
     if start_date:

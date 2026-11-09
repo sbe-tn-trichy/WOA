@@ -11,6 +11,7 @@ from utils.file_utils import json
 import keyword
 from pathlib import Path
 import re
+from typing import Any
 
 from utils.file_utils import yaml
 
@@ -118,10 +119,11 @@ def write_modules(destination: Path, modules: dict[Path, str], manifest: dict) -
                 staged = stage / "new" / relative
                 staged.parent.mkdir(parents=True, exist_ok=True)
                 staged.write_bytes(output[relative])
-            if originals[relative] is not None:
+            orig_data = originals[relative]
+            if orig_data is not None:
                 backup = stage / "previous" / relative
                 backup.parent.mkdir(parents=True, exist_ok=True)
-                backup.write_bytes(originals[relative])
+                backup.write_bytes(orig_data)
         for relative in sorted(set(output) | stale):
             target = destination / relative
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -155,7 +157,7 @@ def identifier(value: str) -> str:
     return value
 
 
-def resolve(document: dict, value: dict) -> dict:
+def resolve(document: dict[str, Any], value: dict[str, Any]) -> dict[str, Any]:
     """Resolve local parameter references; reject unsupported external refs."""
     seen = set()
     while "$ref" in value:
@@ -176,7 +178,8 @@ def generate(source: Path, destination: Path) -> dict:
     resources = {}
     for path in sorted(source.glob("*.yml")):
         raw = path.read_bytes()
-        document = yaml.safe_load(raw)
+        raw_doc = yaml.safe_load(raw)
+        document: dict[str, Any] = raw_doc if isinstance(raw_doc, dict) else {}
         name = identifier(path.stem)
         cls = "".join(part.title() for part in name.split("_"))
         if name in {entry[0] for entry in registry}:
@@ -194,7 +197,7 @@ def generate(source: Path, destination: Path) -> dict:
                 if method in names or hasattr(object, method) or method in {"_request", "client"}:
                     raise ValueError(f"Conflicting operation: {path.name}: {method}")
                 names.add(method)
-                servers = operation.get("servers", item.get("servers", document["servers"]))
+                servers = operation.get("servers", item.get("servers", document.get("servers", [])))
                 server = servers[0]["url"]
                 match = re.fullmatch(r"https://www\.zohoapis\.in/erp/(v\d+)", server)
                 if not match:

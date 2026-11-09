@@ -65,8 +65,8 @@ def convert_analytics_bills(
     return list(bills.values())
 
 
-def _timestamp(value: str) -> datetime:
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+def _timestamp(value: object) -> datetime:
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     if parsed.tzinfo is None:
         raise ValueError("Snapshot timestamp must include a timezone")
     return parsed.astimezone(timezone.utc)

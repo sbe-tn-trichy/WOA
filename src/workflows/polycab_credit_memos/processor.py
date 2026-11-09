@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 from helpers import (
     attach_file_to_books_resource,
-    find_bill_by_number,
+    resolve_bill_by_number,
     workdrive_upload_file,
 )
 from workflows.runtime.config import Config
@@ -195,10 +195,8 @@ def resolve_item_id(pdf_text: str) -> str:
 
 def resolve_bill_id_by_number(books_client: Any, vendor_id: str, bill_number: str) -> str | None:
     """Finds the bill ID for a specific bill number under this vendor in Zoho Books."""
-    bill = find_bill_by_number(books_client, vendor_id, bill_number)
-    if bill:
-        return bill.get("bill_id")
-    return None
+    bill = resolve_bill_by_number(books_client.bills, vendor_id, bill_number)
+    return str(bill["bill_id"]) if bill else None
 
 def resolve_tax_id(books_client: Any, pdf_text: str) -> str:
     """
@@ -322,7 +320,10 @@ def process_polycab_credit_memos(
     logger.info("Fetching existing files in Zoho WorkDrive folder...")
     try:
         wd_files = wd_client.files.list_all_files(folder_id)
-        existing_wd_filenames = {f.get("attributes", {}).get("name") for f in wd_files}
+        existing_wd_filenames = {
+            attrs.get("name") for f in wd_files
+            if isinstance(f, dict) and isinstance(attrs := f.get("attributes"), dict)
+        }
     except Exception as e:
         raise RuntimeError(
             "Could not verify existing WorkDrive files; refusing to upload because "
@@ -380,14 +381,15 @@ def process_polycab_credit_memos(
                 continue
                 
             # Step 2: Create Vendor Credit in Zoho Books
-            vc_id = None
+            vc_id: str | None = None
             credit_created = False
             if cn_num in existing_credit_numbers:
                 logger.info(f"Vendor credit {cn_num} already exists in Zoho Books. Skipping creation.")
                 summary["books_skipped"] += 1
                 for c in existing_credits:
                     if c.get("vendor_credit_number") == cn_num:
-                        vc_id = c.get("vendor_credit_id")
+                        raw_id = c.get("vendor_credit_id")
+                        vc_id = str(raw_id) if raw_id else None
                         break
             else:
                 logger.info("Creating vendor credit in Zoho Books...")

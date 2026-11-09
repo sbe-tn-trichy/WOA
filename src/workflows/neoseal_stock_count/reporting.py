@@ -122,7 +122,10 @@ FLAT_UPSERT_FIELDS = (*FLAT_FIELDS, "packing")
 
 def _read_flat_rows(sheet_client: ZohoSheetAPI, workbook_id: str, worksheet_name: str) -> list[Mapping[str, Any]]:
     """Read through blank row positions that terminate Zoho's tabular fetch."""
-    tabular = sheet_client.get_rows(workbook_id, worksheet_name, limit=1000)
+    tabular: list[Mapping[str, Any]] = [
+        r for r in sheet_client.get_rows(workbook_id, worksheet_name, limit=1000)
+        if isinstance(r, Mapping)
+    ]
     response = sheet_client.request(
         "GET", workbook_id,
         params={"method": "worksheet.content.get", "worksheet_name": worksheet_name,
@@ -131,7 +134,7 @@ def _read_flat_rows(sheet_client: ZohoSheetAPI, workbook_id: str, worksheet_name
     details = response.get("range_details", [])
     if not isinstance(details, list):
         raise ValueError("Flat worksheet returned invalid grid content.")
-    grid = []
+    grid: list[Mapping[str, Any]] = []
     for entry in details:
         row_index = int(entry["row_index"])
         if row_index > 1000:
@@ -368,7 +371,10 @@ def write_flat_stock_count_to_sheet(
         sheet_client.add_sheet(workbook_id, worksheet_name)
         prior_rows: list[Mapping[str, Any]] = []
     else:
-        prior_rows = sheet_client.get_rows(workbook_id, worksheet_name, limit=1000)
+        prior_rows = [
+            r for r in sheet_client.get_rows(workbook_id, worksheet_name, limit=1000)
+            if isinstance(r, Mapping)
+        ]
     # A manual count may have been entered in either view. Prefer Flat's value.
     count_rows = sheet_client.get_rows(workbook_id, count_worksheet_name, limit=1000) if count_worksheet_name in worksheets else []
     prior_by_item = {
@@ -429,7 +435,10 @@ def write_stock_count_to_sheet(
         sheet_client.add_sheet(workbook_id, worksheet_name)
         prior_rows: list[Mapping[str, Any]] = []
     else:
-        prior_rows = sheet_client.get_rows(workbook_id, worksheet_name, limit=1000)
+        prior_rows = [
+            r for r in sheet_client.get_rows(workbook_id, worksheet_name, limit=1000)
+            if isinstance(r, Mapping)
+        ]
     prior_by_item = {
         str(row.get("item_id") or "").strip(): row
         for row in prior_rows
@@ -660,7 +669,10 @@ def write_mapping_to_sheet(
         sheet_client.add_sheet(workbook_id, worksheet_name)
         prior_rows: list[Mapping[str, Any]] = []
     else:
-        prior_rows = sheet_client.get_rows(workbook_id, worksheet_name, limit=1000)
+        prior_rows = [
+            r for r in sheet_client.get_rows(workbook_id, worksheet_name, limit=1000)
+            if isinstance(r, Mapping)
+        ]
 
     prior_by_sku = {
         str(row.get("sku") or "").strip(): row

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
 
 
@@ -33,7 +33,7 @@ class LocationProposal(TypedDict):
     moves: list[LocationMove]
 
 
-def propose_location_updates(rows: list[Mapping[str, Any]]) -> list[LocationProposal]:
+def propose_location_updates(rows: Sequence[Mapping[str, Any]]) -> list[LocationProposal]:
     """Group allocation rows; move payments only when their documents agree."""
     if not rows:
         raise ValueError("Query Table has no inter-location rows")

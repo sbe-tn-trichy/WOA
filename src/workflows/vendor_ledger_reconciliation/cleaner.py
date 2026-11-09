@@ -1,15 +1,23 @@
-from python_calamine import CalamineWorkbook
+from collections.abc import Sequence
 import csv
 import os
 import logging
 from datetime import datetime, date
-from typing import Any
+from python_calamine import CalamineWorkbook
 from workflows.runtime.config import Config
 from workflows.runtime.exceptions import LedgerParsingError, LedgerNotImplementedError
 
 logger = logging.getLogger(__name__)
 
-def _read_first_sheet(file_path: str) -> list[list[Any]]:
+
+def _to_float(val: object) -> float:
+    try:
+        return float(str(val).replace(",", "").strip())
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def _read_first_sheet(file_path: str) -> Sequence[Sequence[object]]:
     workbook = CalamineWorkbook.from_path(file_path)
     try:
         return workbook.get_sheet_by_index(0).to_python(skip_empty_area=False)
@@ -17,7 +25,7 @@ def _read_first_sheet(file_path: str) -> list[list[Any]]:
         workbook.close()
 
 
-def get_ledger_metadata(file_path: str) -> dict[str, Any]:
+def get_ledger_metadata(file_path: str) -> dict[str, object]:
     """
     Extracts metadata (Start Date, End Date) from a ledger file.
     Supports:
@@ -50,9 +58,9 @@ def get_ledger_metadata(file_path: str) -> dict[str, Any]:
         }
 
     # ── Excel path (Polycab .xls) ────────────────────────────────────────────
-    rows = _read_first_sheet(file_path)
-    width = max((len(row) for row in rows), default=0)
-    rows = [row + [""] * (width - len(row)) for row in rows]
+    raw_rows = _read_first_sheet(file_path)
+    width = max((len(row) for row in raw_rows), default=0)
+    rows: list[list[object]] = [list(row) + [""] * (width - len(row)) for row in raw_rows]
     metadata = {
         "start_date": None,
         "end_date": None,
@@ -72,19 +80,16 @@ def get_ledger_metadata(file_path: str) -> dict[str, Any]:
         elif "party name" in first_val:
             metadata["party_name"] = row[2] if len(row) > 2 else None
         elif "opening balance" in first_val:
-            try:
-                metadata["opening_balance"] = float(rows[r][2])
-            except Exception:
-                pass
+            metadata["opening_balance"] = _to_float(rows[r][2]) if len(rows[r]) > 2 else 0.0
     return metadata
 
-def clean_polycab_ledger(file_path: str) -> list[dict[str, Any]]:
+def clean_polycab_ledger(file_path: str) -> list[dict[str, object]]:
     """
     Parses and cleans Polycab's reconciliation ledger Excel file (.xls).
     """
-    rows = _read_first_sheet(file_path)
-    width = max((len(row) for row in rows), default=0)
-    rows = [row + [""] * (width - len(row)) for row in rows]
+    raw_rows = _read_first_sheet(file_path)
+    width = max((len(row) for row in raw_rows), default=0)
+    rows: list[list[object]] = [list(row) + [""] * (width - len(row)) for row in raw_rows]
     
     header_row_index = -1
     for r in range(len(rows)):
@@ -117,7 +122,7 @@ def clean_polycab_ledger(file_path: str) -> list[dict[str, Any]]:
         if h_lower in key_mapping:
             col_to_key[idx] = key_mapping[h_lower]
             
-    transactions = []
+    transactions: list[dict[str, object]] = []
     for r in range(header_row_index + 1, len(rows)):
         first_val = str(rows[r][0]).strip()
         row_vals = [str(rows[r][c]).strip() for c in range(width)]
@@ -136,7 +141,7 @@ def clean_polycab_ledger(file_path: str) -> list[dict[str, Any]]:
         if not first_val:
             continue
             
-        tx = {}
+        tx: dict[str, object] = {}
         for c, key in col_to_key.items():
             val = rows[r][c]
             
@@ -148,10 +153,7 @@ def clean_polycab_ledger(file_path: str) -> list[dict[str, Any]]:
                 else:
                     tx[key] = str(val).strip()
             elif key in ("debit_amount", "credit_amount", "closing_balance"):
-                try:
-                    tx[key] = float(val) if val != "" else 0.0
-                except (ValueError, TypeError):
-                    tx[key] = 0.0
+                tx[key] = _to_float(val)
             elif key in ("account_no", "transaction_no"):
                 if isinstance(val, float):
                     if val.is_integer():
@@ -168,7 +170,7 @@ def clean_polycab_ledger(file_path: str) -> list[dict[str, Any]]:
             
     return transactions
 
-def clean_zeiss_ledger(file_path: str) -> list[dict[str, Any]]:
+def clean_zeiss_ledger(file_path: str) -> list[dict[str, object]]:
     """
     Parses and cleans Carl Zeiss India's CSV statement.
 
@@ -253,9 +255,11 @@ def clean_zeiss_ledger(file_path: str) -> list[dict[str, Any]]:
     other_txs = [t for t in transactions if t["document_type"] != "receipt"]
     receipts = [t for t in transactions if t["document_type"] == "receipt"]
 
-    cleaned_receipts = []
+    cleaned_receipts: list[dict[str, object]] = []
     for r in receipts:
-        net_credit = r["credit_amount"] - r["debit_amount"]
+        credit = _to_float(r.get("credit_amount"))
+        debit = _to_float(r.get("debit_amount"))
+        net_credit = credit - debit
         if net_credit > 0.0:
             r["credit_amount"] = net_credit
             r["debit_amount"] = 0.0
@@ -265,36 +269,40 @@ def clean_zeiss_ledger(file_path: str) -> list[dict[str, Any]]:
             r["debit_amount"] = abs(net_credit)
             cleaned_receipts.append(r)
         else:
-            logger.info(f"Zeiss cleaner: receipt nullified itself (net zero): {r['transaction_reference']}")
+            logger.info(f"Zeiss cleaner: receipt nullified itself (net zero): {r.get('transaction_reference')}")
 
     # Cross-nullify debit reversals with corresponding credit receipts
-    skipped_indices = set()
+    skipped_indices: set[int] = set()
     for idx, r in enumerate(cleaned_receipts):
         if idx in skipped_indices:
             continue
-        if r["debit_amount"] > 0.0:
+        debit_amt = _to_float(r.get("debit_amount"))
+        if debit_amt > 0.0:
             # Debit receipt (reversal). Find a credit receipt with matching amount and reference
             match_idx = -1
             for jdx, other in enumerate(cleaned_receipts):
                 if jdx == idx or jdx in skipped_indices:
                     continue
-                if other["credit_amount"] == r["debit_amount"]:
-                    if other["transaction_reference"] == r["transaction_reference"]:
+                if _to_float(other.get("credit_amount")) == debit_amt:
+                    if other.get("transaction_reference") == r.get("transaction_reference"):
                         match_idx = jdx
                         break
             if match_idx != -1:
-                logger.info(f"Zeiss cleaner: cross-nullified debit receipt {r['transaction_reference']} with credit receipt {cleaned_receipts[match_idx]['transaction_reference']}")
+                logger.info(f"Zeiss cleaner: cross-nullified debit receipt {r.get('transaction_reference')} with credit receipt {cleaned_receipts[match_idx].get('transaction_reference')}")
                 skipped_indices.add(idx)
                 skipped_indices.add(match_idx)
 
     # Rebuild final list, keeping only active credit receipts (exclude matched reversals/debit leftovers)
-    final_receipts = [r for idx, r in enumerate(cleaned_receipts) if idx not in skipped_indices and r["credit_amount"] > 0.0]
+    final_receipts = [
+        r for idx, r in enumerate(cleaned_receipts)
+        if idx not in skipped_indices and _to_float(r.get("credit_amount")) > 0.0
+    ]
 
     transactions = other_txs + final_receipts
     logger.info(f"Zeiss cleaner: parsed {len(transactions)} rows from {os.path.basename(file_path)}")
     return transactions
 
-def clean_ledger_file(file_path: str, vendor_key: str | None = None) -> list[dict[str, Any]]:
+def clean_ledger_file(file_path: str, vendor_key: str | None = None) -> list[dict[str, object]]:
     """
     Cleans a vendor or bank ledger file using the appropriate vendor-specific cleaner.
     
@@ -304,7 +312,7 @@ def clean_ledger_file(file_path: str, vendor_key: str | None = None) -> list[dic
                                     If not specified, determined automatically from filename.
                                     
     Returns:
-        List[Dict[str, Any]]: List of cleaned transaction dictionaries.
+        List[Dict[str, object]]: List of cleaned transaction dictionaries.
     """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")

@@ -2,15 +2,16 @@
 """Export Inventory items for a purchase account and flag missing vendor aliases."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from pathlib import Path
 from collections.abc import Sequence
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:  # Direct script execution.
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_inventory_client
 from workflows.neoseal_audit.exporter import (

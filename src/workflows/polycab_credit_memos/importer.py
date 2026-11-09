@@ -8,6 +8,7 @@ from typing import Any
 from workflows.core.checkpoint import write_atomic_json
 from workflows.core.matching import parse_currency_amount
 from workflows.polycab_credit_review.pdf import read_credit_memo_pdf
+from workflows.runtime.config import Config
 from helpers.operations.records import get_verified_record
 from .processor import upload_vendor_credit_attachment
 
@@ -20,7 +21,7 @@ class CreditImportPolicy:
     scheme_account_id: str
     rma_account_id: str
     clearing_account_id: str
-    rma_item_id: str = '1094368000028456138'
+    rma_item_id: str = Config.POLYCAB_RMA_ITEM_ID
 
     def __post_init__(self) -> None:
         if any(not value.isdigit() for value in vars(self).values()):
@@ -65,7 +66,7 @@ def import_credit_pdf(books: Any, pdf_path: Path, *, policy: CreditImportPolicy,
                          (policy.clearing_account_id, 'Vendor To Customer')] if is_rso else [(policy.scheme_account_id, 'Polycab Kitty')]
     for identifier, name in expected_accounts:
         account = get_verified_record(books.chart_of_accounts, identifier, 'chart_of_account', 'account_id')
-        if account.get('account_name', '').casefold() != name.casefold() or not account.get('is_active'):
+        if str(account.get('account_name') or '').casefold() != name.casefold() or not account.get('is_active'):
             raise ValueError(f'Configured account must be active {name}')
         if identifier == policy.clearing_account_id and account.get('account_type') != 'bank':
             raise ValueError('Vendor To Customer clearing account must be a bank')
@@ -135,7 +136,7 @@ def import_credit_pdf(books: Any, pdf_path: Path, *, policy: CreditImportPolicy,
     checkpoint('preflight')
     try:
         if invoice:
-            fresh = get_verified_record(books.invoices, invoice['invoice_id'], 'invoice', 'invoice_id')
+            fresh = get_verified_record(books.invoices, str(invoice['invoice_id']), 'invoice', 'invoice_id')
             if any(fresh.get(k) != invoice.get(k) for k in ('balance', 'customer_id', 'location_id', 'invoice_number', 'status')):
                 raise ValueError('Invoice changed since planning')
         credit = create('credit', books.vendor_credits, credit_payload, 'vendor_credit', 'vendor_credit_id')
@@ -156,7 +157,7 @@ def import_credit_pdf(books: Any, pdf_path: Path, *, policy: CreditImportPolicy,
             _verify_payload(journal, journal_payload, 'journal')
             if journal.get('status') != 'published':
                 raise ValueError('Journal publication was not verified')
-            references += [('JNL#', str(journal['entry_number'])), ('JNL_ID', journal['journal_id'])]
+            references += [('JNL#', str(journal['entry_number'])), ('JNL_ID', str(journal['journal_id']))]
             payment = create('payment', books.customer_payments,
                 {'customer_id': invoice['customer_id'], 'location_id': policy.location_id,
                  'date': memo.date.isoformat(), 'payment_mode': 'banktransfer', 'amount': amount,
@@ -176,7 +177,7 @@ def import_credit_pdf(books: Any, pdf_path: Path, *, policy: CreditImportPolicy,
                 ('payment', books.customer_payments, payment, 'payment', 'payment_id', {'description': description()})]:
                 checkpoint('references_' + name)
                 resource.update(record[id_key], payload)
-                saved = get_verified_record(resource, record[id_key], key, id_key)
+                saved = get_verified_record(resource, str(record[id_key]), key, id_key)
                 _verify_payload(saved, payload, name)
                 state['records'][name] = saved
         checkpoint('references_credit')
@@ -193,7 +194,7 @@ def import_credit_pdf(books: Any, pdf_path: Path, *, policy: CreditImportPolicy,
             raise ValueError('Source attachment not verified')
         state['records']['credit'] = attached
         if invoice:
-            final_invoice = get_verified_record(books.invoices, invoice['invoice_id'], 'invoice', 'invoice_id')
+            final_invoice = get_verified_record(books.invoices, str(invoice['invoice_id']), 'invoice', 'invoice_id')
             if (final_invoice.get('customer_id') != invoice['customer_id']
                     or final_invoice.get('invoice_number') != memo.invoice_number
                     or parse_currency_amount(final_invoice['balance']) != parse_currency_amount(invoice['balance']) - memo.amount):

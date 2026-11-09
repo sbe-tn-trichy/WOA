@@ -95,7 +95,13 @@ def main(argv: list[str] | None = None) -> int:
             }, timeout=30)
             response.raise_for_status()
             try:
-                partner_interest = Decimal(str(response.json()["valueRanges"][0]["values"][0][0]))
+                resp_json = response.json()
+                resp_obj = resp_json if isinstance(resp_json, dict) else {}
+                raw_ranges = resp_obj.get("valueRanges")
+                vr_list = raw_ranges if isinstance(raw_ranges, list) and raw_ranges and isinstance(raw_ranges[0], dict) else [{}]
+                vals = vr_list[0].get("values")
+                val_list = vals if isinstance(vals, list) and vals and isinstance(vals[0], list) and vals[0] else []
+                partner_interest = Decimal(str(val_list[0]))
             except (KeyError, IndexError, TypeError, ValueError) as exc:
                 raise ValueError("Could not read partner interest from Note 3") from exc
         updates = prepare_pnl_note_updates(
@@ -112,7 +118,9 @@ def main(argv: list[str] | None = None) -> int:
             "ranges": list(updates), "valueRenderOption": "FORMULA",
         }, timeout=30)
         response.raise_for_status()
-        value_ranges = response.json().get("valueRanges", [])
+        raw_vr = response.json()
+        vr_obj = raw_vr if isinstance(raw_vr, dict) else {}
+        value_ranges = vr_obj.get("valueRanges", [])
         if len(value_ranges) != len(updates):
             raise ValueError("Could not verify every P&L note input cell")
         for entry in value_ranges:
@@ -128,7 +136,9 @@ def main(argv: list[str] | None = None) -> int:
             headers=headers, json=body, timeout=30,
         )
         response.raise_for_status()
-        print(f"Updated {response.json().get('totalUpdatedCells', 0)} P&L note cells")
+        raw_post = response.json()
+        post_obj = raw_post if isinstance(raw_post, dict) else {}
+        print(f"Updated {post_obj.get('totalUpdatedCells', 0)} P&L note cells")
         return 0
     equity_config = config.get("equity")
     if equity_config is not None and not isinstance(equity_config, dict):
@@ -203,10 +213,10 @@ def main(argv: list[str] | None = None) -> int:
         if not CELL.fullmatch(item.current_cell) or not CELL.fullmatch(item.previous_cell):
             parser.error("Mappings must use single-cell A1 addresses")
     periods = StatementPeriod("2025-04-01", "2026-03-31", "2024-04-01", "2025-03-31")
-    updates: dict[str, Decimal | str] = (
-        {} if args.equity_only else prepare_updates(books, periods, mappings, location_ids)
-    )
-    if equity_mappings:
+    updates: dict[str, Decimal | str] = {}
+    if not args.equity_only:
+        updates.update(prepare_updates(books, periods, mappings, location_ids))
+    if equity_mappings and equity_config is not None:
         equity_updates = prepare_equity_updates(
             books, periods, equity_mappings, location_ids=location_ids,
             excluded_location_id=equity_config["excluded_location_id"],
@@ -244,7 +254,9 @@ def main(argv: list[str] | None = None) -> int:
     response = http_transport.get(base, headers=headers, params={"ranges": list(updates) + sorted(closing_cells), "valueRenderOption": "FORMULA"}, timeout=30)
     response.raise_for_status()
     seen_closing: set[str] = set()
-    for entry in response.json().get("valueRanges", []):
+    raw_close = response.json()
+    close_obj = raw_close if isinstance(raw_close, dict) else {}
+    for entry in close_obj.get("valueRanges", []):
         old = (entry.get("values") or [[None]])[0][0]
         address = entry["range"]
         if address in closing_cells:
@@ -264,7 +276,9 @@ def main(argv: list[str] | None = None) -> int:
         headers=headers, json=body, timeout=30,
     )
     response.raise_for_status()
-    print(f"Updated {response.json().get('totalUpdatedCells', 0)} cells")
+    raw_res = response.json()
+    res_obj = raw_res if isinstance(raw_res, dict) else {}
+    print(f"Updated {res_obj.get('totalUpdatedCells', 0)} cells")
     return 0
 
 

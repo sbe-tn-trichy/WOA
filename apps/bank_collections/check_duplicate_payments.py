@@ -2,6 +2,7 @@
 """Check Zoho Books for duplicate customer payments; never modifies Books."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
@@ -10,10 +11,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from collections.abc import Sequence
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:  # Direct script execution.
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
 from workflows.runtime.config import Config

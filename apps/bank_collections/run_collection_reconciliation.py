@@ -8,6 +8,7 @@ Outputs are written under `output/collection_reconciliation/`.
 """
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
@@ -18,10 +19,10 @@ from pathlib import Path
 from collections.abc import Sequence
 from typing import Any
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:  # Direct script execution.
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.collection_reconciliation import (
     CollectionReconciler,

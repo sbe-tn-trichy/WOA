@@ -2,6 +2,7 @@
 """Repair unused credits on previously pushed payment-review Books payments."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
@@ -9,10 +10,10 @@ from pathlib import Path
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:  # Direct script execution.
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.collection_reconciliation.repair import (
     _payment_payload,
@@ -41,7 +42,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    state = json.loads(args.state.read_text(encoding="utf-8"))
+    state_raw = json.loads(args.state.read_text(encoding="utf-8"))
+    if not isinstance(state_raw, Mapping):
+        raise ValueError(f"State file {args.state} must be a JSON object")
+    state: Mapping[str, Any] = state_raw
     checkpoint = args.checkpoint or Path(
         "output/collection_reconciliation/payment_allocation_repair.json"
     )

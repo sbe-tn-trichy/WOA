@@ -1,28 +1,35 @@
+from __future__ import annotations
+
 import os
-from typing import Any
+from collections.abc import Mapping
+
+from utils.file_utils import json
+from zoho.core_sdk.base_client import BaseZohoClient
 from ..base import BaseResource
-from .mixins import StatusMixin, EmailMixin, ApprovalMixin, CreditsMixin
+from .mixins import ApprovalMixin, CreditsMixin, EmailMixin, StatusMixin
+
 
 class Invoices(BaseResource, StatusMixin, EmailMixin, ApprovalMixin, CreditsMixin):
-    def __init__(self, client: Any):
-        super().__init__(client, 'invoices')
+    def __init__(self, client: BaseZohoClient) -> None:
+        super().__init__(client, "invoices")
 
 
 class Estimates(BaseResource, StatusMixin, EmailMixin):
-    def __init__(self, client: Any):
-        super().__init__(client, 'estimates')
+    def __init__(self, client: BaseZohoClient) -> None:
+        super().__init__(client, "estimates")
 
-    def mark_as_accepted(self, estimate_id: str) -> dict[str, Any]:
-        return self._action('POST', estimate_id, 'status/accepted')
+    def mark_as_accepted(self, estimate_id: str) -> object:
+        return self._action("POST", estimate_id, "status/accepted")
 
-    def mark_as_declined(self, estimate_id: str) -> dict[str, Any]:
-        return self._action('POST', estimate_id, 'status/declined')
+    def mark_as_declined(self, estimate_id: str) -> object:
+        return self._action("POST", estimate_id, "status/declined")
+
 
 class SalesOrders(BaseResource, StatusMixin):
-    def __init__(self, client: Any):
-        super().__init__(client, 'salesorders')
+    def __init__(self, client: BaseZohoClient) -> None:
+        super().__init__(client, "salesorders")
 
-    def add_attachment(self, sales_order_id: str, file_path: str) -> dict[str, Any]:
+    def add_attachment(self, sales_order_id: str, file_path: str) -> object:
         """Attach a local file to a sales order."""
         if not os.path.isfile(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
@@ -35,15 +42,17 @@ class SalesOrders(BaseResource, StatusMixin):
                 files=files,
             )
 
+
 class CreditNotes(BaseResource, StatusMixin):
-    def __init__(self, client: Any):
-        super().__init__(client, 'creditnotes')
+    def __init__(self, client: BaseZohoClient) -> None:
+        super().__init__(client, "creditnotes")
+
 
 class VendorCredits(BaseResource, StatusMixin):
-    def __init__(self, client: Any):
-        super().__init__(client, 'vendorcredits')
+    def __init__(self, client: BaseZohoClient) -> None:
+        super().__init__(client, "vendorcredits")
 
-    def add_attachment(self, vendor_credit_id: str, file_path: str) -> dict[str, Any]:
+    def add_attachment(self, vendor_credit_id: str, file_path: str) -> object:
         if not os.path.isfile(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
         filename = os.path.basename(file_path)
@@ -55,27 +64,36 @@ class VendorCredits(BaseResource, StatusMixin):
                 files=files,
             )
 
+
 class SalesReturns(BaseResource, StatusMixin):
-    def __init__(self, client: Any):
-        super().__init__(client, 'salesreturns')
+    def __init__(self, client: BaseZohoClient) -> None:
+        super().__init__(client, "salesreturns")
+
 
 class CustomerPayments(BaseResource):
-    def __init__(self, client: Any):
-        super().__init__(client, 'customerpayments')
-        
-    def refund(self, payment_id: str, data: dict[str, Any]) -> dict[str, Any]:
-        return self._action('POST', payment_id, 'refunds', data=data)
+    def __init__(self, client: BaseZohoClient) -> None:
+        super().__init__(client, "customerpayments")
 
-    def update_with_number_series(self, payment_id: str, data: dict[str, Any]) -> dict[str, Any]:
+    def refund(
+        self, payment_id: str, data: Mapping[str, object]
+    ) -> object:
+        return self._action("POST", payment_id, "refunds", data=dict(data))
+
+    def update_with_number_series(
+        self, payment_id: str, data: Mapping[str, object]
+    ) -> object:
         """Update a payment via multipart form while preserving the chosen number series."""
-        from utils.file_utils import json
-
         if not payment_id or not data.get("location_id"):
             raise ValueError("Payment ID and destination location are required")
-        if not data.get("payment_number_prefix") or not data.get("payment_number_suffix"):
+        if not data.get("payment_number_prefix") or not data.get(
+            "payment_number_suffix"
+        ):
             raise ValueError("Payment number prefix and suffix are required")
         return self.update(
-            payment_id, {},
-            files={"JSONString": (None, json.dumps(data)),
-                   "ignore_auto_number_generation": (None, "true")},
+            payment_id,
+            {},
+            files={
+                "JSONString": (None, json.dumps(dict(data))),
+                "ignore_auto_number_generation": (None, "true"),
+            },
         )

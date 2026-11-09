@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from decimal import Decimal
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from .payment_proposals import expected_payment_prefix
@@ -16,7 +16,7 @@ def money(value: Any) -> Decimal:
 
 def propose_split(
     proposal: Mapping[str, Any], payment: Mapping[str, Any],
-    documents: list[Mapping[str, Any]],
+    documents: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     """Group verified allocations by document location without changing Books."""
     payment_id = str(proposal["payment_id"])

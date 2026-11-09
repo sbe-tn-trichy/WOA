@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
 
 
@@ -41,7 +41,7 @@ def expected_payment_prefix(location_id: str, financial_year: str, payment_type:
 
 
 def filter_payment_rows_for_year(
-    rows: list[Mapping[str, Any]], financial_year: str,
+    rows: Sequence[Mapping[str, Any]], financial_year: str,
 ) -> list[Mapping[str, Any]]:
     """Keep only QT payment rows belonging to the requested fiscal year."""
     if financial_year not in {"FY 2025-26", "FY 2026-27"}:
@@ -77,7 +77,7 @@ GROUP BY {payment_alias}."{payment_id}"'''
 
 
 def propose_payment_locations(
-    rows: list[Mapping[str, Any]],
+    rows: Sequence[Mapping[str, Any]],
     allocation_summaries: Mapping[str, Mapping[str, Mapping[str, Any]]],
     *,
     clearing_account_id: str = "1094368000002033114",

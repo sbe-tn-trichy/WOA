@@ -12,6 +12,7 @@ else:
     importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_analytics_client, get_books_client
+from workflows.runtime.config import Config
 from workflows.core.checkpoint import write_atomic_json
 from workflows.core.dates import get_fy_date_range
 from workflows.payment_renumbering import (
@@ -42,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--destination-prefix", default="SBE2526CP-")
     parser.add_argument("--width", type=int, default=5)
     parser.add_argument("--starting-sequence", type=int)
-    parser.add_argument("--workspace-id", default=os.environ.get("ZOHO_ANALYTICS_WORKSPACE_ID", "264324000000002043"))
+    parser.add_argument("--workspace-id", default=Config.ANALYTICS_WORKSPACE_ID)
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).resolve().parents[1] / "output")
     args = parser.parse_args(argv, namespace=Arguments())
     audit: dict[str, object]

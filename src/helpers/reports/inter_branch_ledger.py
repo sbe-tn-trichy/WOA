@@ -6,16 +6,40 @@ from datetime import date
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from utils.file_utils import json
-from collections.abc import Mapping
-from typing import Any, TypedDict
+from collections.abc import Iterable, Mapping
+from typing import Protocol, TypedDict
 
-from .equity_ledger import resolve_excluded_location_name
+from .equity_ledger import BooksLocationsClient, BooksLocationsResource, resolve_excluded_location_name
 
 
 class InterBranchLedgerEntry(TypedDict):
     account_id: str
     location_name: str
-    transaction: Mapping[str, Any]
+    transaction: Mapping[str, object]
+
+
+class BooksReportsGLResource(Protocol):
+    def general_ledger(
+        self, *, from_date: str, to_date: str, rule: str, cash_based: bool = False,
+    ) -> Mapping[str, object]: ...
+
+
+class BooksRegistersInterBranchResource(Protocol):
+    def iter_transactions(
+        self,
+        account_id: str,
+        *,
+        from_date: str,
+        to_date: str,
+        per_page: int,
+        cash_based: bool = False,
+    ) -> Iterable[Mapping[str, object]]: ...
+
+
+class BooksInterBranchClient(Protocol):
+    locations: BooksLocationsResource
+    reports: BooksReportsGLResource
+    registers: BooksRegistersInterBranchResource
 
 
 @dataclass(frozen=True)
@@ -30,13 +54,13 @@ class InterBranchGeneralLedger:
 
 
 def fetch_inter_branch_general_ledger(
-    books_client: Any,
+    books_client: BooksInterBranchClient,
     *,
     from_date: str,
     to_date: str,
-    account_id: str = "1094368000000443474",
-    excluded_location_id: str = "1094368000044509446",
- ) -> InterBranchGeneralLedger:
+    account_id: str = "",
+    excluded_location_id: str = "",
+) -> InterBranchGeneralLedger:
     """Fetch the branch-filtered inter-branch balance via the Books SDK report."""
     try:
         start, end = date.fromisoformat(from_date), date.fromisoformat(to_date)
@@ -58,10 +82,12 @@ def fetch_inter_branch_general_ledger(
         from_date=from_date, to_date=to_date,
         rule=json.dumps(rule), cash_based=False,
     )
-    rows = response["generalledger"]
-    if len(rows) != 1 or str(rows[0].get("account_id") or "") != account_id:
+    rows_val = response.get("generalledger")
+    if not isinstance(rows_val, list) or len(rows_val) != 1 or not isinstance(rows_val[0], Mapping):
         raise ValueError("Books General Ledger did not return exactly the inter-branch account")
-    row = rows[0]
+    row = rows_val[0]
+    if str(row.get("account_id") or "") != account_id:
+        raise ValueError("Books General Ledger did not return exactly the inter-branch account")
     try:
         debit = Decimal(str(row["debit_total"]))
         credit = Decimal(str(row["credit_total"]))
@@ -77,14 +103,18 @@ def fetch_inter_branch_general_ledger(
 
 
 def fetch_inter_branch_register_transactions(
-    books_client: Any, *, from_date: str, to_date: str,
-    account_id: str = "1094368000000443474",
-    excluded_location_id: str = "1094368000044509446",
+    books_client: BooksInterBranchClient, *, from_date: str, to_date: str,
+    account_id: str = "",
+    excluded_location_id: str = "",
     per_page: int = 500,
 ) -> list[InterBranchLedgerEntry]:
     """Read raw register postings, which may omit branch-generated balances."""
     if per_page < 1:
         raise ValueError("per_page must be positive")
+    if not account_id or not account_id.strip():
+        raise ValueError("account_id is required")
+    if not excluded_location_id or not excluded_location_id.strip():
+        raise ValueError("excluded_location_id is required")
     excluded_name = resolve_excluded_location_name(books_client, excluded_location_id)
     entries: list[InterBranchLedgerEntry] = []
     for transaction in books_client.registers.iter_transactions(

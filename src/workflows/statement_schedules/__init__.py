@@ -5,10 +5,11 @@ from .writer import (
     note_bold_requests, update_requests,
 )
 from .workflow import (
-    AssetVerification, SchedulePlan, build_schedule_plan, fetch_schedule_sources,
+    AssetVerification, ScheduleConfig, SchedulePlan, ScheduleSources, build_schedule_plan, fetch_schedule_sources,
     validate_sources, verify_asset,
 )
 
 __all__ = ["apply_plan", "cell_data", "changed_update_requests", "grid_address",
-           "note_bold_requests", "update_requests", "checkbox_formula_updates", "AssetVerification", "SchedulePlan", "build_schedule_plan",
+           "note_bold_requests", "update_requests", "checkbox_formula_updates", "AssetVerification",
+           "ScheduleConfig", "SchedulePlan", "ScheduleSources", "build_schedule_plan",
            "fetch_schedule_sources", "validate_sources", "verify_asset"]

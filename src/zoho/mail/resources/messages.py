@@ -1,16 +1,40 @@
-from ..base import BaseResource
-from typing import Any
+from __future__ import annotations
+
+import builtins
 import os
+from collections.abc import Iterator, Mapping
 from pathlib import Path
+from typing import TYPE_CHECKING, overload
+
 from utils.http_utils.http import write_response_to_file
-from zoho.core_sdk.security import sanitize_filename, resolve_output_path
+from zoho.core_sdk.security import resolve_output_path, sanitize_filename
+from ..base import BaseResource
+
+if TYPE_CHECKING:
+    from zoho.core_sdk.base_client import BaseZohoClient
+
 
 class Messages(BaseResource):
-    def __init__(self, client, account_id: str):
+    def __init__(self, client: BaseZohoClient, account_id: str):
         super().__init__(client, f"accounts/{account_id}/messages")
         self.account_id = account_id
 
-    def list(self, folder_id: str | None = None, page: int = 1, limit: int = 50, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    @overload
+    def list(
+        self,
+        folder_id: str | None = None,
+        page: int = 1,
+        limit: int = 50,
+        params: Mapping[str, object] | None = None,
+    ) -> object: ...
+
+    @overload
+    def list(
+        self,
+        params: Mapping[str, object] | None = None,
+    ) -> object: ...
+
+    def list(self, *args: object, **kwargs: object) -> object:
         """
         List messages summary.
         :param folder_id: Optional folder ID to filter messages.
@@ -18,55 +42,69 @@ class Messages(BaseResource):
         :param limit: Number of messages per page (default: 50).
         :param params: Additional query parameters.
         """
-        query_params = {
-            "start": (page - 1) * limit + 1,
-            "limit": limit
+        if args and isinstance(args[0], Mapping):
+            return super().list(params=args[0])
+        if "params" in kwargs and len(kwargs) == 1 and not args:
+            raw_p = kwargs["params"]
+            return super().list(params=raw_p if isinstance(raw_p, Mapping) else None)
+
+        folder_id = args[0] if args else kwargs.get("folder_id")
+        page = args[1] if len(args) > 1 else kwargs.get("page", 1)
+        limit = args[2] if len(args) > 2 else kwargs.get("limit", 50)
+        params = args[3] if len(args) > 3 else kwargs.get("params")
+
+        page_int = int(page) if isinstance(page, (int, str)) else 1
+        limit_int = int(limit) if isinstance(limit, (int, str)) else 50
+
+        query_params: dict[str, object] = {
+            "start": (page_int - 1) * limit_int + 1,
+            "limit": limit_int,
         }
         if folder_id:
-            query_params["folderId"] = folder_id
-        
-        if params:
+            query_params["folderId"] = str(folder_id)
+
+        if isinstance(params, Mapping):
             query_params.update(params)
-            
+
         return self.client.request('GET', f"{self.endpoint}/view", params=query_params)
 
-    def get_content(self, message_id: str) -> dict[str, Any]:
+    def get_content(self, message_id: str) -> object:
         """Get full message content."""
         return self.client.request('GET', f"{self.endpoint}/{message_id}/content")
 
-    def send(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> dict[str, Any]:
+    def send(self, from_address: str, to_address: str, subject: str, content: str, **kwargs: object) -> object:
         """Send an email."""
-        data = {
+        data: dict[str, object] = {
             "fromAddress": from_address,
             "toAddress": to_address,
             "subject": subject,
             "content": content,
-            "action": "send"
+            "action": "send",
         }
         data.update(kwargs)
         return self.create(data)
 
-    def save_draft(self, from_address: str, to_address: str, subject: str, content: str, **kwargs) -> dict[str, Any]:
+    def save_draft(self, from_address: str, to_address: str, subject: str, content: str, **kwargs: object) -> object:
         """Save a draft email."""
-        data = {
+        data: dict[str, object] = {
             "fromAddress": from_address,
             "toAddress": to_address,
             "subject": subject,
             "content": content,
-            "action": "save"
+            "action": "save",
         }
         data.update(kwargs)
         return self.create(data)
 
-    def mark_as_read(self, message_id: str) -> dict[str, Any]:
+    def mark_as_read(self, message_id: str) -> object:
         """Mark message as read."""
         return self.update(message_id, {"status": "read"})
 
-    def mark_as_unread(self, message_id: str) -> dict[str, Any]:
+    def mark_as_unread(self, message_id: str) -> object:
         """Mark message as unread."""
         return self.update(message_id, {"status": "unread"})
 
-    def get_attachments_info(self, folder_id: str, message_id: str) -> dict[str, Any]:
+    def get_attachments_info(self, folder_id: str, message_id: str) -> object:
         """Get attachment information for a message."""
         # The endpoint for listing attachments requires the folder ID and message ID
         endpoint = f"accounts/{self.account_id}/folders/{folder_id}/messages/{message_id}/attachmentinfo"
@@ -77,7 +115,7 @@ class Messages(BaseResource):
         endpoint = f"accounts/{self.account_id}/folders/{folder_id}/messages/{message_id}/attachments/{attachment_id}"
         response = self.client.request('GET', endpoint, stream=True)
         try:
-            return response.content
+            return getattr(response, "content", b"")
         finally:
             if hasattr(response, "close"):
                 response.close()
@@ -92,8 +130,15 @@ class Messages(BaseResource):
         response = self.client.request('GET', endpoint, stream=True)
         return write_response_to_file(response, download_path)
 
-
-    def list_iter(self, folder_id: str | None = None, start: int = 1, limit: int = 50):
+    def list_iter(
+        self,
+        folder_id: str | None = None,
+        start: int = 1,
+        limit: int = 50,
+        params: dict[str, object] | None = None,
+        resource_key: str | None = None,
+        per_page: int = 200,
+    ) -> Iterator[dict[str, object]]:
         """
         Iterator for messages in a folder.
         """
@@ -102,7 +147,8 @@ class Messages(BaseResource):
             # Calculate page for the existing list method
             page = ((current_start - 1) // limit) + 1
             response = self.list(folder_id=folder_id, page=page, limit=limit)
-            data = response.get('data', [])
+            raw_data = response.get('data', []) if isinstance(response, dict) else []
+            data = [d for d in raw_data if isinstance(d, dict)] if isinstance(raw_data, list) else []
             if not data:
                 break
 
@@ -113,12 +159,14 @@ class Messages(BaseResource):
                 break
             current_start += limit
 
-    def message_has_attachment(self, message: dict[str, Any]) -> bool:
+    def message_has_attachment(self, message: Mapping[str, object]) -> bool:
         """Return True when a Zoho message summary indicates attachments."""
         return str(message.get('hasAttachment', '')).lower() in ('1', 'true', 'yes')
 
-    def extract_attachments(self, response: dict[str, Any]) -> list[dict[str, Any]]:
+    def extract_attachments(self, response: object) -> builtins.list[dict[str, object]]:
         """Normalize Zoho attachment metadata response shapes."""
+        if not isinstance(response, dict):
+            return []
         data = response.get('data', [])
         if isinstance(data, dict):
             attachments = data.get('attachments', [])
@@ -145,7 +193,7 @@ class Messages(BaseResource):
             counter += 1
         return str(target_path)
 
-    def download_folder_attachments(self, folder_id: str, download_dir: str, filename: str | None = None) -> list[str]:
+    def download_folder_attachments(self, folder_id: str, download_dir: str, filename: str | None = None) -> builtins.list[str]:
         """
         Downloads all attachments from all messages in a specific folder.
         
@@ -164,7 +212,7 @@ class Messages(BaseResource):
                 continue
 
             msg_id = msg.get('messageId')
-            if not msg_id:
+            if not msg_id or not isinstance(msg_id, str):
                 continue
 
             att_info_resp = self.get_attachments_info(folder_id, msg_id)
@@ -172,11 +220,11 @@ class Messages(BaseResource):
                 att_name = att.get('attachmentName')
                 att_id = att.get('attachmentId')
                 
-                if not att_id or (not att_name and not filename):
+                if not att_id or not isinstance(att_id, str) or (not att_name and not filename):
                     continue
                 
                 sequence_index = None
-                target_name = att_name
+                target_name = str(att_name)
                 if filename:
                     target_name = filename
                     sequence_index = override_index or None

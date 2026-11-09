@@ -3,21 +3,29 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Protocol
 
 logger = logging.getLogger("helpers.catalog.bins")
 
-DEFAULT_WORKSPACE_ID = "264324000000002043"
+DEFAULT_WORKSPACE_ID = ""
 DEFAULT_TABLE_NAME = "Item Stock by Bin"
 
 
-def _escape_sql_literal(value: Any) -> str:
+class AnalyticsQueriesResource(Protocol):
+    def execute(self, workspace_id: str, sql_query: str) -> object: ...
+
+
+class AnalyticsBinClient(Protocol):
+    queries: AnalyticsQueriesResource
+
+
+def _escape_sql_literal(value: object) -> str:
     """Escape single quotes for SQL string literals."""
-    return str(value).replace("'", "''")
+    return str(value or "").replace("'", "''")
 
 
-def _to_clean_list(val: Any) -> list[str]:
+def _to_clean_list(val: object) -> list[str]:
     """Convert a single value or sequence into a list of non-empty strings."""
     if val is None:
         return []
@@ -25,15 +33,16 @@ def _to_clean_list(val: Any) -> list[str]:
         cleaned = str(val).strip()
         return [cleaned] if cleaned else []
     result = []
-    for item in val:
-        cleaned = str(item).strip()
-        if cleaned:
-            result.append(cleaned)
+    if isinstance(val, (list, tuple, set)):
+        for item in val:
+            cleaned = str(item).strip()
+            if cleaned:
+                result.append(cleaned)
     return result
 
 
 def get_bins_for_items(
-    analytics_client: Any,
+    analytics_client: AnalyticsBinClient,
     workspace_id: str = DEFAULT_WORKSPACE_ID,
     item_ids: Sequence[str | int] | str | int | None = None,
     skus: Sequence[str] | str | None = None,
@@ -41,7 +50,7 @@ def get_bins_for_items(
     available_only: bool = True,
     table_name: str = DEFAULT_TABLE_NAME,
     order_by: str | None = 'ORDER BY "Item Name" ASC',
-) -> list[dict[str, Any]]:
+) -> list[dict[str, object]]:
     """Query item stock across warehouse bins using Zoho Analytics.
 
     Parameters:
@@ -90,6 +99,9 @@ def get_bins_for_items(
     order_clause = f" {order_by.strip()}" if order_by and order_by.strip() else ""
     sql = f'SELECT * FROM "{table_name}"{where_clause}{order_clause}'
 
+    if not workspace_id or not str(workspace_id).strip():
+        raise ValueError("workspace_id is required to query bin stock.")
+
     logger.debug("Executing get_bins_for_items SQL: %s", sql)
 
     try:
@@ -104,14 +116,14 @@ def get_bins_for_items(
 
 
 def get_bins_by_item_map(
-    analytics_client: Any,
+    analytics_client: AnalyticsBinClient,
     workspace_id: str = DEFAULT_WORKSPACE_ID,
     key_field: str = "SKU",
     item_ids: Sequence[str | int] | str | int | None = None,
     skus: Sequence[str] | str | None = None,
     available_only: bool = True,
     table_name: str = DEFAULT_TABLE_NAME,
-) -> dict[str, list[dict[str, Any]]]:
+) -> dict[str, list[dict[str, object]]]:
     """Fetch bin stock grouped by item key (e.g. SKU, Product ID, or Item Name).
 
     Returns a mapping of {key_value: [bin_record_1, bin_record_2, ...]}.
@@ -124,7 +136,7 @@ def get_bins_by_item_map(
         available_only=available_only,
         table_name=table_name,
     )
-    grouped: dict[str, list[dict[str, Any]]] = {}
+    grouped: dict[str, list[dict[str, object]]] = {}
     for record in records:
         key_val = record.get(key_field)
         if key_val is not None:
@@ -134,13 +146,9 @@ def get_bins_by_item_map(
     return grouped
 
 
-# Alias matching exact requested camelCase name
-getBinsForItems = get_bins_for_items
-
 __all__ = [
     "DEFAULT_TABLE_NAME",
     "DEFAULT_WORKSPACE_ID",
     "get_bins_by_item_map",
     "get_bins_for_items",
-    "getBinsForItems",
 ]

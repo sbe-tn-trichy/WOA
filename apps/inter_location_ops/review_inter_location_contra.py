@@ -1,15 +1,16 @@
 """Export a read-only review of inter-location contra entries or bank payment location mismatches."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_analytics_client, get_books_client
 from workflows.runtime.config import Config
@@ -18,7 +19,7 @@ from workflows.inter_location.contra import add_analytics_location_evidence, fet
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--account-id", default="1094368000002033114")
+    parser.add_argument("--account-id", default=Config.INTER_LOCATION_CLEARING_ACCOUNT_ID)
     parser.add_argument(
         "--mode",
         choices=["auto", "contra", "bank"],
@@ -28,8 +29,8 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=Path("output/inter_location_contra_review.json"))
     parser.add_argument("--analytics", action="store_true", help="Cross-check against CustomerPaymentLocationDiff")
     parser.add_argument("--analytics-org-id", default=Config.ANALYTICS_ORG_ID)
-    parser.add_argument("--analytics-workspace-id", default="264324000000002043")
-    parser.add_argument("--location-diff-view-id", default="264324000006990003")
+    parser.add_argument("--analytics-workspace-id", default=Config.ANALYTICS_WORKSPACE_ID)
+    parser.add_argument("--location-diff-view-id", default=Config.INTER_LOCATION_DIFF_VIEW_ID)
     args = parser.parse_args()
     if not args.output.is_absolute() and args.output.parts[0] != "output":
         parser.error("Relative output must be under output/")
@@ -37,7 +38,7 @@ def main() -> int:
     books = get_books_client()
     mode = args.mode
     if mode == "auto":
-        mode = "contra" if args.account_id == "1094368000002033114" else "bank"
+        mode = "contra" if args.account_id == Config.INTER_LOCATION_CLEARING_ACCOUNT_ID else "bank"
 
     if mode == "contra":
         result = review_contras(fetch_account_entries(books, args.account_id))

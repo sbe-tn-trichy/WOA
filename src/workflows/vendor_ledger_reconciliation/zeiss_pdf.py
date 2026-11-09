@@ -3,7 +3,6 @@ import re
 import csv
 import logging
 from datetime import datetime
-from typing import Any
 from utils.file_utils.pdf import read_pdf_pages
 
 logger = logging.getLogger(__name__)
@@ -50,7 +49,7 @@ def format_amount(val_str: str) -> str:
     except ValueError:
         return val_str
 
-def parse_zeiss_pdf_statement(pdf_path: str) -> list[dict[str, Any]]:
+def parse_zeiss_pdf_statement(pdf_path: str) -> list[dict[str, str]]:
     """Parse transaction lines from a Zeiss PDF statement using pypdfium2."""
     if not os.path.exists(pdf_path):
         raise FileNotFoundError(f"Zeiss PDF file not found: {pdf_path}")
@@ -122,7 +121,7 @@ def parse_zeiss_pdf_statement(pdf_path: str) -> list[dict[str, Any]]:
     logger.info(f"Extracted {len(rows)} entries from {filename}")
     return rows
 
-def consolidate_zeiss_statements(ledgers_dir: str, output_csv_path: str) -> list[dict[str, Any]]:
+def consolidate_zeiss_statements(ledgers_dir: str, output_csv_path: str) -> list[dict[str, str]]:
     """
     Finds all Zeiss PDF statements in ledgers_dir, parses them, de-duplicates them,
     sorts them chronologically, writes the consolidated dataset to output_csv_path, and returns the records.

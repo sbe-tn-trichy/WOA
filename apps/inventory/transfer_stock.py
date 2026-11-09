@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Create a matched invoice/bill pair for explicitly selected replenishment items."""
 from __future__ import annotations
+import importlib
 
 import argparse
 import csv
@@ -10,17 +11,21 @@ from dataclasses import asdict
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from collections.abc import Mapping, Sequence
+from typing import Any
 
-try:
+if __package__:
     from . import _bootstrap
-except ImportError:
-    import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
+from helpers import unwrap_record
 from workflows.runtime.auth import get_books_client, get_inventory_client
 from workflows.stock_transfer import (
     build_plan, build_payloads, line_total, split_plan, transaction_dates,
     invoice_numbers, validate_series_start_date, validate_stock,
 )
+from zoho.core_sdk.validation import require_record, require_records
 
 
 def main():
@@ -52,20 +57,27 @@ def main():
         raise RuntimeError(f'Execution already attempted; inspect {journal} before recovery. Do not recreate the pair.')
     if args.resume and not journal.exists():
         raise RuntimeError(f'No execution journal exists to resume at {journal}')
-    resume_state = json.loads(journal.read_text()) if args.resume else None
-    if resume_state and resume_state.get('reference') != args.reference:
+    resume_state: dict[str, Any] | None = None
+    if args.resume:
+        raw_journal = json.loads(journal.read_text())
+        if isinstance(raw_journal, dict):
+            resume_state = {str(k): v for k, v in raw_journal.items()}
+    if resume_state is not None and resume_state.get('reference') != args.reference:
         raise ValueError('Execution journal reference does not match --reference')
     books, inventory = get_books_client(), get_inventory_client()
 
-    def fetch_details(item_ids):
-        details = inventory.items.get_details(item_ids)
+    def fetch_details(item_ids: list[str]) -> list[dict[str, object]]:
+        raw_details = inventory.items.get_details(item_ids)
+        details = [dict(item) for item in require_records(raw_details, "item details")]
         for index, item in enumerate(details, 1):
-            loc = next(row for row in item['locations'] if row['location_id'] == args.source)
+            locations = require_records(item.get('locations'), f"Item {item.get('item_id')} locations")
+            loc = next(row for row in locations if row.get('location_id') == args.source)
             if loc.get('is_storage_location_enabled'):
                 time.sleep(1.0)
                 for attempt in range(3):
                     try:
-                        item['transfer_bins'] = inventory.items.list_bins(item['item_id'], args.source)
+                        item_id = str(item.get('item_id', ''))
+                        item['transfer_bins'] = inventory.items.list_bins(item_id, args.source)
                         break
                     except Exception:
                         if attempt == 2:
@@ -74,9 +86,14 @@ def main():
             if index % 20 == 0:
                 print(f'Checked bins for {index}/{len(details)} items', flush=True)
         # Refresh location balances after the paced bin reads.
-        fresh = {item['item_id']: item for item in inventory.items.get_details(item_ids)}
+        fresh = {
+            str(item.get('item_id')): item
+            for item in require_records(inventory.items.get_details(item_ids), "refreshed details")
+        }
         for item in details:
-            item['locations'] = fresh[item['item_id']]['locations']
+            refreshed = fresh.get(str(item.get('item_id')))
+            if refreshed and 'locations' in refreshed:
+                item['locations'] = refreshed['locations']
         return details
     with args.items_csv.open() as handle:
         ids = [row['item_id'] for row in csv.DictReader(handle)]
@@ -94,8 +111,8 @@ def main():
     })
     validate_series_start_date(args.starting_date, existing_invoices, args.invoice_number_prefix)
     locations = {row['location_id']: row for row in books.locations.list_all()}
-    customer = books.contacts.get(args.customer_id)['contact']
-    vendor = books.contacts.get(args.vendor_id)['contact']
+    customer = unwrap_record(books.contacts.get(args.customer_id), 'contact')
+    vendor = unwrap_record(books.contacts.get(args.vendor_id), 'contact')
     payload_sets = []
     for index, document_lines in enumerate(documents, 1):
         reference = f'{args.reference}-{index:03d}'
@@ -108,7 +125,7 @@ def main():
             matches = books.invoices.list_all(params={'invoice_number': numbers[index - 1]})
             if any(row.get('invoice_number') == numbers[index - 1] for row in matches) and not args.resume:
                 raise ValueError(f'Invoice number already exists: {numbers[index - 1]}')
-    resumed_document = int(resume_state.get('document') or 0) if resume_state else 0
+    resumed_document = int(resume_state.get('document') or 0) if resume_state is not None else 0
     for resource in (books.invoices, books.bills):
         for index in range(1, len(documents) + 1):
             reference = f'{args.reference}-{index:03d}'
@@ -124,49 +141,55 @@ def main():
                       'markup_percentage': '1', 'apply': args.apply}), flush=True)
     if not args.apply:
         return
-    state = resume_state or {'reference': args.reference, 'stage': 'preflight'}
+    state: dict[str, Any] = dict(resume_state) if resume_state is not None else {'reference': args.reference, 'stage': 'preflight'}
 
-    def checkpoint(stage, **data):
+    def checkpoint(stage: str, **data: object) -> None:
         state.update(stage=stage, **data)
         journal.write_text(json.dumps(state, default=str, indent=2))
 
-    def verify_document(doc, kind, expected, expected_lines):
+    def verify_document(doc: Mapping[str, object], kind: str, expected: Mapping[str, object], expected_lines: Sequence[object]) -> None:
         if kind == 'invoice' and expected.get('invoice_number') and doc.get('invoice_number') != expected['invoice_number']:
             raise ValueError('Created invoice number mismatch')
         if doc['location_id'] != expected['location_id'] or doc['gst_no'] != expected['gst_no']:
             raise ValueError('Created document location/GSTIN mismatch')
-        actual = {str(row['item_id']): row for row in doc['line_items']}
-        if len(actual) != len(expected_lines) or len(doc['line_items']) != len(expected_lines):
+        line_items = require_records(doc.get('line_items'), f'{kind} line items')
+        actual = {str(row['item_id']): row for row in line_items}
+        if len(actual) != len(expected_lines) or len(line_items) != len(expected_lines):
             raise ValueError('Created document item count mismatch')
-        for row in expected['line_items']:
-            found = actual[row['item_id']]
+        expected_items = require_records(expected.get('line_items'), f'expected {kind} line items')
+        for row in expected_items:
+            found = actual[str(row['item_id'])]
             for key in ('quantity', 'rate', 'tax_id', 'location_id', 'account_id'):
-                if str(found.get(key)) != str(row[key]) and found.get(key) != row[key]:
+                if str(found.get(key)) != str(row.get(key)) and found.get(key) != row.get(key):
                     raise ValueError(f'Created {kind} {key} mismatch')
 
-    def align_bill_total(invoice, bill):
+    def align_bill_total(invoice: Mapping[str, object], bill: Mapping[str, object]) -> dict[str, object]:
         difference = Decimal(str(invoice['total'])) - Decimal(str(bill['total']))
+        current_bill = dict(bill)
         if difference:
             if abs(difference) > Decimal('1.00'):
                 raise ValueError('Paired totals differ by more than the permitted rounding adjustment')
-            adjustment = Decimal(str(bill.get('adjustment') or 0)) + difference
-            bill = books.bills.update(bill['bill_id'], {
+            adjustment = Decimal(str(current_bill.get('adjustment') or 0)) + difference
+            current_bill = unwrap_record(books.bills.update(str(current_bill['bill_id']), {
                 'adjustment': float(adjustment),
                 'adjustment_description': 'Rounding adjustment to match paired invoice',
                 'is_draft': True,
-            })['bill']
-        if Decimal(str(invoice['total'])) != Decimal(str(bill['total'])):
+            }), 'bill')
+        if Decimal(str(invoice['total'])) != Decimal(str(current_bill['total'])):
             raise ValueError('Bill rounding adjustment did not match the invoice total')
-        return bill
+        return current_bill
 
     validate_stock(lines, details, args.source, args.destination)
-    completed = list(state.get('completed') or [])
-    if resume_state:
+    completed_raw = state.get('completed')
+    completed: list[dict[str, object]] = [dict(row) for row in completed_raw] if isinstance(completed_raw, list) else []
+    if resume_state is not None:
         if state.get('stage') not in {'bill_created', 'bill_aligned'} or not resumed_document:
             raise RuntimeError('Automatic resume requires a journal stopped after creating a bill')
         document_lines, payloads = documents[resumed_document - 1], payload_sets[resumed_document - 1]
-        invoice = books.invoices.get(state['invoice']['invoice_id'])['invoice']
-        bill = books.bills.get(state['bill']['bill_id'])['bill']
+        inv_state = require_record(state.get('invoice'), 'state invoice')
+        bill_state = require_record(state.get('bill'), 'state bill')
+        invoice = unwrap_record(books.invoices.get(str(inv_state['invoice_id'])), 'invoice')
+        bill = unwrap_record(books.bills.get(str(bill_state['bill_id'])), 'bill')
         verify_document(invoice, 'invoice', payloads['invoice'], document_lines)
         verify_document(bill, 'bill', payloads['bill'], document_lines)
         if invoice['status'] != 'draft' or bill['status'] != 'draft':
@@ -179,14 +202,17 @@ def main():
         if index <= resumed_document:
             continue
         checkpoint('creating_invoice', document=index, completed=completed)
-        invoice = books.invoices.create(payloads['invoice'], params={'ignore_auto_number_generation': 'true'} if numbers else None)['invoice']
+        invoice = unwrap_record(
+            books.invoices.create(payloads['invoice'], params={'ignore_auto_number_generation': 'true'} if numbers else None),
+            'invoice',
+        )
         checkpoint('invoice_created', document=index, completed=completed, invoice=invoice)
         verify_document(invoice, 'invoice', payloads['invoice'], document_lines)
         if invoice['status'] != 'draft' or Decimal(str(invoice['total'])) > args.maximum_invoice_total:
             raise ValueError('Expected a draft invoice within the maximum threshold')
-        payloads['bill']['bill_number'] = invoice['invoice_number']
+        payloads['bill']['bill_number'] = str(invoice['invoice_number'])
         checkpoint('creating_bill', document=index, completed=completed, invoice=invoice)
-        bill = books.bills.create(payloads['bill'])['bill']
+        bill = unwrap_record(books.bills.create(payloads['bill']), 'bill')
         checkpoint('bill_created', document=index, completed=completed, invoice=invoice, bill=bill)
         verify_document(bill, 'bill', payloads['bill'], document_lines)
         if bill['status'] != 'draft':
@@ -199,12 +225,16 @@ def main():
     validate_stock(lines, fetch_details([line.item_id for line in lines]), args.source, args.destination)
     for entry in completed:
         checkpoint('posting', completed=completed, current=entry)
-        books.invoices.mark_as_sent(entry['invoice_id'])
-        books.bills.mark_as_open(entry['bill_id'])
-    after = inventory.items.get_details([line.item_id for line in lines])
+        books.invoices.mark_as_sent(str(entry['invoice_id']))
+        books.bills.mark_as_open(str(entry['bill_id']))
+    after = require_records(inventory.items.get_details([line.item_id for line in lines]), "after stock details")
     (output / 'stock_after.json').write_text(json.dumps(after, indent=2))
-    negative = [i['item_id'] for i in after for loc in i['locations']
-                if loc['location_id'] == args.source and float(loc['location_stock_on_hand']) < 0]
+    negative: list[object] = [
+        item['item_id']
+        for item in after
+        for loc in require_records(item.get('locations'), 'locations')
+        if loc.get('location_id') == args.source and float(str(loc.get('location_stock_on_hand', 0))) < 0
+    ]
     checkpoint('complete' if not negative else 'stock_verification_failed', completed=completed, negative_source_items=negative)
     if negative:
         raise ValueError('Source stock verification failed; inspect the execution journal')

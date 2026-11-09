@@ -1,19 +1,22 @@
 """Apply reviewed inter-location customer payment moves after a full Books preflight."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
+from collections.abc import Mapping, Sequence
 from utils.file_utils import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.inter_location.apply_updates import apply_verified_move, verify_proposed_pair
 from workflows.runtime.auth import get_books_client
+from workflows.runtime.config import Config
 
 
 def main() -> int:
@@ -22,10 +25,15 @@ def main() -> int:
     parser.add_argument("--audit", type=Path, default=Path("output/inter_location_location_apply_audit.json"))
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
-    report = json.loads(args.proposal.read_text(encoding="utf-8"))
-    if report.get("view_id") != "264324000008274019" or report.get("workspace_id") != "264324000000002043":
+    raw_report = json.loads(args.proposal.read_text(encoding="utf-8"))
+    report = raw_report if isinstance(raw_report, Mapping) else {}
+    if (
+        report.get("view_id") != Config.INTER_LOCATION_CONTRA_VIEW_ID
+        or report.get("workspace_id") != Config.ANALYTICS_WORKSPACE_ID
+    ):
         raise ValueError("Proposal is not from the reviewed Query Table")
-    proposals = [item for item in report["proposals"] if item["status"] == "proposed"]
+    raw_proposals = report.get("proposals")
+    proposals = [item for item in raw_proposals if isinstance(item, Mapping) and item.get("status") == "proposed"] if isinstance(raw_proposals, Sequence) else []
     if len(proposals) != 15 or report.get("manual_review_pairs") != 3:
         raise ValueError("Proposal counts differ from the reviewed 15 moves and 3 holds")
     books = get_books_client()
@@ -37,12 +45,12 @@ def main() -> int:
             verified.append(item)
             print(f"Preflight {index}/{len(proposals)}: {item['payment_id']} -> {item['to_location_id']}", flush=True)
         except Exception as exc:
-            preflight_errors.append({"payment_id": proposal["customer_payment_id"], "error": str(exc)})
-            print(f"Preflight {index}/{len(proposals)} failed: {proposal['customer_payment_id']}: {exc}", flush=True)
+            preflight_errors.append({"payment_id": proposal.get("customer_payment_id"), "error": str(exc)})
+            print(f"Preflight {index}/{len(proposals)} failed: {proposal.get('customer_payment_id')}: {exc}", flush=True)
     if not args.apply:
         print(f"Dry run complete: {len(verified)} verified, {len(preflight_errors)} held. No Books locations changed.")
         return 0
-    audit = {"started_at": datetime.now(timezone.utc).isoformat(), "source_view_id": report["view_id"],
+    audit = {"started_at": datetime.now(timezone.utc).isoformat(), "source_view_id": report.get("view_id"),
              "preflight_count": len(verified), "preflight_errors": preflight_errors, "results": []}
     args.audit.parent.mkdir(parents=True, exist_ok=True)
     if preflight_errors:

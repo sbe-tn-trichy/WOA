@@ -2,16 +2,17 @@
 """Backfill Creator identifiers onto existing Books customer payments."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
 from pathlib import Path
 from collections.abc import Sequence
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client, get_creator_client
 from workflows.creator_payments.books_link import BackfillConfig, BackfillResult, CreatorBooksPaymentLinkBackfill, build_native_payment_indexes, classify_links, find_creator_sequence_gaps, resolve_books_payment

@@ -7,5 +7,15 @@ InvoiceId = NewType("InvoiceId", str)
 CustomerId = NewType("CustomerId", str)
 AccountId = NewType("AccountId", str)
 LocationId = NewType("LocationId", str)
+PurchaseAccountId = NewType("PurchaseAccountId", str)
+OrganizationId = NewType("OrganizationId", str)
 
-__all__ = ["PaymentId", "InvoiceId", "CustomerId", "AccountId", "LocationId"]
+__all__ = [
+    "PaymentId",
+    "InvoiceId",
+    "CustomerId",
+    "AccountId",
+    "LocationId",
+    "PurchaseAccountId",
+    "OrganizationId",
+]

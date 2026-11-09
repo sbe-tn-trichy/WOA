@@ -2,16 +2,16 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
 
 from ..core.matching import get_abs_amount, get_bank_reference, parse_date, ref_match
 from ..core.models import DotDict
+from ._matcher import BooksBankVendorClient
 from ._matcher import match_bank_with_vendor_ledger as _match_bank_with_vendor_ledger
 from ._matcher import match_ledger_entries as _match_ledger_entries
 
 
 def match_ledger_entries(
-    books_client: Any,
+    books_client: BooksBankVendorClient,
     bank_account_id: str,
     vendor_id: str,
     start_date: date | None = None,
@@ -32,7 +32,7 @@ def match_ledger_entries(
 
 
 def match_bank_with_vendor_ledger(
-    books_client: Any,
+    books_client: BooksBankVendorClient,
     bank_account_id: str,
     vendor_ledger_path: str,
     vendor_id: str | None = None,

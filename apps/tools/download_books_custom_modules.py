@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Download Books Sales Persons and Beat custom modules; never writes to Books."""
 from __future__ import annotations
+import importlib
 import argparse
 from utils.file_utils import json
 from pathlib import Path
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 from workflows.runtime.auth import get_books_client
 from workflows.books_statements.custom_module_store import download_books_custom_modules
 

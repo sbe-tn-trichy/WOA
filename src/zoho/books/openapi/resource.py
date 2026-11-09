@@ -1,10 +1,11 @@
 """Wire encoding and argument guards for generated Books operations."""
 from __future__ import annotations
 
-from utils.file_utils import json
+from collections.abc import Mapping
 from typing import Any
 from urllib.parse import quote
 
+from utils.file_utils import json
 from ..base import BaseResource
 
 
@@ -41,9 +42,9 @@ class BooksOperationResource(BaseResource):
             raise ValueError(f'{path}: a request body is required')
         multipart = bool(files) or 'multipart/form-data' in media
         # Books represents structured payloads alongside files as JSONString.
-        data = None
+        data: Mapping[str, object] | str | bytes | None = None
         if multipart and body is not None:
-            data = body if 'multipart/form-data' in media else {'JSONString': json.dumps(body)}
+            data = body if isinstance(body, Mapping) and 'multipart/form-data' in media else {'JSONString': json.dumps(body)}
         return self.client.request(
             method, path.lstrip('/'), json=None if multipart else body,
             data=data, params=query, headers=headers, files=files,

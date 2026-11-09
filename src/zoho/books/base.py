@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 
+from typing import ClassVar
+
 from zoho.core_sdk.base_resource import BaseResource as _BaseResource
 from .exceptions import ZohoBooksError
 
@@ -8,5 +10,8 @@ from .exceptions import ZohoBooksError
 class BaseResource(_BaseResource):
     """Base class for Zoho Books modules providing standard CRUD operations."""
 
-    error_class: type[ZohoBooksError] = ZohoBooksError
-    logger_name: str = "zoho.books.api"
+    logger_name: ClassVar[str] = "zoho.books.api"
+
+    @property
+    def error_class(self) -> type[ZohoBooksError]:
+        return ZohoBooksError

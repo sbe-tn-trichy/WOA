@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from utils.file_utils import json
 from pathlib import Path
 import sqlite3
+from collections.abc import Mapping
 from typing import Any, TypedDict
 
 from ..analytics_catalog import AnalyticsCatalog
@@ -164,13 +165,16 @@ def _merge_persons(table: str, rid: str, base: Any, local: Any, incoming: Any,
 
 
 def _initial_baseline(table: str, row: dict[str, Any], customers: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    original = json.loads(row['_source_json'] if table == 'Customer Addresses'
+    raw_orig = json.loads(row['_source_json'] if table == 'Customer Addresses'
                           else customers[row['Customer ID']]['_source_json'])
+    original: dict[str, Any] = dict(raw_orig) if isinstance(raw_orig, Mapping) else {}
     fields = {key: original[key] for key in _business(row) if key in original}
     baseline = _normalize_record(fields, table, row[_primary(table)], [], [])
     if table == 'Customers':
+        raw_persons = json.loads(row['_source_contact_persons_json'])
+        persons_list: list[dict[str, Any]] = [dict(p) for p in raw_persons if isinstance(p, Mapping)] if isinstance(raw_persons, list) else []
         baseline['Contact Persons'] = [_normalize_record(p, table, row['Customer ID'], [], [])
-                                      for p in json.loads(row['_source_contact_persons_json'])]
+                                       for p in persons_list]
     return baseline
 
 
@@ -186,7 +190,10 @@ def _validate_target(
         report_path = destination.with_suffix('.report.json')
         if not report_path.is_file():
             raise ValueError('Initial snapshot report is required to verify database ownership')
-        report = json.loads(report_path.read_text(encoding='utf-8'))
+        raw_report = json.loads(report_path.read_text(encoding='utf-8'))
+        if not isinstance(raw_report, dict):
+            raise ValueError('Initial snapshot report must be a JSON object')
+        report: dict[str, Any] = raw_report
         manifest, _ = _load_sources(Path(report['source']), organization_id)
         if manifest.get('workspace_id') != workspace_id or report.get('organization_id') != organization_id:
             raise ValueError('Database belongs to another organization or Analytics workspace')
@@ -194,7 +201,13 @@ def _validate_target(
     else:
         if None in infos or len(infos) != 1:
             raise ValueError('Sync metadata was changed or customer rows were inserted directly')
-        info = json.loads(next(iter(infos)))
+        first_info = next(iter(infos))
+        if first_info is None:
+            raise ValueError('Sync metadata was changed or customer rows were inserted directly')
+        raw_info = json.loads(first_info)
+        if not isinstance(raw_info, dict):
+            raise ValueError('Database belongs to another organization or Analytics workspace')
+        info: dict[str, Any] = raw_info
         if info['organization_id'] != organization_id or info['workspace_id'] != workspace_id:
             raise ValueError('Database belongs to another organization or Analytics workspace')
         counts = info['counts']
@@ -203,7 +216,8 @@ def _validate_target(
     for table, records in rows.items():
         for rid, row in records.items():
             if row.get('_baseline_json'):
-                baseline = json.loads(row['_baseline_json'])
+                raw_base = json.loads(row['_baseline_json'])
+                baseline = dict(raw_base) if isinstance(raw_base, Mapping) else {}
             else:
                 baseline = _initial_baseline(table, row, rows['Customers'])
             for key in {_primary(table), 'Customer ID'}:
@@ -225,9 +239,16 @@ def _store_row(db: sqlite3.Connection, table: str, row: dict[str, Any], *, exist
 def _verify_person_ownership(old: dict[str, dict[str, dict[str, Any]]], incoming: dict[str, dict[str, dict[str, Any]]]) -> None:
     owners = {}
     for cid, row in old['Customers'].items():
-        base = (json.loads(row['_baseline_json']) if row.get('_baseline_json')
-                else _initial_baseline('Customers', row, old['Customers']))
-        for person in base['Contact Persons']:
+        if row.get('_baseline_json'):
+            raw_base = json.loads(row['_baseline_json'])
+            base: dict[str, Any] = dict(raw_base) if isinstance(raw_base, Mapping) else {}
+        else:
+            base = _initial_baseline('Customers', row, old['Customers'])
+        contact_persons = base.get('Contact Persons', [])
+        persons = contact_persons if isinstance(contact_persons, list) else []
+        for person in persons:
+            if not isinstance(person, Mapping):
+                continue
             pid = person['Contact Person ID']
             if pid in owners:
                 raise ValueError(f'Duplicate tracked contact-person identity: {pid}')
@@ -311,8 +332,11 @@ def sync_analytics_customers(
                 if rid in old[table]:
                     current = old[table][rid]
                     ours = _business(current)
-                    base = (json.loads(current['_baseline_json']) if current.get('_baseline_json')
-                            else _initial_baseline(table, current, old['Customers']))
+                    if current.get('_baseline_json'):
+                        raw_base = json.loads(current['_baseline_json'])
+                        base: dict[str, Any] = dict(raw_base) if isinstance(raw_base, Mapping) else {}
+                    else:
+                        base = _initial_baseline(table, current, old['Customers'])
                     if set(base) - set(theirs):
                         raise ValueError(f'{table}: Analytics removed columns; review schema before syncing')
                     if current['Customer ID'] != incoming_row['Customer ID']:
@@ -332,8 +356,11 @@ def sync_analytics_customers(
                 if rid in incoming[table]:
                     continue
                 missing[table] += 1
-                base = (json.loads(current['_baseline_json']) if current.get('_baseline_json')
-                        else _initial_baseline(table, current, old['Customers']))
+                if current.get('_baseline_json'):
+                    raw_base = json.loads(current['_baseline_json'])
+                    base = dict(raw_base) if isinstance(raw_base, Mapping) else {}
+                else:
+                    base = _initial_baseline(table, current, old['Customers'])
                 ours = _business(current)
                 issue = _conflict(table, rid, '', 'Record missing from Analytics; retained locally', base, ours, _MISSING)
                 _store_row(db, table, {**current, '_baseline_json': base, '_present_in_analytics': 0,

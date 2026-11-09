@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Preview or post existing stock-transfer pairs from a reviewed execution journal."""
 from __future__ import annotations
+import importlib
 
 import argparse
 from dataclasses import asdict
@@ -9,10 +10,10 @@ from utils.file_utils import json
 from pathlib import Path
 import sys
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client, get_inventory_client
 from workflows.stock_transfer import TransferRecoveryPolicy, recover_stock_transfer

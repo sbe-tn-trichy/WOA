@@ -13,7 +13,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--month", help="Return month YYYY-MM; defaults to previous month")
     parser.add_argument("--force-refresh", action="store_true", help="Fetch live Zoho Books data")
-    parser.add_argument("--analytics-workspace-id", default="264324000000002043")
+    parser.add_argument("--analytics-workspace-id", default=Config.ANALYTICS_WORKSPACE_ID)
     parser.add_argument("--no-e-invoice", action="store_true")
     parser.add_argument("--output", type=Path, default=Path("output/gstr1_verification.md"),
                         help="Markdown report path")
@@ -28,7 +28,8 @@ def main() -> int:
                                       financial_credit_note_ids=tuple(Config.GSTR1_FINANCIAL_CREDIT_NOTES)),
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(render_markdown_report(report, gstin_aliases=Config.GSTIN_ALIASES), encoding="utf-8")
+    gstin_aliases = {str(k): str(v) for k, v in Config.GSTIN_ALIASES.items()}
+    args.output.write_text(render_markdown_report(report, gstin_aliases=gstin_aliases), encoding="utf-8")
     if args.json_output:
         args.json_output.parent.mkdir(parents=True, exist_ok=True)
         args.json_output.write_text(json.dumps(report, indent=2), encoding="utf-8")

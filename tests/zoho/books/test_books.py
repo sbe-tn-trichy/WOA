@@ -511,9 +511,9 @@ items:
 
         # Mock the items lookup to return matched item ID
         inventory = MagicMock()
-        inventory.items.list.return_value = {"items": [
+        inventory.items.list_all.return_value = [
             {"sku": "FAN-POLYCAB", "item_id": "poly123", "name": "Fan", "rate": 1200}
-        ]}
+        ]
 
         res = create_sales_order_from_yaml(client, yaml_content, customer_id="cust123", inventory_client=inventory)
         self.assertEqual(res, {"status": "ok"})

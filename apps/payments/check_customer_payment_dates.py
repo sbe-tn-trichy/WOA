@@ -2,6 +2,7 @@
 """Check customer payments for mismatches between payment date and applied dates using Zoho Analytics."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
@@ -10,10 +11,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from collections.abc import Sequence
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:  # Direct script execution.
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_analytics_client
 from workflows.runtime.config import Config
@@ -30,8 +31,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--from-date", help="Include payments on or after YYYY-MM-DD")
     parser.add_argument("--to-date", help="Include payments on or before YYYY-MM-DD")
     parser.add_argument("--tolerance-days", type=int, default=0, help="Allowed difference in days (default: 0)")
-    parser.add_argument("--workspace-id", default="264324000000002043", help="Zoho Analytics workspace ID")
-    parser.add_argument("--view-id", default="264324000008269008", help="Query Table view ID in Zoho Analytics")
+    parser.add_argument("--workspace-id", default=Config.ANALYTICS_WORKSPACE_ID, help="Zoho Analytics workspace ID")
+    parser.add_argument("--view-id", default=Config.ANALYTICS_DATE_MISMATCH_VIEW_ID, help="Query Table view ID in Zoho Analytics")
     parser.add_argument("--org-id", default=Config.ANALYTICS_ORG_ID, help="Zoho Analytics organization ID")
     parser.add_argument("--domain", default=Config.DOMAIN, help="Zoho data-center domain")
     parser.add_argument(

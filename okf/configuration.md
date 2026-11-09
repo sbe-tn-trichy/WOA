@@ -86,6 +86,16 @@ Supported configuration keys:
 
 - `TOKEN_URL`: HTTP URL for retrieving runtime OAuth access tokens.
 - `ORG_ID`: Zoho Books organization ID.
+- `ANALYTICS_ORG_ID`: Zoho Analytics organization ID.
+- `ANALYTICS_WORKSPACE_ID`: Zoho Analytics workspace ID; also falls back to the
+  legacy `ZOHO_ANALYTICS_WORKSPACE_ID` environment variable when unset.
+- `ANALYTICS_DATE_MISMATCH_VIEW_ID`, `ANALYTICS_BANK_STATEMENT_VIEW_ID`,
+  `ANALYTICS_CUSTOMER_FINDER_VIEW_ID`, `ANALYTICS_DETAILED_GL_VIEW_ID`,
+  `ANALYTICS_UNDEPOSITED_CANDIDATES_VIEW_ID`, `ANALYTICS_UNDEPOSITED_REPORT_VIEW_ID`,
+  `INTER_LOCATION_CONTRA_VIEW_ID`, and `INTER_LOCATION_DIFF_VIEW_ID`: Zoho
+  Analytics view and query-table identifiers for customer payment date checks,
+  HDFC statement comparisons, payment customer finder, general ledger and
+  undeposited funds reports, and inter-location contra workflows.
 - `DOMAIN`: Zoho API data-center domain; defaults to `in`.
 - `CREATOR_OWNER_NAME`: Zoho Creator account owner used by shared client factories.
   The former `CREATOR_ACCOUNT_OWNER_NAME` environment variable remains a
@@ -105,6 +115,10 @@ Supported configuration keys:
   value is a list of Books location IDs owned by that registration. GSTR-2 verification uses this snapshot to
   select the Books documents owned by the recipient registration and fails
   closed when the map is empty, invalid, or missing a document location.
+- `GSTR2_DEFAULT_JSON_PATH`: Optional default GSTR-2 / GSTR-2B JSON path used
+  when no positional file or `--json-path` argument is passed to `apps/verify_gstr2.py`.
+- `GST_CASH_LEDGER_ACCOUNT_IDS`: List or comma-separated set of Books cash-ledger
+  tax account IDs validated by `apps/gst/check_monthly_gst_analytics.py`.
 - `GSTIN_ALIASES`: Object mapping registration GSTINs to short firm labels,
   exposed as `Config.GSTIN_ALIASES`. Configure deployment-specific labels in
   the active profile's `gstin_aliases` object, or provide a JSON object in the
@@ -127,6 +141,8 @@ Supported configuration keys:
   clearing-account IDs for the [Polycab credit review](polycab-credit-review.md).
   The CLI also accepts explicit overrides and validates these before API access.
 - `NEOSEAL_PURCHASE_ACCOUNT_ID`: Purchase-account ID used to scope NeoSeal item-catalog workflows.
+- `NEOSEAL_DUPLICATE_MAP`: Optional mapping of zero-stock duplicate NeoSeal SKUs
+  to their master SKU, master item ID, and audit reason.
 - `NEOSEAL_PRICE_LIST_GOOGLE_SHEET_ID`: Google Sheet ID for the NeoSeal price list.
 - `GOOGLE_SHEETS_ACCESS_TOKEN`: OAuth 2.0 access token for Google Sheets API operations.
 - `GOOGLE_APPLICATION_CREDENTIALS`: Path to Google service account credentials JSON file.
@@ -144,6 +160,19 @@ Supported configuration keys:
 - `RSO_CUSTOMER_ID`: Default Books customer for imported Polycab RSO sales orders.
 - `EXPECTED_LOCATION_ID`: Default Zoho Books location / branch ID.
 - `EXPECTED_LOCATION_NAME`: Expected location display name.
+- `EXCLUDED_LOCATION_ID`: Books branch/location ID excluded from filtered P&L,
+  AIS, and inter-branch ledger comparisons.
+- `SALES_ACCOUNT_ID`: Root Books Sales account ID for GSTR-3B vs P&L and AIS
+  comparisons.
+- `UNEARNED_REVENUE_ACCOUNT_ID`: Liability account ID for unused customer
+  payment and unearned revenue checks.
+- `INTER_BRANCH_ACCOUNT_ID`: Books inter-branch general ledger account ID.
+- `INTER_LOCATION_CLEARING_ACCOUNT_ID`, `LOCATION_PAYMENT_PREFIXES`,
+  `INTER_LOCATION_EXCLUDED_PAYMENT_IDS`,
+  `INTER_LOCATION_HANDLED_SPLIT_PAYMENT_IDS`, and
+  `SELECTED_VENDOR_PAYMENT_MOVES`: Clearing account, location-to-series prefix
+  map, and reviewed payment exclusions/selections for inter-location contra and
+  payment-move workflows.
 - `BANK_ACCOUNT_IDFC`, `BANK_ACCOUNT_HDFC`, `BANK_ACCOUNT_HDFC_AGENCIES`, and
   `BANK_ACCOUNT_ICICI`: Books bank-account identifiers.
 - `GSTIN_TO_VENDOR_ID`: JSON object mapping GSTIN values to vendor IDs.
@@ -205,14 +234,20 @@ Polycab supplier-credit creation uses `POLYCAB_SCHEME_ACCOUNT_ID`,
 
 ## Explicit deployment identifiers (HELPER-002)
 
-Analytics organization, payment travel/salary/cash accounts, and the NeoSeal
-stock-count workbook no longer inherit built-in tenant IDs. Set
-`ANALYTICS_ORG_ID`, `PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID`,
-`PAYMENT_SALARY_EXPENSE_ACCOUNT_ID`, `PAYMENT_CASH_ACCOUNT_ID`, and
-`NEOSEAL_STOCK_COUNT_SHEET_ID` in the existing environment or deployment profile.
-Existing explicit values keep their precedence; omitted values now remain empty.
-Analytics client construction rejects a missing organization before token access.
-Stock-count commands require a workbook before writing; salary/cash operations
-require account IDs. Travel expenses retain their existing scoped account-name
-lookup and uniqueness checks when no ID is supplied. These are operation-specific
-guards; unrelated SDK operations do not require all deployment settings.
+Analytics organization, workspace and view IDs, payment travel/salary/cash
+accounts, the NeoSeal stock-count workbook, and Books sales, unearned-revenue,
+inter-branch, clearing, and excluded-location identifiers no longer inherit
+built-in tenant IDs in Python code. Set `ANALYTICS_ORG_ID`,
+`ANALYTICS_WORKSPACE_ID`, view IDs (`ANALYTICS_DATE_MISMATCH_VIEW_ID`,
+`ANALYTICS_BANK_STATEMENT_VIEW_ID`, `ANALYTICS_CUSTOMER_FINDER_VIEW_ID`,
+`INTER_LOCATION_CONTRA_VIEW_ID`, `INTER_LOCATION_DIFF_VIEW_ID`),
+`PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID`, `PAYMENT_SALARY_EXPENSE_ACCOUNT_ID`,
+`PAYMENT_CASH_ACCOUNT_ID`, `NEOSEAL_STOCK_COUNT_SHEET_ID`, `SALES_ACCOUNT_ID`,
+`UNEARNED_REVENUE_ACCOUNT_ID`, `INTER_BRANCH_ACCOUNT_ID`,
+`INTER_LOCATION_CLEARING_ACCOUNT_ID`, `POLYCAB_RMA_ITEM_ID`, and
+`EXCLUDED_LOCATION_ID` in the environment or active `config/config.yaml` profile.
+Existing explicit values keep their precedence; omitted values remain empty in
+`Config`. Helper functions in `src/helpers/` (`get_bins_for_items`,
+`get_bins_by_item_map`, `fetch_inter_branch_general_ledger`, and
+`fetch_inter_branch_register_transactions`) default deployment IDs to `""` and
+validate non-empty inputs before API calls without importing `workflows`.

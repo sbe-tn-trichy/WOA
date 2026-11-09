@@ -21,7 +21,8 @@ from urllib.parse import urlparse
 if __package__:
     from . import _bootstrap
 else:
-    import _bootstrap
+    import importlib
+    importlib.import_module("_bootstrap")
 
 from utils.file_utils import json
 from workflows.runtime.config import Config
@@ -436,7 +437,8 @@ HTML = _TEMPLATE_PATH.read_text(encoding="utf-8")
 def make_handler(runner: WorkflowRunner, launcher_token: str):
     class Handler(BaseHTTPRequestHandler):
         def _valid_host(self) -> bool:
-            port = self.server.server_address[1]
+            addr = self.server.server_address
+            port = addr[1] if isinstance(addr, tuple) and len(addr) > 1 else 0
             values = self.headers.get_all("Host", [])
             return len(values) == 1 and values[0] in {
                 f"localhost:{port}", f"127.0.0.1:{port}", f"[::1]:{port}",
@@ -485,13 +487,16 @@ def make_handler(runner: WorkflowRunner, launcher_token: str):
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0") or "0")
-                body = json.loads(self.rfile.read(length) or b"{}")
+                raw_body = json.loads(self.rfile.read(length) or b"{}")
+                body = raw_body if isinstance(raw_body, dict) else {}
                 if body.get("confirm") is not True:
                     raise ValueError("Explicit confirmation is required.")
                 parts = urlparse(self.path).path.strip("/").split("/")
                 if len(parts) != 4 or parts[:2] != ["api", "workflows"] or parts[3] != "run":
                     raise ValueError("Unknown action.")
-                self._json(runner.start(int(parts[2]), body.get("source_file")))
+                source_file = body.get("source_file")
+                source_dict = source_file if isinstance(source_file, dict) else None
+                self._json(runner.start(int(parts[2]), source_dict))
             except (ValueError, json.JSONDecodeError) as exc:
                 self._json({"error": str(exc)}, 400)
 

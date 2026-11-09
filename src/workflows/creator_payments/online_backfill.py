@@ -2,23 +2,28 @@
 
 from __future__ import annotations
 
-from utils.file_utils import json
+from datetime import date
 from pathlib import Path
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING
 
+from utils.file_utils import json
 from workflows.core.payments import PaymentEvidence, payment_evidence_matches
 from workflows.core.checkpoint import write_atomic_json
 from workflows.core.matching import normalize_payment_reference, parse_date, to_decimal, to_text
 
+if TYPE_CHECKING:
+    from zoho.books import ZohoBooksAPI
+    from zoho.creator import ZohoCreatorAPI
 
-def _normalized(value: Any) -> str:
+
+def _normalized(value: object) -> str:
     return normalize_payment_reference(value)
 
 
 def find_books_payment(
-    values: Mapping[str, Any], payments: Sequence[Mapping[str, Any]]
-) -> tuple[Mapping[str, Any] | None, str]:
+    values: Mapping[str, object], payments: Sequence[Mapping[str, object]]
+) -> tuple[Mapping[str, object] | None, str]:
     """Resolve a Books payment for an online Creator payment record."""
     existing_id = to_text(values.get("books_payment_id"))
     existing_number = _normalized(values.get("books_payment_number"))
@@ -39,12 +44,13 @@ def find_books_payment(
         return None, "identifier_conflict"
 
     expected_date = values.get("date")
+    target_date = expected_date if isinstance(expected_date, date) else parse_date(expected_date)
     expected_amount = to_decimal(values.get("amount"))
     expected_reference = _normalized(values.get("reference"))
     expected_customer = to_text(values.get("customer_id"))
-    if not expected_date or expected_amount is None or not expected_reference or not expected_customer:
+    if target_date is None or expected_amount is None or not expected_reference or not expected_customer:
         return None, "creator_data_incomplete"
-    evidence = PaymentEvidence(expected_date, expected_amount, expected_reference, expected_customer)
+    evidence = PaymentEvidence(target_date, expected_amount, expected_reference, expected_customer)
     candidates = [payment for payment in payments if payment_evidence_matches(
         payment, evidence, customer_key="customer_id")]
     unique = {
@@ -59,7 +65,7 @@ def find_books_payment(
     return None, "payment_missing"
 
 
-def _creator_values(record: Mapping[str, Any]) -> dict[str, Any]:
+def _creator_values(record: Mapping[str, object]) -> dict[str, object]:
     customer = record.get("Customer_Name")
     customer = customer if isinstance(customer, Mapping) else {}
     return {
@@ -72,10 +78,10 @@ def _creator_values(record: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _require_creator_update_success(response: Any) -> None:
+def _require_creator_update_success(response: object) -> None:
     if not isinstance(response, Mapping):
         raise RuntimeError("Creator returned an invalid update response.")
-    payloads = [response]
+    payloads: list[Mapping[str, object]] = [response]
     data = response.get("data")
     if isinstance(data, Mapping):
         payloads.append(data)
@@ -88,7 +94,7 @@ def _require_creator_update_success(response: Any) -> None:
 
 
 def _verify_creator_fields(
-    creator: Any,
+    creator: ZohoCreatorAPI,
     creator_app: str,
     record_id: str,
     expected: Mapping[str, str],
@@ -112,13 +118,13 @@ def _verify_creator_fields(
         raise RuntimeError("Creator checkpoint verification failed.")
 
 
-def _write_result(path: Path, result: Mapping[str, Any]) -> None:
+def _write_result(path: Path, result: Mapping[str, object]) -> None:
     write_atomic_json(path, result, indent=2, max_retries=1)
 
 
 def run_backfill(
-    creator: Any,
-    books: Any,
+    creator: ZohoCreatorAPI,
+    books: ZohoBooksAPI,
     *,
     creator_app: str,
     execute: bool = False,
@@ -126,7 +132,7 @@ def run_backfill(
     creator_record_id: str | None = None,
     checkpoint_path: Path | None = None,
     resume_from: Path | None = None,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     if execute and not creator_record_id and not allow_batch:
         raise ValueError("Batch execution requires --allow-batch.")
     records = creator.get_all_records(creator_app, "Online_Payments")
@@ -135,16 +141,19 @@ def run_backfill(
             record for record in records
             if to_text(record.get("ID")) == creator_record_id
         ]
-    resumed: dict[str, Mapping[str, Any]] = {}
+    resumed: dict[str, Mapping[str, object]] = {}
     if resume_from and resume_from.exists():
         payload = json.loads(resume_from.read_text(encoding="utf-8"))
-        resumed = {
-            to_text(row.get("record_id")): row
-            for row in payload.get("rows", [])
-            if isinstance(row, Mapping) and to_text(row.get("record_id"))
-        }
+        if isinstance(payload, Mapping):
+            raw_rows = payload.get("rows")
+            if isinstance(raw_rows, list):
+                resumed = {
+                    to_text(row.get("record_id")): row
+                    for row in raw_rows
+                    if isinstance(row, Mapping) and to_text(row.get("record_id"))
+                }
     payments = books.customer_payments.list_all()
-    rows = []
+    rows: list[dict[str, object]] = []
     for record in records:
         record_id = to_text(record.get("ID"))
         if record_id in resumed and resumed[record_id].get("status") == "updated":
@@ -155,7 +164,7 @@ def run_backfill(
                 )
             continue
         payment, source = find_books_payment(_creator_values(record), payments)
-        row = {"record_id": record_id, "status": source}
+        row: dict[str, object] = {"record_id": record_id, "status": source}
         if payment is not None:
             expected = {
                 "Books_Transaction_Id": to_text(payment.get("payment_id")),
@@ -172,7 +181,7 @@ def run_backfill(
                     )
                     _require_creator_update_success(response)
                     _verify_creator_fields(
-                        creator, creator_app, row["record_id"], expected
+                        creator, creator_app, str(row["record_id"]), expected
                     )
                     row["status"] = "updated"
                 except Exception as exc:
@@ -182,13 +191,13 @@ def run_backfill(
                 row["status"] = "planned"
         rows.append(row)
         if checkpoint_path:
-            partial = {"summary": _summary(rows), "rows": rows}
+            partial: dict[str, object] = {"summary": _summary(rows), "rows": rows}
             _write_result(checkpoint_path, partial)
     summary = _summary(rows)
     return {"summary": summary, "rows": rows}
 
 
-def _summary(rows: Sequence[Mapping[str, Any]]) -> dict[str, int]:
+def _summary(rows: Sequence[Mapping[str, object]]) -> dict[str, int]:
     summary: dict[str, int] = {"scanned": len(rows)}
     for row in rows:
         status = to_text(row.get("status")) or "unknown"

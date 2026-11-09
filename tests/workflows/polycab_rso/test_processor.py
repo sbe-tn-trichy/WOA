@@ -68,9 +68,9 @@ def test_import_creates_sales_order_in_location_and_attaches_pdf(mock_parse):
     books = MagicMock()
     inventory = MagicMock()
     books.sales_orders.list_all.return_value = []
-    inventory.items.list.side_effect = [
-        {"items": [{"item_id": "item1", "sku": "SKU1"}]},
-        {"items": [{"item_id": "item2", "sku": "SKU2"}]},
+    inventory.items.list_all.side_effect = [
+        [{"item_id": "item1", "sku": "SKU1"}],
+        [{"item_id": "item2", "sku": "SKU2"}],
     ]
     books.sales_orders.create.return_value = {
         "salesorder": {"salesorder_id": "so1", "salesorder_number": "262707003493"}
@@ -118,7 +118,7 @@ def test_import_existing_order_only_adds_missing_attachment(mock_parse):
     assert result["created"] is False
     assert result["attachment_uploaded"] is True
     books.sales_orders.create.assert_not_called()
-    inventory.items.list.assert_not_called()
+    inventory.items.list_all.assert_not_called()
     books.sales_orders.add_attachment.assert_called_once_with(
         "so-existing", "RSO_262707003493.pdf"
     )
@@ -135,7 +135,7 @@ def test_import_refuses_to_create_when_sku_is_missing(mock_parse):
     books = MagicMock()
     inventory = MagicMock()
     books.sales_orders.list_all.return_value = []
-    inventory.items.list.return_value = {"items": []}
+    inventory.items.list_all.return_value = []
 
     with pytest.raises(ValueError, match="MISSING"):
         import_polycab_rso_pdf(books, "RSO_262707003493.pdf", inventory_client=inventory, purchase_account_id="account-1")
@@ -165,17 +165,15 @@ def test_import_resolves_compact_polycab_code_to_inventory_sku(mock_parse):
     books = MagicMock()
     inventory = MagicMock()
     books.sales_orders.list_all.return_value = []
-    inventory.items.list.side_effect = [
-        {"items": []},
-        {
-            "items": [
+    inventory.items.list_all.side_effect = [
+        [],
+        [
                 {
                     "item_id": "item1",
                     "sku": "FPENSS-T008P",
                     "status": "active",
                 }
-            ]
-        },
+            ],
     ]
     books.sales_orders.create.return_value = {
         "salesorder": {"salesorder_id": "so1"}
@@ -183,9 +181,9 @@ def test_import_resolves_compact_polycab_code_to_inventory_sku(mock_parse):
 
     import_polycab_rso_pdf(books, "RSO_262707003493.pdf", inventory_client=inventory, purchase_account_id="account-1")
 
-    assert inventory.items.list.call_args_list == [
-        call(params={"sku": "FPENSST008P", "purchase_account_id": "account-1"}),
-        call(params={"sku": "FPENSS-T008P", "purchase_account_id": "account-1"}),
+    assert inventory.items.list_all.call_args_list == [
+        call(params={"sku": "FPENSST008P", "purchase_account_id": "account-1"}, resource_key="items"),
+        call(params={"sku": "FPENSS-T008P", "purchase_account_id": "account-1"}, resource_key="items"),
     ]
     assert books.sales_orders.create.call_args.args[0]["line_items"] == [
         {"item_id": "item1", "quantity": 2.0, "rate": 4004.01}
@@ -214,22 +212,36 @@ def test_import_uses_approved_sku_replacement(mock_parse):
     books = MagicMock()
     inventory = MagicMock()
     books.sales_orders.list_all.return_value = []
-    inventory.items.list.return_value = {
-        "items": [
+    inventory.items.list_all.return_value = [
             {
                 "item_id": "replacement-item",
                 "sku": "FCEECS-T187M",
                 "status": "active",
             }
         ]
-    }
     books.sales_orders.create.return_value = {
         "salesorder": {"salesorder_id": "so1"}
     }
 
     import_polycab_rso_pdf(books, "RSO_262707003493.pdf", inventory_client=inventory, purchase_account_id="account-1")
 
-    inventory.items.list.assert_called_once_with(params={"sku": "FCEECS-T187M", "purchase_account_id": "account-1"})
+    inventory.items.list_all.assert_called_once_with(params={"sku": "FCEECS-T187M", "purchase_account_id": "account-1"}, resource_key="items")
     assert books.sales_orders.create.call_args.args[0]["line_items"] == [
         {"item_id": "replacement-item", "quantity": 1.0, "rate": 1922.8}
     ]
+
+
+@patch("workflows.polycab_rso.processor.parse_polycab_rso_pdf")
+def test_ambiguous_existing_order_prevents_creation_and_attachment(mock_parse):
+    mock_parse.return_value = {"sales_order_number": "RSO-1"}
+    books = MagicMock()
+    books.sales_orders.list_all.side_effect = [
+        [{"salesorder_id": "one", "reference_number": "RSO-1"}],
+        [{"salesorder_id": "two", "salesorder_number": "RSO-1"}],
+    ]
+    inventory = MagicMock()
+    with pytest.raises(ValueError, match="found 2"):
+        import_polycab_rso_pdf(books, "RSO.pdf", inventory_client=inventory, purchase_account_id="account")
+    books.sales_orders.create.assert_not_called()
+    books.sales_orders.add_attachment.assert_not_called()
+    inventory.items.list_all.assert_not_called()

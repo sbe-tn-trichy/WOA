@@ -27,19 +27,19 @@ Docs: https://www.zoho.com/creator/help/api/v2.1/
 ##### `ZohoCreatorAPI.__init__`
 
 ```python
-def __init__(self, access_token: str, account_owner_name: str, domain: str = 'in', environment: str = 'production', send_environment_header: bool = True, token_refresh_callback: Any | None = None)
+def __init__(self, access_token: str, account_owner_name: str, domain: str = 'in', environment: str = 'production', send_environment_header: bool = True, token_refresh_callback: Callable[[BaseZohoClient], None] | Callable[[], str] | None = None)
 ```
 
 ##### `ZohoCreatorAPI.request`
 
 ```python
-def request(self, method: str, endpoint: str, json: dict[str, Any] | None = None, data: dict[str, Any] | None = None, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, files: dict[str, Any] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> Any
+def request(self, method: str, endpoint: str, json: Mapping[str, object] | Sequence[object] | None = None, data: Mapping[str, object] | str | bytes | None = None, params: Mapping[str, object] | None = None, headers: Mapping[str, str] | None = None, files: Mapping[str, object] | None = None, stream: bool = False, override_url: str | None = None, is_mutation: bool | None = None, timeout: int | None = None) -> object
 ```
 
 ##### `ZohoCreatorAPI.list_applications`
 
 ```python
-def list_applications(self) -> dict[str, Any]
+def list_applications(self) -> object
 ```
 
 Gets metadata of all applications.
@@ -47,7 +47,7 @@ Gets metadata of all applications.
 ##### `ZohoCreatorAPI.list_forms`
 
 ```python
-def list_forms(self, app_link_name: str) -> dict[str, Any]
+def list_forms(self, app_link_name: str) -> object
 ```
 
 Gets metadata of all forms in an application.
@@ -55,7 +55,7 @@ Gets metadata of all forms in an application.
 ##### `ZohoCreatorAPI.list_reports`
 
 ```python
-def list_reports(self, app_link_name: str) -> dict[str, Any]
+def list_reports(self, app_link_name: str) -> object
 ```
 
 Gets metadata of all reports in an application.
@@ -63,7 +63,7 @@ Gets metadata of all reports in an application.
 ##### `ZohoCreatorAPI.get_fields`
 
 ```python
-def get_fields(self, app_link_name: str, form_link_name: str) -> dict[str, Any]
+def get_fields(self, app_link_name: str, form_link_name: str) -> object
 ```
 
 Gets metadata of all fields in a form.
@@ -71,7 +71,7 @@ Gets metadata of all fields in a form.
 ##### `ZohoCreatorAPI.get_records`
 
 ```python
-def get_records(self, app_link_name: str, report_link_name: str, params: dict[str, Any] | None = None, headers: dict[str, Any] | None = None) -> dict[str, Any]
+def get_records(self, app_link_name: str, report_link_name: str, params: Mapping[str, object] | None = None, headers: Mapping[str, str] | None = None) -> object
 ```
 
 Fetches records from a report (up to 1000 records).
@@ -79,7 +79,7 @@ Fetches records from a report (up to 1000 records).
 ##### `ZohoCreatorAPI.download_file`
 
 ```python
-def download_file(self, app_link_name: str, report_link_name: str, record_id: str, field_link_name: str, destination: str, *, filepath: str | None = None) -> str
+def download_file(self, app_link_name: str, report_link_name: str, record_id: str, field_link_name: str, destination: str | Path, *, filepath: str | None = None) -> str
 ```
 
 Download one report attachment to a caller-selected local path.
@@ -90,7 +90,7 @@ Attachment URLs are never followed, keeping OAuth on the API host.
 ##### `ZohoCreatorAPI.add_records`
 
 ```python
-def add_records(self, app_link_name: str, form_link_name: str, payload: dict[str, Any], params: dict[str, Any] | None = None) -> dict[str, Any]
+def add_records(self, app_link_name: str, form_link_name: str, payload: Mapping[str, object], params: Mapping[str, object] | None = None) -> object
 ```
 
 Adds record(s) to a form (payload format: {"data": [...]}).
@@ -98,7 +98,7 @@ Adds record(s) to a form (payload format: {"data": [...]}).
 ##### `ZohoCreatorAPI.update_records`
 
 ```python
-def update_records(self, app_link_name: str, report_link_name: str, payload: dict[str, Any], record_id: str | None = None, params: dict[str, Any] | None = None) -> dict[str, Any]
+def update_records(self, app_link_name: str, report_link_name: str, payload: Mapping[str, object], record_id: str | None = None, params: Mapping[str, object] | None = None) -> object
 ```
 
 Updates record(s) in a report by ID or criteria (payload: {"data": {...}}).
@@ -106,7 +106,7 @@ Updates record(s) in a report by ID or criteria (payload: {"data": {...}}).
 ##### `ZohoCreatorAPI.delete_records`
 
 ```python
-def delete_records(self, app_link_name: str, report_link_name: str, record_id: str | None = None, params: dict[str, Any] | None = None) -> dict[str, Any]
+def delete_records(self, app_link_name: str, report_link_name: str, record_id: str | None = None, params: Mapping[str, object] | None = None) -> object
 ```
 
 Deletes record(s) in a report by ID or criteria.
@@ -114,7 +114,7 @@ Deletes record(s) in a report by ID or criteria.
 ##### `ZohoCreatorAPI.get_all_records`
 
 ```python
-def get_all_records(self, app_link_name: str, report_link_name: str, criteria: str | None = None, *, field_config: str | None = None) -> list[dict[str, Any]]
+def get_all_records(self, app_link_name: str, report_link_name: str, criteria: str | None = None, *, field_config: str | None = None) -> list[dict[str, object]]
 ```
 
 Custom function: Auto-paginates using record_cursor to fetch all records.
@@ -122,7 +122,7 @@ Custom function: Auto-paginates using record_cursor to fetch all records.
 ##### `ZohoCreatorAPI.add_records_bulk`
 
 ```python
-def add_records_bulk(self, app_link_name: str, form_link_name: str, records: list[dict[str, Any]], skip_workflow: list[str] | None = None) -> list[dict[str, Any]]
+def add_records_bulk(self, app_link_name: str, form_link_name: str, records: Sequence[Mapping[str, object]], skip_workflow: Sequence[str] | None = None) -> list[object]
 ```
 
 Custom function: Bulk adds records by chunking them into batches of 200.

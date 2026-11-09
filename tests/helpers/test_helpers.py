@@ -30,7 +30,6 @@ from helpers import (
     find_transaction_by_number,
     get_bins_by_item_map,
     get_bins_for_items,
-    getBinsForItems,
     get_custom_field_value,
     get_financial_year_range,
     get_month_range,
@@ -507,7 +506,7 @@ class TestBinsHelper:
             {"Product ID": "101", "Item Name": "Item A", "SKU": "SKU-A", "Bin Name": "Bin 1", "Available": "10"},
         ]
 
-        res = get_bins_for_items(mock_analytics)
+        res = get_bins_for_items(mock_analytics, workspace_id="264324000000002043")
         assert len(res) == 1
         assert res[0]["SKU"] == "SKU-A"
         mock_analytics.queries.execute.assert_called_once_with(
@@ -515,13 +514,21 @@ class TestBinsHelper:
             sql_query='SELECT * FROM "Item Stock by Bin" WHERE "Available" > 0 ORDER BY "Item Name" ASC',
         )
 
+    def test_get_bins_for_items_requires_workspace_id(self):
+        mock_analytics = MagicMock()
+        with pytest.raises(ValueError, match="workspace_id"):
+            get_bins_for_items(mock_analytics)
+        mock_analytics.queries.execute.assert_not_called()
+
     def test_get_bins_for_items_with_sku_filter(self):
         mock_analytics = MagicMock()
         mock_analytics.queries.execute.return_value = [
             {"Product ID": "101", "SKU": "SKU-A", "Bin Name": "Bin 1", "Available": "5"},
         ]
 
-        res = get_bins_for_items(mock_analytics, skus=["SKU-A", "SKU-B"], available_only=False)
+        res = get_bins_for_items(
+            mock_analytics, workspace_id="264324000000002043", skus=["SKU-A", "SKU-B"], available_only=False
+        )
         assert len(res) == 1
         mock_analytics.queries.execute.assert_called_once_with(
             workspace_id="264324000000002043",
@@ -532,7 +539,7 @@ class TestBinsHelper:
         mock_analytics = MagicMock()
         mock_analytics.queries.execute.return_value = []
 
-        get_bins_for_items(mock_analytics, skus="SKU-X")
+        get_bins_for_items(mock_analytics, workspace_id="264324000000002043", skus="SKU-X")
         mock_analytics.queries.execute.assert_called_once_with(
             workspace_id="264324000000002043",
             sql_query='SELECT * FROM "Item Stock by Bin" WHERE "Available" > 0 AND "SKU" IN (\'SKU-X\') ORDER BY "Item Name" ASC',
@@ -542,14 +549,17 @@ class TestBinsHelper:
         mock_analytics = MagicMock()
         mock_analytics.queries.execute.return_value = []
 
-        get_bins_for_items(mock_analytics, item_ids=["901", "902"])
+        get_bins_for_items(mock_analytics, workspace_id="264324000000002043", item_ids=["901", "902"])
         mock_analytics.queries.execute.assert_called_once_with(
             workspace_id="264324000000002043",
             sql_query='SELECT * FROM "Item Stock by Bin" WHERE "Available" > 0 AND "Product ID" IN (\'901\', \'902\') ORDER BY "Item Name" ASC',
         )
 
-    def test_get_bins_for_items_alias(self):
-        assert getBinsForItems is get_bins_for_items
+    def test_get_bins_for_items_exports(self):
+        from helpers.catalog import bins, items
+
+        assert bins.get_bins_for_items is get_bins_for_items
+        assert items.get_bins_for_items is get_bins_for_items
 
     def test_get_bins_by_item_map(self):
         mock_analytics = MagicMock()
@@ -559,7 +569,7 @@ class TestBinsHelper:
             {"Product ID": "102", "SKU": "SKU-B", "Bin Name": "Bin 1", "Available": "8"},
         ]
 
-        item_map = get_bins_by_item_map(mock_analytics, key_field="SKU")
+        item_map = get_bins_by_item_map(mock_analytics, workspace_id="264324000000002043", key_field="SKU")
         assert "SKU-A" in item_map
         assert len(item_map["SKU-A"]) == 2
         assert "SKU-B" in item_map

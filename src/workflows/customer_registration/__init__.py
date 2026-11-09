@@ -27,6 +27,10 @@ class CustomerRegistrationError(RuntimeError):
         super().__init__(message)
 
 
+def _as_dict(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
 def register_customer(
     books_client: ZohoBooksAPI,
     creator_client: ZohoCreatorAPI,
@@ -71,13 +75,13 @@ def register_customer(
     if dry_run:
         return CustomerRegistrationResult(True, contact_id, None, books, payload)
     if contact_id:
-        response = books_client.contacts.get(contact_id)
-        contact = response.get("contact", {})
+        response = _as_dict(books_client.contacts.get(contact_id))
+        contact = _as_dict(response.get("contact"))
         if response.get("code") != 0 or str(contact.get("contact_id")) != contact_id or contact.get("contact_type") != "customer":
             raise CustomerRegistrationError("Existing Books customer could not be verified.", books_contact_id=contact_id)
     else:
-        response = books_client.contacts.create(books)
-        contact = response.get("contact", {})
+        response = _as_dict(books_client.contacts.create(books))
+        contact = _as_dict(response.get("contact"))
         if response.get("code") != 0 or not contact.get("contact_id"):
             raise CustomerRegistrationError("Books creation did not return a successful contact ID; inspect Books before retrying.")
         contact_id = str(contact["contact_id"])
@@ -85,22 +89,23 @@ def register_customer(
     try:
         number = contact.get("contact_number")
         if not isinstance(number, str) or not number.strip():
-            detail = books_client.contacts.get(contact_id)
-            contact = detail.get("contact", {})
+            detail = _as_dict(books_client.contacts.get(contact_id))
+            contact = _as_dict(detail.get("contact"))
             if detail.get("code") != 0 or str(contact.get("contact_id")) != contact_id:
                 raise ValueError("Books customer detail could not be verified.")
             number = contact.get("contact_number")
         if not isinstance(number, str) or not number.strip():
             raise ValueError("Books customer contact_number is missing or blank.")
         creator["Customer_no"] = number.strip()
-        response = creator_client.add_records(app_link_name, form_link_name, payload=payload)
+        response = _as_dict(creator_client.add_records(app_link_name, form_link_name, payload=payload))
         records = response.get("result", response.get("data"))
         if isinstance(records, dict):
             records = [records]
         if response.get("code") != 3000 or not isinstance(records, list) or len(records) != 1:
             raise ValueError("Unexpected Creator response.")
-        record = records[0]
-        data = record.get("data", record)
+        raw_record = records[0]
+        record = _as_dict(raw_record)
+        data = _as_dict(record.get("data", record))
         if record.get("code", 3000) != 3000 or not data.get("ID"):
             raise ValueError("Creator record was not confirmed successful.")
         record_id = str(data["ID"])

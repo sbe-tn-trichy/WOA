@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from .vendor_payment_proposals import VendorPaymentMove
@@ -12,7 +13,7 @@ from workflows.core.payments import (
 from workflows.core.matching import parse_currency_amount as _amount
 
 
-def preflight_vendor_moves(books: Any, moves: list[VendorPaymentMove]) -> None:
+def preflight_vendor_moves(books: Any, moves: Sequence[VendorPaymentMove]) -> None:
     """Recheck selected payments, bills, and destination number availability."""
     if not moves or len({m["payment_id"] for m in moves}) != len(moves):
         raise ValueError("A nonempty batch with unique payment IDs is required")
@@ -66,7 +67,7 @@ def submit_vendor_move(books: Any, move: VendorPaymentMove) -> None:
         raise ValueError(f"Books rejected vendor payment {move['payment_id']}: {response.get('message')}")
 
 
-def verify_vendor_batch(books: Any, moves: list[VendorPaymentMove]) -> list[dict[str, str]]:
+def verify_vendor_batch(books: Any, moves: Sequence[VendorPaymentMove]) -> list[dict[str, str]]:
     """Read one descending series page and check every saved vendor payment."""
     if not moves:
         raise ValueError("Cannot verify an empty vendor batch")

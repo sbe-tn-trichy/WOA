@@ -11,7 +11,7 @@ from typing import Any
 from utils.file_utils.pdf import read_pdf_pages
 
 from zoho.inventory import ZohoInventoryAPI
-from helpers import find_item_by_exact_sku, find_transaction_by_number, unwrap_record
+from helpers import resolve_inventory_sku, resolve_transaction_by_number, unwrap_record
 from workflows.runtime.config import Config
 
 
@@ -145,11 +145,10 @@ def parse_polycab_rso_pdf(pdf_path: str) -> dict[str, Any]:
 
 
 def _find_existing_sales_order(books_client: Any, rso_number: str) -> dict[str, Any] | None:
-    return find_transaction_by_number(
-        books_client.sales_orders,
-        rso_number,
-        number_keys=("reference_number", "salesorder_number"),
-        resource_key="salesorders",
+    return resolve_transaction_by_number(
+        books_client.sales_orders, rso_number,
+        number_fields=("reference_number", "salesorder_number"),
+        resource_key="salesorders", id_key="salesorder_id",
     )
 
 
@@ -172,7 +171,7 @@ def _resolve_line_items(
 
         match: dict[str, Any] | None = None
         for candidate in candidate_skus:
-            match = find_item_by_exact_sku(inventory_client, candidate, purchase_account_id)
+            match = resolve_inventory_sku(inventory_client, candidate, purchase_account_id=purchase_account_id)
             if match:
                 break
         if not match or not match.get("item_id"):

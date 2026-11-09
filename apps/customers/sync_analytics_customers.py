@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Sync three Analytics sources into four local customer tables, preserving cleanup edits."""
 from __future__ import annotations
+import importlib
 
 import argparse
 from dataclasses import asdict
 from utils.file_utils import json
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.analytics_catalog import AnalyticsCatalog
 from workflows.runtime.auth import get_analytics_client
@@ -21,7 +22,7 @@ from workflows.customer_management.analytics_sync import sync_analytics_customer
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--db', type=Path, default=Path('output/customer_cleanup/normalized_customers.sqlite3'))
-    parser.add_argument('--workspace-id', default='264324000000002043')
+    parser.add_argument('--workspace-id', default=Config.ANALYTICS_WORKSPACE_ID)
     parser.add_argument('--catalog-dir', type=Path, help='Cached metadata directory; never refreshed by this workflow')
     parser.add_argument('--source', type=Path, help='Replay a previously completed source export without network access')
     args = parser.parse_args()

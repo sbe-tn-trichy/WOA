@@ -6,14 +6,14 @@ import re
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TypedDict
 from xml.etree import ElementTree as ET
 from workflows.core.matching import to_finite_decimal
 
 
 class MasterRow(TypedDict):
     row: int
-    cells: dict[str, Any]
+    cells: dict[str, str]
 
 
 Master = dict[str, list[MasterRow]]
@@ -25,32 +25,37 @@ def read_ais_master(path: Path | str) -> Master:
     """Parse and validate the supplied AIS IT tabular export; reject cached formulas."""
     result: Master = {}
     with zipfile.ZipFile(path) as archive:
-        strings = []
+        strings: list[str] = []
         if "xl/sharedStrings.xml" in archive.namelist():
             strings = ["".join(t.text or "" for t in si.findall(".//m:t", NS))
                        for si in ET.fromstring(archive.read("xl/sharedStrings.xml"))]
-        rels = {r.attrib["Id"]: r.attrib["Target"] for r in
+        rels: dict[str, str] = {r.attrib["Id"]: r.attrib["Target"] for r in
                 ET.fromstring(archive.read("xl/_rels/workbook.xml.rels"))}
-        for sheet in ET.fromstring(archive.read("xl/workbook.xml")).find("m:sheets", NS):
+        sheets = ET.fromstring(archive.read("xl/workbook.xml")).find("m:sheets", NS)
+        if sheets is None:
+            raise ValueError("Workbook is missing sheets")
+        for sheet in sheets:
             target = rels[sheet.attrib[RID]]
             target = target.lstrip("/") if target.startswith("/") else posixpath.normpath("xl/" + target)
             if not target.startswith("xl/"):
                 raise ValueError("Workbook relationship is outside xl/")
-            rows = []
+            rows: list[MasterRow] = []
             for row in ET.fromstring(archive.read(target)).findall("m:sheetData/m:row", NS):
-                cells = {}
+                cells: dict[str, str] = {}
                 for cell in row:
                     if cell.find("m:f", NS) is not None:
                         raise ValueError(f"Formula in AIS master: {sheet.attrib['name']}!{cell.attrib['r']}")
                     value = cell.find("m:v", NS)
                     kind = cell.attrib.get("t")
                     if kind == "s":
+                        if value is None or value.text is None:
+                            continue
                         parsed = strings[int(value.text)]
                     elif kind == "inlineStr":
                         parsed = "".join(t.text or "" for t in cell.findall(".//m:t", NS))
                     elif kind == "e":
                         raise ValueError("Excel error in AIS master")
-                    elif value is None:
+                    elif value is None or value.text is None:
                         continue
                     elif kind == "str":
                         parsed = value.text
@@ -101,7 +106,10 @@ def validate_master(master: Master) -> None:
                         if to_finite_decimal(c.get(col), allow_commas=True) is None:
                             raise ValueError(f"Invalid AIS amount: {name}!{col}{row['row']}")
                     col = "G" if suffix == "TDS TCS" else "F"
-                    day = datetime.strptime(c[col], "%d/%m/%Y" if suffix == "TDS TCS" else "%b-%Y")
+                    date_val = c.get(col)
+                    if date_val is None:
+                        raise ValueError(f"Missing AIS date: {name}!{col}{row['row']}")
+                    day = datetime.strptime(date_val, "%d/%m/%Y" if suffix == "TDS TCS" else "%b-%Y")
                     if not datetime(year, 4, 1) <= day < datetime(year + 1, 4, 1):
                         raise ValueError(f"AIS date outside tab financial year: {name}!{row['row']}")
     for name in ("Tax payments", "Refunds"):

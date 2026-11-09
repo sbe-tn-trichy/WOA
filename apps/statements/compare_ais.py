@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Compare an AIS IT workbook with Zoho Books without changing transactions."""
 from __future__ import annotations
+import importlib
 
 import argparse
 import sys
 from pathlib import Path
 from collections.abc import Sequence
 
-try:
+if __package__:
     from . import _bootstrap
-except ImportError:
-    import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
 from workflows.runtime.config import Config
@@ -27,8 +28,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--org-id", default=Config.ORG_ID)
     parser.add_argument("--domain", default=Config.DOMAIN)
     parser.add_argument("--gstin", help="Recipient GSTIN (default: unique GSTIN in AIS purchases)")
-    parser.add_argument("--sales-account-id", default="1094368000000000486")
-    parser.add_argument("--exclude-location-id", default="1094368000044509446")
+    parser.add_argument("--sales-account-id", default=Config.SALES_ACCOUNT_ID)
+    parser.add_argument("--exclude-location-id", default=Config.EXCLUDED_LOCATION_ID)
     parser.add_argument("--snapshot", type=Path, help="Replay a complete saved snapshot; no network reads")
     parser.add_argument("--max-requests", type=int, default=250)
     parser.add_argument("--request-interval", type=float, default=2.1)

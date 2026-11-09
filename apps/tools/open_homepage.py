@@ -11,6 +11,7 @@ import time
 import webbrowser
 from pathlib import Path
 from collections.abc import Sequence
+from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -24,7 +25,8 @@ def dashboard_is_running(timeout: float = 0.5) -> bool:
     """Return whether the project dashboard is responding on its local port."""
     try:
         with urlopen(HEALTH_URL, timeout=timeout) as response:
-            payload = json.load(response)
+            raw_payload = json.load(response)
+            payload = raw_payload if isinstance(raw_payload, dict) else {}
             return (
                 response.status == 200
                 and isinstance(payload.get("workflows"), list)
@@ -34,12 +36,12 @@ def dashboard_is_running(timeout: float = 0.5) -> bool:
         return False
 
 
-def start_dashboard() -> subprocess.Popen[bytes]:
+def start_dashboard() -> subprocess.Popen[Any]:
     """Launch the dashboard independently of the calling process."""
     log_dir = PROJECT_ROOT / "logs"
     log_dir.mkdir(exist_ok=True)
     log_path = log_dir / "project_dashboard.auto.log"
-    kwargs: dict[str, object] = {
+    kwargs: dict[str, Any] = {
         "cwd": PROJECT_ROOT,
         "stdin": subprocess.DEVNULL,
     }

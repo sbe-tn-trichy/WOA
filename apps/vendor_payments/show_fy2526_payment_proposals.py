@@ -1,18 +1,21 @@
 """Create a focused FY 2025-26 review from the saved inter-location proposals."""
 
 from __future__ import annotations
+import importlib
 
 from utils.file_utils import json
 from collections import Counter
+from collections.abc import Mapping, Sequence
 from datetime import datetime, date
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
+from workflows.runtime.config import Config
 from workflows.inter_location.payment_updates import plan_customer_payment_moves
 
 
@@ -21,23 +24,26 @@ DESTINATION = Path("output/inter_location_payment_proposals_fy2526.md")
 
 
 def main() -> int:
-    report = json.loads(SOURCE.read_text(encoding="utf-8"))
-    if report.get("view_id") != "264324000008274019":
+    raw_report = json.loads(SOURCE.read_text(encoding="utf-8"))
+    report = raw_report if isinstance(raw_report, Mapping) else {}
+    if report.get("view_id") != Config.INTER_LOCATION_CONTRA_VIEW_ID:
         raise ValueError("Unexpected proposal source")
-    payments = [p for p in report["proposals"]
-                if date(2025, 4, 1) <= datetime.strptime(p["date"], "%d/%m/%Y").date()
-                <= date(2026, 3, 31)]
-    payments.sort(key=lambda p: (p["date"], p["payment_id"]))
-    counts = Counter(p["status"] for p in payments)
+    raw_proposals = report.get("proposals")
+    payments = [p for p in raw_proposals
+                if isinstance(p, Mapping)
+                and date(2025, 4, 1) <= datetime.strptime(str(p.get("date", "")), "%d/%m/%Y").date()
+                <= date(2026, 3, 31)] if isinstance(raw_proposals, Sequence) else []
+    payments.sort(key=lambda p: (str(p.get("date", "")), str(p.get("payment_id", ""))))
+    counts = Counter(p.get("status") for p in payments)
     batch_moves = plan_customer_payment_moves(
         get_books_client(), payments, prefix="SB2526CP-", limit=15,
-        excluded_payment_ids=frozenset({"1094368000053835002"}))
+        excluded_payment_ids=frozenset(Config.INTER_LOCATION_EXCLUDED_PAYMENT_IDS))
     if len(batch_moves) != 15:
         raise ValueError(f"Expected 15 live Books-verified candidates; found {len(batch_moves)}")
-    by_id = {p["payment_id"]: p for p in payments}
+    by_id = {str(p.get("payment_id")): p for p in payments}
     proposed_numbers = {move["payment_id"]: move["new_number"] for move in batch_moves}
     lines = ["# FY 2025–26 inter-location payment proposals", "",
-             f"Source: Zoho Analytics Query Table {report['view_id']}. "
+             f"Source: Zoho Analytics Query Table {report.get('view_id')}. "
              f"{len(payments)} payments: {counts['proposed']} proposed, "
              f"{counts['manual_review']} manual review.", "",
              "## Next 15 customer-payment candidates", "",

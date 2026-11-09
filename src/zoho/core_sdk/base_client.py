@@ -1,7 +1,7 @@
 import contextlib
 import threading
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -70,6 +70,8 @@ class BaseZohoClient:
         self.service_name = service_name
         self.token_refresh_callback = token_refresh_callback
         self.on_request_completed = on_request_completed
+        self.on_http_attempt_started: Callable[..., Any] | None = None
+        self.on_http_attempt: Callable[..., Any] | None = None
         self.default_timeout = default_timeout
         self.session = http_transport.Session()
         self._token_lock = threading.Lock()
@@ -99,7 +101,7 @@ class BaseZohoClient:
         self,
         token: str,
         method: str,
-        headers: dict[str, Any] | None,
+        headers: Mapping[str, str] | None,
         has_files: bool,
         has_data: bool,
     ) -> dict[str, str]:
@@ -310,11 +312,11 @@ class BaseZohoClient:
         self,
         method: str,
         endpoint: str,
-        json: dict[str, Any] | None = None,
-        data: dict[str, Any] | None = None,
-        params: dict[str, Any] | None = None,
-        headers: dict[str, Any] | None = None,
-        files: dict[str, Any] | None = None,
+        json: Mapping[str, object] | Sequence[object] | None = None,
+        data: Mapping[str, object] | str | bytes | None = None,
+        params: Mapping[str, object] | None = None,
+        headers: Mapping[str, str] | None = None,
+        files: Mapping[str, object] | None = None,
         stream: bool = False,
         override_url: str | None = None,
         is_mutation: bool | None = None,

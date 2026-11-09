@@ -1,14 +1,16 @@
 """Check GST cash-ledger balances against output minus input GST."""
+import importlib
 import argparse
+from collections.abc import Mapping
 from datetime import datetime
 from decimal import Decimal
 from utils.file_utils import json
 from pathlib import Path
 
-try:
+if __package__:
     from . import _bootstrap
-except ImportError:
-    import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 from workflows.runtime.auth import get_books_client
 from workflows.core.checkpoint import write_atomic_json, atomic_text_writer
 from workflows.gst.cash_ledger import check_gst_cash_ledger, fetch_gst_cash_ledger_report
@@ -23,15 +25,18 @@ def main() -> int:
     parser.add_argument('--tolerance', type=Decimal, default=Decimal('0.01'))
     parser.add_argument('--output', type=Path, default=Path('output/gst-cash-ledger'))
     args = parser.parse_args()
-    report = json.loads(args.saved.read_text(encoding='utf-8-sig')) if args.saved else fetch_gst_cash_ledger_report(
+    raw_report = json.loads(args.saved.read_text(encoding='utf-8-sig')) if args.saved else fetch_gst_cash_ledger_report(
         get_books_client(), from_date=args.from_date, to_date=args.to_date, firm=args.firm)
+    report: Mapping[str, object] = raw_report if isinstance(raw_report, Mapping) else {}
     checks = check_gst_cash_ledger(report, tolerance=args.tolerance)
     args.output.mkdir(parents=True, exist_ok=True)
     if args.saved and args.saved.resolve() in {(args.output/'balancesheet.json').resolve(), (args.output/'report.md').resolve()}:
         raise ValueError('Output must not overwrite saved source')
     write_atomic_json(args.output/'balancesheet.json', report)
+    ctx = report.get("page_context")
+    to_date = ctx.get("to_date") if isinstance(ctx, Mapping) else args.to_date
     lines = ['# GST cash-ledger mismatch check', '', f'Created: {datetime.now().astimezone().isoformat(timespec="seconds")}', '',
-        f'As of {report["page_context"]["to_date"]}; accrual balances. Tolerance ₹{args.tolerance}.', '',
+        f'As of {to_date}; accrual balances. Tolerance ₹{args.tolerance}.', '',
         'Cash Ledger Tax balance = Output GST minus Input GST. Difference = cash ledger minus expected. Interest and late fees excluded. Closing balances are compared; tax payments and set-offs can affect this equality. This check does not establish a filing or posting error.', '',
         '| GST | Cash ledger | Output GST | Input GST | Expected net GST | Difference | Result |',
         '|---|---:|---:|---:|---:|---:|---|']

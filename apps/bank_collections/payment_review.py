@@ -16,7 +16,8 @@ from urllib.parse import unquote, urlparse
 if __package__:
     from . import _bootstrap
 else:
-    import _bootstrap  # type: ignore[no-redef]
+    import importlib
+    importlib.import_module("_bootstrap")
 
 from utils.file_utils import json
 from workflows.collection_reconciliation import (
@@ -41,7 +42,8 @@ def make_handler(service: OnlinePaymentReviewService, review_token: str,
                  metrics: RequestMetrics | None = None):
     class Handler(BaseHTTPRequestHandler):
         def _valid_host(self) -> bool:
-            port = self.server.server_address[1]
+            addr = self.server.server_address
+            port = addr[1] if isinstance(addr, tuple) and len(addr) > 1 else 0
             values = self.headers.get_all("Host", [])
             return len(values) == 1 and values[0] in {
                 f"localhost:{port}", f"127.0.0.1:{port}", f"[::1]:{port}",
@@ -107,7 +109,10 @@ def make_handler(service: OnlinePaymentReviewService, review_token: str,
                 return
             length = int(self.headers.get("Content-Length", "0") or "0")
             try:
-                body = json.loads(self.rfile.read(length) or b"{}")
+                raw_body = json.loads(self.rfile.read(length) or b"{}")
+                if not isinstance(raw_body, dict):
+                    raise ValueError("JSON request body must be an object.")
+                body: dict[str, Any] = raw_body
                 if body.get("confirm") is not True:
                     raise ValueError("Explicit confirmation is required.")
                 path = urlparse(self.path).path
@@ -256,18 +261,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             cash_account_id=Config.PAYMENT_CASH_ACCOUNT_ID,
             bank_accounts=bank_accounts,
             payment_reports=(
-                ("Online", Config.PAYMENT_CREATOR_REPORTS["online"]),
-                ("Cheque", Config.PAYMENT_CREATOR_REPORTS["cheque"]),
+                ("Online", str(Config.PAYMENT_CREATOR_REPORTS["online"])),
+                ("Cheque", str(Config.PAYMENT_CREATOR_REPORTS["cheque"])),
             ),
-            cheque_detail_report_link_name=Config.PAYMENT_CREATOR_REPORTS[
+            cheque_detail_report_link_name=str(Config.PAYMENT_CREATOR_REPORTS[
                 "cheque_detail"
-            ],
-            customer_report_link_name=Config.PAYMENT_CREATOR_REPORTS["customer"],
-            creator_checkpoint_report_link_name=Config.PAYMENT_CREATOR_REPORTS[
+            ]),
+            customer_report_link_name=str(Config.PAYMENT_CREATOR_REPORTS["customer"]),
+            creator_checkpoint_report_link_name=str(Config.PAYMENT_CREATOR_REPORTS[
                 "checkpoint"
-            ],
-            analytics_workspace_id="264324000000002043",
-            customer_finder_view_id="264324000006111037",
+            ]),
+            analytics_workspace_id=Config.ANALYTICS_WORKSPACE_ID,
+            customer_finder_view_id=Config.ANALYTICS_CUSTOMER_FINDER_VIEW_ID,
             state_path=args.state,
             analytics_preview_ttl_seconds=args.analytics_preview_ttl,
             customer_mapping_ttl_seconds=args.customer_mapping_ttl,

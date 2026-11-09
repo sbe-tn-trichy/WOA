@@ -58,7 +58,7 @@ def test_resource_error_propagates():
 
 def test_public_helper_exports_and_sdk_parser_identity():
     import helpers
-    from helpers.formatting.sequences import parse_doc_number
+    from helpers.formatting import parse_doc_number
     from utils.general_utils.sequences import parse_doc_number as primitive
     from zoho.books.custom.gst import parse_doc_number as sdk_parser
 

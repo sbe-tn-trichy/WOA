@@ -92,11 +92,27 @@ def test_deployment_defaults_are_empty_and_explicit_values_migrate(monkeypatch):
     from workflows.runtime import config
     source = __import__('pathlib').Path(config.__file__).read_text()
     class_source = source[source.index('class Config:'):]
-    keys = ['ANALYTICS_ORG_ID', 'PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID',
-            'PAYMENT_SALARY_EXPENSE_ACCOUNT_ID', 'PAYMENT_CASH_ACCOUNT_ID',
-            'NEOSEAL_STOCK_COUNT_SHEET_ID']
+    keys = [
+        'ANALYTICS_ORG_ID',
+        'ANALYTICS_WORKSPACE_ID',
+        'ANALYTICS_DATE_MISMATCH_VIEW_ID',
+        'ANALYTICS_BANK_STATEMENT_VIEW_ID',
+        'ANALYTICS_CUSTOMER_FINDER_VIEW_ID',
+        'INTER_LOCATION_CONTRA_VIEW_ID',
+        'INTER_LOCATION_DIFF_VIEW_ID',
+        'PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID',
+        'PAYMENT_SALARY_EXPENSE_ACCOUNT_ID',
+        'PAYMENT_CASH_ACCOUNT_ID',
+        'NEOSEAL_STOCK_COUNT_SHEET_ID',
+        'POLYCAB_RMA_ITEM_ID',
+        'SALES_ACCOUNT_ID',
+        'UNEARNED_REVENUE_ACCOUNT_ID',
+        'INTER_BRANCH_ACCOUNT_ID',
+        'INTER_LOCATION_CLEARING_ACCOUNT_ID',
+        'EXCLUDED_LOCATION_ID',
+    ]
     monkeypatch.setattr(config, '_FILE_CONFIG', {})
-    for key in keys:
+    for key in keys + ['ZOHO_ANALYTICS_WORKSPACE_ID']:
         monkeypatch.delenv(key, raising=False)
     namespace = dict(vars(config))
     exec(class_source, namespace)

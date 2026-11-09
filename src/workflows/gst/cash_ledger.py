@@ -1,9 +1,23 @@
 """Read-only GST cash-ledger versus net GST balance reconciliation."""
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from collections.abc import Mapping
-from typing import Any
+from typing import Protocol, cast
+
+from utils.file_utils import json
+from workflows.audited_financials.reports import _firm_rule
+
+
+class BooksRequestClient(Protocol):
+    def request(
+        self,
+        method: str,
+        endpoint: str,
+        *,
+        params: Mapping[str, object] | None = None,
+        json: Mapping[str, object] | None = None,
+    ) -> object: ...
 
 
 @dataclass(frozen=True)
@@ -17,7 +31,7 @@ class GSTCashLedgerCheck:
     mismatch: bool
 
 
-def check_gst_cash_ledger(report: Mapping[str, Any], *, tolerance: Decimal = Decimal('0.01')) -> list[GSTCashLedgerCheck]:
+def check_gst_cash_ledger(report: Mapping[str, object], *, tolerance: Decimal = Decimal('0.01')) -> list[GSTCashLedgerCheck]:
     """Compare closing balance-sheet amounts; difference is cash minus net GST.
 
     Uses Tax cash ledgers only, excluding interest and late fees. Input and cash
@@ -28,26 +42,30 @@ def check_gst_cash_ledger(report: Mapping[str, Any], *, tolerance: Decimal = Dec
         raise ValueError('Tolerance must be finite and nonnegative')
     if report.get('code') != 0 or not isinstance(report.get('balance_sheet'), list):
         raise ValueError('Successful Books balance sheet required')
-    context = report.get('page_context', {})
+    raw_ctx = report.get('page_context')
+    context = raw_ctx if isinstance(raw_ctx, Mapping) else {}
     if str(context.get('cash_based')).lower() != 'false':
         raise ValueError('Accrual balance sheet required')
     amounts: dict[str, Decimal] = {}
     target_names = {name for tax in ('CGST', 'SGST', 'IGST', 'CESS')
                     for name in (f'Cash Ledger : {tax} Tax', f'Output {tax}', f'Input {tax}')}
 
-    def visit(nodes: list[dict[str, Any]]) -> None:
+    def visit(nodes: Sequence[Mapping[str, object]]) -> None:
         for node in nodes:
-            name = node['name']
+            name = str(node.get('name') or '')
             if name in target_names and name in amounts:
                 raise ValueError('Ambiguous account name: ' + name)
-            amount = Decimal(str(node['total']))
+            amount = Decimal(str(node.get('total', '0')))
             if not amount.is_finite():
                 raise ValueError('Non-finite balance: ' + name)
             if name in target_names:
                 amounts[name] = amount
-            visit(node.get('account_transactions', []))
+            children = node.get('account_transactions')
+            if isinstance(children, Sequence):
+                visit(cast(Sequence[Mapping[str, object]], children))
 
-    visit(report['balance_sheet'])
+    raw_bs = report.get('balance_sheet')
+    visit(cast(Sequence[Mapping[str, object]], raw_bs) if isinstance(raw_bs, Sequence) else [])
     checks = []
     for tax in ('CGST', 'SGST', 'IGST', 'CESS'):
         names = (f'Cash Ledger : {tax} Tax', f'Output {tax}', f'Input {tax}')
@@ -61,22 +79,29 @@ def check_gst_cash_ledger(report: Mapping[str, Any], *, tolerance: Decimal = Dec
     return checks
 
 
-def fetch_gst_cash_ledger_report(books: Any, *, from_date: str, to_date: str, firm: str | None = None) -> Mapping[str, Any]:
-    from workflows.audited_financials.reports import _firm_rule
-    from utils.file_utils import json
+def fetch_gst_cash_ledger_report(books: BooksRequestClient, *, from_date: str, to_date: str, firm: str | None = None) -> Mapping[str, object]:
     if date.fromisoformat(from_date) > date.fromisoformat(to_date):
         raise ValueError('Start date must not follow end date')
     rule = _firm_rule(firm, None)
-    report = books.request('GET', 'reports/balancesheet', params={
+    raw_report = books.request('GET', 'reports/balancesheet', params={
         'filter_by': 'TransactionDate.CustomDate', 'from_date': from_date,
         'to_date': to_date, 'cash_based': 'false', 'show_rows': 'all',
         'is_expand': 'true', 'rule': json.dumps(rule)})
-    if report.get('page_context', {}).get('to_date') != to_date:
+    report = raw_report if isinstance(raw_report, Mapping) else {}
+    raw_ctx = report.get('page_context')
+    context = raw_ctx if isinstance(raw_ctx, Mapping) else {}
+    if context.get('to_date') != to_date:
         raise ValueError('Books report date does not match')
-    applied = report.get('page_context', {}).get('rule', {})
-    if applied.get('criteria_string') != rule['criteria_string'] or any(
+    raw_applied = context.get('rule')
+    applied = raw_applied if isinstance(raw_applied, Mapping) else {}
+    applied_cols = applied.get('columns')
+    applied_list = applied_cols if isinstance(applied_cols, list) else []
+    expected_cols = rule.get('columns')
+    expected_list = expected_cols if isinstance(expected_cols, list) else []
+    if applied.get('criteria_string') != rule.get('criteria_string') or any(
         any(actual.get(k) != expected.get(k) for k in ('index', 'field', 'value', 'comparator', 'group'))
-        for actual, expected in zip(applied.get('columns', []), rule['columns'])
-    ) or len(applied.get('columns', [])) != len(rule['columns']):
+        for actual, expected in zip(applied_list, expected_list)
+        if isinstance(actual, Mapping) and isinstance(expected, Mapping)
+    ) or len(applied_list) != len(expected_list):
         raise ValueError('Books report location scope does not match')
     return report

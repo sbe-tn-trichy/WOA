@@ -1,12 +1,14 @@
 """Compare each GST month with next-month cash tax debits."""
+import importlib
 import argparse
+from collections.abc import Mapping
 from decimal import Decimal
 from datetime import datetime
 from pathlib import Path
-try:
+if __package__:
     from . import _bootstrap
-except ImportError:
-    import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 from workflows.runtime.auth import get_books_client
 from workflows.core.checkpoint import write_atomic_json, atomic_text_writer
 from workflows.audited_financials.reports import fetch_trial_balance_for_firm
@@ -28,7 +30,8 @@ def main():
     for y, m in periods + [(y, m)]:
         key = f'{y}-{m:02d}'; first, last = month_bounds(y, m)
         report = fetch_trial_balance_for_firm(api, from_date=first, to_date=last, firm=args.firm, show_rows='all')
-        context = report.get('page_context', {})
+        raw_context = report.get('page_context', {})
+        context = raw_context if isinstance(raw_context, Mapping) else {}
         if context.get('from_date') != first or context.get('to_date') != last: raise ValueError('Report dates do not match')
         snapshots[key] = report
         write_atomic_json(args.output/f'{key}.json', report)

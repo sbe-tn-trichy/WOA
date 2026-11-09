@@ -9,13 +9,14 @@ from pathlib import Path
 import csv
 import re
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal
+from typing import Literal
 
 from workflows.analytics_catalog import AnalyticsCatalog
 from workflows.core.matching import normalize_payment_reference, parse_currency_amount, parse_date, to_text
+from workflows.runtime.config import Config
 
-DEFAULT_WORKSPACE_ID = "264324000000002043"
-DEFAULT_VIEW_ID = "264324000005829009"
+DEFAULT_WORKSPACE_ID = Config.ANALYTICS_WORKSPACE_ID
+DEFAULT_VIEW_ID = Config.ANALYTICS_BANK_STATEMENT_VIEW_ID
 
 
 @dataclass(frozen=True)
@@ -47,7 +48,7 @@ class StatementComparison:
     unmatched_books_ids: tuple[str, ...]
 
 
-def _amount(value: Any, context: str) -> Decimal:
+def _amount(value: object, context: str) -> Decimal:
     try:
         amount = parse_currency_amount(value)
         if not amount.is_finite() or amount < 0 or amount != amount.quantize(Decimal("0.01")):
@@ -86,7 +87,7 @@ def read_hdfc_csv(path: Path) -> list[StatementLine]:
     return lines
 
 
-def parse_analytics_lines(rows: Sequence[Mapping[str, Any]], *, account_id: str,
+def parse_analytics_lines(rows: Sequence[Mapping[str, object]], *, account_id: str,
                           start: date, end: date) -> list[StatementLine]:
     """Validate every scoped row; Analytics debit means deposit for this table."""
     lines = []
@@ -256,8 +257,8 @@ def compare_statement_lines(csv_lines: Sequence[StatementLine], books_lines: Seq
         tuple(line.source_id for j, line in enumerate(books_lines) if j not in owner))
 
 
-def fetch_statement_snapshot(analytics: Any, *, catalog: AnalyticsCatalog, account_id: str,
-                             start: date, end: date, view_id: str = DEFAULT_VIEW_ID) -> dict[str, Any]:
+def fetch_statement_snapshot(analytics: object, *, catalog: AnalyticsCatalog, account_id: str,
+                             start: date, end: date, view_id: str = DEFAULT_VIEW_ID) -> dict[str, object]:
     """Use cached table design and a scoped live SQL export; never refresh metadata."""
     if not re.fullmatch(r"\d+", account_id) or start > end:
         raise ValueError("A numeric account ID and ordered dates are required")
@@ -267,21 +268,27 @@ def fetch_statement_snapshot(analytics: Any, *, catalog: AnalyticsCatalog, accou
         names = {column["name"] for column in store.get_columns(view_id)}
     if not required <= names:
         raise ValueError(f"Statement table lacks required columns: {sorted(required - names)}")
-    table = metadata["views"][0]["name"].replace('"', '""')
+    views = metadata.get("views")
+    if not isinstance(views, Sequence) or not views or not isinstance(views[0], Mapping):
+        raise ValueError("Catalog metadata missing view details")
+    table = str(views[0].get("name") or "").replace('"', '""')
     sql = ('SELECT ' + ', '.join('"' + name + '"' for name in sorted(required)) +
            f' FROM "{table}" WHERE "Account ID" = \'{account_id}\' AND "Date" >= \'{start.isoformat()}\'' +
            f' AND "Date" < \'{(end + timedelta(days=1)).isoformat()}\' ORDER BY "Date", "Statement Line ID"')
-    rows = analytics.queries.execute(catalog.workspace_id, sql)
+    queries = getattr(analytics, "queries", None)
+    if queries is None:
+        raise ValueError("Analytics client missing queries resource")
+    rows = queries.execute(catalog.workspace_id, sql)
     if not isinstance(rows, list) or not all(isinstance(row, Mapping) for row in rows):
         raise ValueError("Analytics returned an invalid statement export")
     parse_analytics_lines(rows, account_id=account_id, start=start, end=end)
     return {"schema_version": 1, "workspace_id": catalog.workspace_id, "view_id": view_id,
             "account_id": account_id, "start": start.isoformat(), "end": end.isoformat(),
             "captured_at": datetime.now(timezone.utc).isoformat(),
-            "last_successful_metadata_sync_at": metadata["last_successful_sync_at"], "sql": sql, "rows": rows}
+            "last_successful_metadata_sync_at": metadata.get("last_successful_sync_at"), "sql": sql, "rows": rows}
 
 
-def comparison_dict(comparison: StatementComparison) -> dict[str, Any]:
+def comparison_dict(comparison: StatementComparison) -> dict[str, object]:
     """JSON-ready report preserving exact decimal amounts."""
     result = asdict(comparison)
     result["start"], result["end"] = comparison.start.isoformat(), comparison.end.isoformat()

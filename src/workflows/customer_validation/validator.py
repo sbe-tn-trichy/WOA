@@ -239,13 +239,13 @@ class CustomerValidator:
         total_found = len(detailed_contacts)
 
         
-        report = []
+        report: list[ContactValidation] = []
         compliant_count = 0
         
         for contact in detailed_contacts:
-            name = contact.get('contact_name', 'Unnamed Contact')
-            c_id = contact.get('contact_id')
-            issues = []
+            name = str(contact.get('contact_name') or 'Unnamed Contact')
+            c_id = str(contact.get('contact_id') or '')
+            issues: list[ValidationIssue] = []
             
             # 1. Address validations
             for addr_key in ['billing_address', 'shipping_address']:
@@ -296,14 +296,15 @@ class CustomerValidator:
             # 2. Phone number ISD validations
             for ph_key in ['phone', 'mobile']:
                 val = contact.get(ph_key)
-                phone_err = self.check_phone_isd(val)
-                if phone_err:
-                    issues.append({
-                        "field": ph_key,
-                        "error_type": "ISD Code Issue",
-                        "value": val,
-                        "details": phone_err
-                    })
+                if val:
+                    phone_err = self.check_phone_isd(str(val))
+                    if phone_err:
+                        issues.append({
+                            "field": ph_key,
+                            "error_type": "ISD Code Issue",
+                            "value": val,
+                            "details": phone_err
+                        })
             
             # 3. Name geography checks
             geo_err = self.check_geographic_name(contact)

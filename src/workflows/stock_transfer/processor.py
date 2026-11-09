@@ -27,6 +27,7 @@ class TransferPayload(TypedDict):
     gst_no: str
     line_items: list[dict[str, object]]
     customer_id: NotRequired[str]
+    invoice_number: NotRequired[str]
     place_of_supply: NotRequired[str]
     send: NotRequired[bool]
     vendor_id: NotRequired[str]

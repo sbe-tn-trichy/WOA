@@ -47,6 +47,8 @@ from zoho.core_sdk.identifiers import (
     InvoiceId,
     LocationId,
     PaymentId,
+    PurchaseAccountId,
+    OrganizationId,
 )
 from .inventory import ZohoInventoryAPI, ZohoInventoryError
 from zoho.core_sdk.logging import configure_service_logger
@@ -76,6 +78,8 @@ __all__ = [
     "CustomerId",
     "AccountId",
     "LocationId",
+    "PurchaseAccountId",
+    "OrganizationId",
     "ZohoBooksAPI",
     "ZohoBooksError",
     "ZohoCliqAPI",

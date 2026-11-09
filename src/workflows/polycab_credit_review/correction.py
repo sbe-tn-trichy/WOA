@@ -140,8 +140,10 @@ def execute_credit_correction(
         if _concurrency_state(current[name], name) != _concurrency_state(before[name], name):
             raise ValueError(f'{name} changed since planning; audit and plan again')
     # Confirm the PDF invoice is live, belongs to this customer/location, and supports allocations.
-    for allocation in current['payment']['invoices']:
-        invoice = get_verified_record(books_client.invoices, allocation['invoice_id'], 'invoice', 'invoice_id')
+    raw_invoices = current['payment'].get('invoices')
+    invoices = raw_invoices if isinstance(raw_invoices, list) else []
+    for allocation in invoices:
+        invoice = get_verified_record(books_client.invoices, str(allocation['invoice_id']), 'invoice', 'invoice_id')
         if (invoice.get('customer_id') != plan.policy.customer_id
                 or invoice.get('location_id') != current['vc'].get('location_id')
                 or invoice.get('invoice_number') != allocation['invoice_number']
@@ -161,7 +163,7 @@ def execute_credit_correction(
                 response = resource.update(latest[id_key], deepcopy(plan.payloads[name]))
                 if response.get('code') != 0:
                     raise ValueError(f'{name} update was not acknowledged')
-            after = get_verified_record(resource, latest[id_key], key, id_key)
+            after = get_verified_record(resource, str(latest[id_key]), key, id_key)
             expected = _financial_state(before[name], name)
             if name == 'vc':
                 field_id = next(x['customfield_id'] for x in before[name]['custom_fields'] if x.get('api_name') == plan.policy.against_invoice_field)

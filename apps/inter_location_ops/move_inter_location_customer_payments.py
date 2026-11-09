@@ -1,18 +1,21 @@
 """Move reviewed customer payments with destination location number series."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
+from collections.abc import Mapping, Sequence
 from utils.file_utils import json
 from datetime import datetime, date
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
+from workflows.runtime.config import Config
 from workflows.inter_location.payment_updates import plan_customer_payment_moves, submit_customer_payment_move, verify_customer_payment_batch
 
 
@@ -24,18 +27,25 @@ def main() -> int:
     parser.add_argument("--last-suffix", type=int, default=None,
                         help="Override the current highest Books suffix; default reads Books")
     parser.add_argument("--batch-size", type=int, default=15)
-    parser.add_argument("--exclude-payment-id", action="append", default=["1094368000053835002"])
+    parser.add_argument(
+        "--exclude-payment-id",
+        action="append",
+        default=list(Config.INTER_LOCATION_EXCLUDED_PAYMENT_IDS),
+    )
     parser.add_argument("--audit", type=Path, default=Path("output/inter_location_customer_payment_apply_audit.json"))
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
-    report = json.loads(args.proposal.read_text(encoding="utf-8"))
+    raw_report = json.loads(args.proposal.read_text(encoding="utf-8"))
+    report = raw_report if isinstance(raw_report, Mapping) else {}
     if (report.get("workspace_id"), report.get("view_id")) != (
-            "264324000000002043", "264324000008274019"):
+            Config.ANALYTICS_WORKSPACE_ID, Config.INTER_LOCATION_CONTRA_VIEW_ID):
         raise ValueError("Proposal is not from the reviewed Query Table")
-    proposals = [p for p in report["proposals"]
-                 if p.get("financial_year") == args.financial_year
-                 and date(2025, 4, 1) <= datetime.strptime(p["date"], "%d/%m/%Y").date()
-                 <= date(2026, 3, 31)]
+    raw_proposals = report.get("proposals")
+    proposals = [p for p in raw_proposals
+                 if isinstance(p, Mapping)
+                 and p.get("financial_year") == args.financial_year
+                 and date(2025, 4, 1) <= datetime.strptime(str(p.get("date", "")), "%d/%m/%Y").date()
+                 <= date(2026, 3, 31)] if isinstance(raw_proposals, Sequence) else []
     books = get_books_client()
     moves = plan_customer_payment_moves(books, proposals,
                                         prefix=args.prefix, last_suffix=args.last_suffix,

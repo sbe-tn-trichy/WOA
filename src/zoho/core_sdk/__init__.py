@@ -24,7 +24,15 @@ from .exceptions import (
     ZohoCliqError,
     ZohoSheetError,
 )
-from .identifiers import PaymentId, InvoiceId, CustomerId, AccountId, LocationId
+from .identifiers import (
+    PaymentId,
+    InvoiceId,
+    CustomerId,
+    AccountId,
+    LocationId,
+    PurchaseAccountId,
+    OrganizationId,
+)
 from .logging import configure_service_logger, configure_logger
 from .security import (
     mask_sensitive_value,
@@ -60,6 +68,8 @@ __all__ = [
     "CustomerId",
     "AccountId",
     "LocationId",
+    "PurchaseAccountId",
+    "OrganizationId",
     "configure_service_logger",
     "configure_logger",
     "mask_sensitive_value",

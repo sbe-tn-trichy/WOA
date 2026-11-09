@@ -2,36 +2,40 @@
 
 from __future__ import annotations
 
-from utils.file_utils import json
 import time
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
-from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING
 
 from helpers.operations.transactions import unwrap_record
-
-from workflows.core.payments import PaymentEvidence, build_payment_indexes, payment_evidence_matches
+from utils.file_utils import json
 from workflows.core.checkpoint import write_atomic_json
 from workflows.core.matching import normalize_payment_reference, parse_date, to_decimal, to_text
+from workflows.core.payments import PaymentEvidence, build_payment_indexes, payment_evidence_matches
+
+if TYPE_CHECKING:
+    from zoho.books import ZohoBooksAPI
+    from zoho.creator import ZohoCreatorAPI
 
 
-def _normalized(value: Any) -> str:
+def _normalized(value: object) -> str:
     return normalize_payment_reference(value)
 
 
 def build_native_payment_indexes(
-    payments: Sequence[Mapping[str, Any]],
-) -> tuple[dict[str, Mapping[str, Any]], dict[str, list[Mapping[str, Any]]]]:
+    payments: Sequence[Mapping[str, object]],
+) -> tuple[dict[str, Mapping[str, object]], dict[str, list[Mapping[str, object]]]]:
     return build_payment_indexes(payments)
 
 
 def resolve_books_payment(
-    creator: Mapping[str, Any],
-    payments: Sequence[Mapping[str, Any]],
-    by_id: Mapping[str, Mapping[str, Any]],
-    by_number: Mapping[str, Sequence[Mapping[str, Any]]],
-) -> tuple[Mapping[str, Any] | None, str]:
+    creator: Mapping[str, object],
+    payments: Sequence[Mapping[str, object]],
+    by_id: Mapping[str, Mapping[str, object]],
+    by_number: Mapping[str, Sequence[Mapping[str, object]]],
+) -> tuple[Mapping[str, object] | None, str]:
     transaction_id = to_text(creator.get("books_transaction_id"))
     payment_number = _normalized(creator.get("books_payment_number"))
     id_match = by_id.get(transaction_id) if transaction_id else None
@@ -52,7 +56,8 @@ def resolve_books_payment(
     if payment_number:
         return None, "payment_number_missing"
 
-    target_date = creator.get("date")
+    raw_date = creator.get("date")
+    target_date = raw_date if isinstance(raw_date, date) else parse_date(raw_date)
     target_amount = to_decimal(creator.get("amount"))
     target_reference = _normalized(creator.get("reference"))
     target_customer = _normalized(creator.get("customer_name"))
@@ -66,26 +71,28 @@ def resolve_books_payment(
     return None, "payment_missing"
 
 
-def _custom_field_values(payment: Mapping[str, Any]) -> dict[str, str]:
+def _custom_field_values(payment: Mapping[str, object]) -> dict[str, str]:
     values: dict[str, str] = {
         key: to_text(payment.get(key))
         for key in ("cf_creator_record_id", "cf_creator_payment_id")
         if to_text(payment.get(key))
     }
-    for row in (payment.get("custom_fields") or payment.get("custom_fields_list") or []):
-        if isinstance(row, Mapping):
-            key = to_text(row.get("api_name") or row.get("label")).casefold()
-            key = {
-                "creator record id": "cf_creator_record_id",
-                "creator payment id": "cf_creator_payment_id",
-            }.get(key, key)
-            if key:
-                values[key] = to_text(row.get("value"))
+    raw_fields = payment.get("custom_fields") or payment.get("custom_fields_list") or []
+    if isinstance(raw_fields, Sequence):
+        for row in raw_fields:
+            if isinstance(row, Mapping):
+                key = to_text(row.get("api_name") or row.get("label")).casefold()
+                key = {
+                    "creator record id": "cf_creator_record_id",
+                    "creator payment id": "cf_creator_payment_id",
+                }.get(key, key)
+                if key:
+                    values[key] = to_text(row.get("value"))
     return values
 
 
 def classify_links(
-    payment: Mapping[str, Any], creator_record_id: str, creator_payment_id: str
+    payment: Mapping[str, object], creator_record_id: str, creator_payment_id: str
 ) -> tuple[str, list[str]]:
     if not creator_record_id or not creator_payment_id:
         return "creator_data_incomplete", []
@@ -126,9 +133,9 @@ class BackfillConfig:
 
 @dataclass
 class BackfillResult:
-    rows: list[dict[str, Any]] = field(default_factory=list)
+    rows: list[dict[str, object]] = field(default_factory=list)
     oldest_creator_date: str | None = None
-    sequence_gaps: list[dict[str, Any]] = field(default_factory=list)
+    sequence_gaps: list[dict[str, object]] = field(default_factory=list)
 
     def summary(self) -> dict[str, int]:
         summary: dict[str, int] = {"scanned": len(self.rows)}
@@ -138,7 +145,7 @@ class BackfillResult:
         return summary
 
 
-def _creator_values(record: Mapping[str, Any]) -> dict[str, Any]:
+def _creator_values(record: Mapping[str, object]) -> dict[str, object]:
     customer = record.get("Customer_Name")
     if isinstance(customer, Mapping):
         customer = customer.get("zc_display_value") or customer.get("Name")
@@ -153,8 +160,8 @@ def _creator_values(record: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _crosschecked_values(
-    record: Mapping[str, Any], canonical: Mapping[str, Any] | None
-) -> dict[str, Any]:
+    record: Mapping[str, object], canonical: Mapping[str, object] | None
+) -> dict[str, object]:
     values = _creator_values(record)
     if canonical is not None:
         canonical_values = _creator_values(canonical)
@@ -165,9 +172,9 @@ def _crosschecked_values(
 
 
 def find_creator_sequence_gaps(
-    matched: Sequence[Mapping[str, Any]],
-    crosscheck: Sequence[Mapping[str, Any]],
-) -> list[dict[str, Any]]:
+    matched: Sequence[Mapping[str, object]],
+    crosscheck: Sequence[Mapping[str, object]],
+) -> list[dict[str, object]]:
     """Report absent matched-report Payment_ID ranges and their Creator cross-check."""
     matched_ids = sorted({
         int(value) for row in matched
@@ -177,12 +184,12 @@ def find_creator_sequence_gaps(
         int(value) for row in crosscheck
         if (value := to_text(row.get("Payment_ID"))).isdigit()
     })
-    gaps: list[dict[str, Any]] = []
+    gaps: list[dict[str, object]] = []
     for left, right in zip(matched_ids, matched_ids[1:]):
         if right - left <= 1:
             continue
         found = [value for value in all_ids if left < value < right]
-        missing_ranges = []
+        missing_ranges: list[dict[str, int]] = []
         previous = left
         for value in [*found, right]:
             if value > previous + 1:
@@ -213,13 +220,13 @@ def _write_checkpoint(path: Path, result: BackfillResult) -> None:
 
 
 class CreatorBooksPaymentLinkBackfill:
-    def __init__(self, creator: Any, books: Any, config: BackfillConfig) -> None:
+    def __init__(self, creator: ZohoCreatorAPI, books: ZohoBooksAPI, config: BackfillConfig) -> None:
         self.creator = creator
         self.books = books
         self.config = config
         self._last_books_request_at = 0.0
 
-    def _books_request(self, operation: Any, *args: Any) -> Any:
+    def _books_request(self, operation: Callable[..., object], *args: object) -> object:
         for attempt in range(4):
             wait = self.config.books_request_interval_seconds - (
                 time.monotonic() - self._last_books_request_at
@@ -254,14 +261,17 @@ class CreatorBooksPaymentLinkBackfill:
                 row for row in records
                 if to_text(row.get("ID")) == self.config.creator_record_id
             ]
-        resumed: dict[str, dict[str, Any]] = {}
+        resumed: dict[str, dict[str, object]] = {}
         if self.config.resume_from and self.config.resume_from.exists():
             payload = json.loads(self.config.resume_from.read_text(encoding="utf-8"))
-            resumed = {
-                to_text(row.get("creator_record_id")): dict(row)
-                for row in payload.get("rows", [])
-                if to_text(row.get("creator_record_id"))
-            }
+            if isinstance(payload, Mapping):
+                raw_rows = payload.get("rows")
+                if isinstance(raw_rows, list):
+                    resumed = {
+                        to_text(row.get("creator_record_id")): dict(row)
+                        for row in raw_rows
+                        if isinstance(row, Mapping) and to_text(row.get("creator_record_id"))
+                    }
         payments = [
             payment for payment in self.books.customer_payments.list_all()
             if to_text(payment.get("location_id")) == self.config.location_id
@@ -274,14 +284,15 @@ class CreatorBooksPaymentLinkBackfill:
             candidate, _ = resolve_books_payment(
                 _crosschecked_values(
                     record, canonical_by_id.get(to_text(record.get("ID")))
-                ), payments, by_id, by_number
+                ),
+                payments, by_id, by_number
             )
             record_id = to_text(record.get("ID"))
             if candidate is not None and record_id:
                 payment_id = to_text(candidate.get("payment_id") or candidate.get("id"))
                 claims.setdefault(payment_id, set()).add(record_id)
-        rows: list[dict[str, Any]] = []
-        details: dict[str, Mapping[str, Any]] = {}
+        rows: list[dict[str, object]] = []
+        details: dict[str, Mapping[str, object]] = {}
         missing_link_ids: set[str] = set()
         for payment in payments:
             payment_id = to_text(payment.get("payment_id") or payment.get("id"))
@@ -315,28 +326,27 @@ class CreatorBooksPaymentLinkBackfill:
                 _crosschecked_values(record, canonical_by_id.get(record_id)),
                 payments, by_id, by_number
             )
-            row: dict[str, Any] = {
+            row: dict[str, object] = {
                 "creator_record_id": record_id,
                 "match_source": source,
             }
             if payment is None:
                 row["status"] = source
             else:
-                row["books_payment_id"] = to_text(
-                    payment.get("payment_id") or payment.get("id")
-                )
+                pmt_id = to_text(payment.get("payment_id") or payment.get("id"))
+                row["books_payment_id"] = pmt_id
                 if not row["books_payment_id"]:
                     row["status"] = "payment_missing"
                     rows.append(row)
                     _write_checkpoint(self.config.checkpoint_path, BackfillResult(rows, oldest_date.isoformat(), sequence_gaps))
                     continue
-                matched_payment_ids.add(row["books_payment_id"])
-                if len(claims.get(row["books_payment_id"], set())) > 1:
+                matched_payment_ids.add(pmt_id)
+                if len(claims.get(pmt_id, set())) > 1:
                     row["status"] = "creator_match_ambiguous"
                     rows.append(row)
                     _write_checkpoint(self.config.checkpoint_path, BackfillResult(rows, oldest_date.isoformat(), sequence_gaps))
                     continue
-                current = details.get(row["books_payment_id"])
+                current = details.get(pmt_id)
                 if current is None:
                     row["status"] = "payment_read_failed"
                     rows.append(row)
@@ -345,11 +355,14 @@ class CreatorBooksPaymentLinkBackfill:
                 status, _missing = classify_links(current, record_id, creator_payment_id)
                 if status == "ready" and self.config.execute:
                     try:
+                        raw_pmt = self._books_request(
+                            self.books.customer_payments.get,
+                            pmt_id,
+                        )
+                        if not isinstance(raw_pmt, Mapping):
+                            raise RuntimeError("Books returned no customer payment record.")
                         current = unwrap_record(
-                            self._books_request(
-                                self.books.customer_payments.get,
-                                row["books_payment_id"],
-                            ),
+                            raw_pmt,
                             ("customerpayment", "customer_payment", "payment"),
                         )
                         if not isinstance(current, Mapping):
@@ -366,7 +379,7 @@ class CreatorBooksPaymentLinkBackfill:
                             continue
                         response = self._books_request(
                             self.books.customer_payments.update,
-                            row["books_payment_id"],
+                            pmt_id,
                             {
                                 "custom_fields": [
                                     {"label": "Creator Record ID", "value": record_id},
@@ -378,13 +391,18 @@ class CreatorBooksPaymentLinkBackfill:
                             response.get("code", "")
                         ).strip() not in {"0"}:
                             raise RuntimeError("Books rejected the custom-field update.")
+                        raw_v_pmt = self._books_request(
+                            self.books.customer_payments.get,
+                            pmt_id,
+                        )
+                        if not isinstance(raw_v_pmt, Mapping):
+                            raise RuntimeError("Books customer-payment re-read failed.")
                         verified = unwrap_record(
-                            self._books_request(
-                                self.books.customer_payments.get,
-                                row["books_payment_id"],
-                            ),
+                            raw_v_pmt,
                             ("customerpayment", "customer_payment", "payment"),
                         )
+                        if not isinstance(verified, Mapping):
+                            raise RuntimeError("Books customer-payment re-read failed.")
                         verified_status, _ = classify_links(
                             verified, record_id, creator_payment_id
                         )

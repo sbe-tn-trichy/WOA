@@ -2,16 +2,17 @@
 """Backfill Creator payment checkpoints from existing Books customer payments."""
 
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
 from pathlib import Path
 from collections.abc import Sequence
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:  # Direct script execution.
-    import _bootstrap  # type: ignore[no-redef]  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client, get_creator_client
 from workflows.creator_payments.online_backfill import _creator_values, _normalized, _require_creator_update_success, _summary, _verify_creator_fields, _write_result, find_books_payment, run_backfill

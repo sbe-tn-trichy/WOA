@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """Preview or import one Polycab credit memo, including RSO settlement."""
 from __future__ import annotations
+import importlib
 
 import argparse
 from utils.file_utils import json
 from pathlib import Path
 
-try:
-    from . import _bootstrap  # noqa: F401
-except ImportError:
-    import _bootstrap  # noqa: F401
+if __package__:
+    from . import _bootstrap
+else:
+    importlib.import_module("_bootstrap")
 
 from workflows.runtime.auth import get_books_client
-from workflows.runtime.config import Config, get_config
+from workflows.runtime.config import Config
 from workflows.polycab_credit_memos import CreditImportPolicy, import_credit_pdf
 from zoho.core_sdk.security import resolve_output_path
 
@@ -23,9 +24,9 @@ def main() -> int:
     for name, default in (
         ('vendor', Config.POLYCAB_VENDOR_ID), ('location', Config.EXPECTED_LOCATION_ID),
         ('scheme-item', Config.ZOHO_SCHEME_CN_ITEM_ID),
-        ('scheme-account', get_config('POLYCAB_SCHEME_ACCOUNT_ID', '')),
-        ('rma-account', get_config('POLYCAB_RMA_ACCOUNT_ID', '')),
-        ('clearing-account', get_config('POLYCAB_CLEARING_ACCOUNT_ID', '')),
+        ('scheme-account', Config.POLYCAB_SCHEME_ACCOUNT_ID),
+        ('rma-account', Config.POLYCAB_RMA_ACCOUNT_ID),
+        ('clearing-account', Config.POLYCAB_CLEARING_ACCOUNT_ID),
     ):
         parser.add_argument('--' + name + '-id', default=default)
     parser.add_argument('--checkpoint', default='output/polycab_credit_import/checkpoint.json')

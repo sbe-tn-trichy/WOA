@@ -31,7 +31,7 @@ utils (Shared Transport & Primitives) <-- zoho (API Clients & Auth) <-- helpers 
    - `utils.file_utils.pdf.read_pdf_pages` extracts text through pypdfium2, normalizes CRLF and closes document/page/text handles. Supplier-specific interpretation stays in each workflow.
    - `utils.file_utils.yaml` uses YAMLRocks, preserves legacy scalar interpretation and validates source tags before conversion so custom/Python tags and multi-document configuration fail closed.
    - `utils.general_utils.encoding.detect_encoding` detects character encoding via Rust chardetng.
-   - `utils.general_utils.sequences.parse_doc_number` owns the SDK-safe parsing primitive, re-exported by `helpers.formatting.sequences`.
+   - `utils.general_utils.sequences.parse_doc_number` owns the SDK-safe parsing primitive, re-exported by `helpers` and `helpers.formatting`.
    - Must not import from `zoho`, `helpers`, `workflows`, `google_sheets`, `apps`, or `scripts`.
 
 1. **Core / Client Layer (`zoho.books`, `zoho.wd`, `zoho.creator`, etc.)**:
@@ -44,7 +44,8 @@ utils (Shared Transport & Primitives) <-- zoho (API Clients & Auth) <-- helpers 
    - Public composite operations are exported from `helpers`. Implementations are grouped into catalog, report, formatting and operation packages.
    - Helpers may import SDK clients and utilities, but never workflows, apps or scripts.
    - The former `zoho.helpers` import path is removed; callers must import `helpers`.
-   - `utils.general_utils.sequences.parse_doc_number` owns the SDK-safe parsing primitive, re-exported by `helpers.formatting.sequences` and the legacy Books GST module.
+   - Import `get_bins_for_items` for warehouse bin stock queries. The former `getBinsForItems` spelling was removed.
+   - `utils.general_utils.sequences.parse_doc_number` owns the SDK-safe parsing primitive, re-exported by `helpers` and the legacy Books GST module.
 
 2. **Workflow Layer (`workflows`)**:
    - Multi-service domain engines and reconciliation algorithms.
@@ -80,6 +81,28 @@ concept documents the architectural boundaries they apply to.
   or creation; Books clients do not expose an item resource. See
   [Inventory API routing](zoho-inventory.md) for the public API migration.
 
+## Search result cardinality
+
+`helpers.search_customers(client, query, by="name")` returns a
+`CustomerSearchResult` with `status` (`no_match`, `unique`, or `ambiguous`)
+and candidates deduplicated by Books contact ID. Name search uses separate
+contact and company name filters and supports exact or partial matching.
+GSTIN and phone searches scan customer pages and compare normalized fields
+locally. Phone search covers the contact row's phone and mobile fields,
+retains country-code digits, and uses exact matching after removing formatting.
+Service and response errors propagate to the caller.
+
+Financial workflows that require one record use the `resolve_*` helpers.
+These return a unique record or `None` for a confirmed miss and raise
+`AmbiguousMatchError` for multiple distinct IDs at the winning rank. Inventory
+queries retain the purchase-account filter where required and exclude rows
+with a different purchase account when the field is present. Bill resolution
+checks both vendor ID and bill number. Searches use the SDK's
+[pagination contract](zoho-books.md#openapi-operation-coverage) and do not
+return a partial result after a failed page. Existing `find_*` and map helpers
+retain their compatibility behavior. Custom-field provisioning reports
+ambiguous normalized field names before creating any requested field.
+
 ## Authentication and failure ownership
 
 `zoho.core_sdk.auth` owns OAuth refresh, the HTTP token broker and explicit Catalyst mutation
@@ -108,7 +131,7 @@ callers should inspect that metadata rather than infer categories from messages.
 ## Shared primitives and extracted domain workflows
 
 Generic document-number parsing lives in `utils.general_utils.sequences`, re-exported by
-`helpers.formatting.sequences` and reusable by
+`helpers` and reusable by
 Books GST and workflow consumers. Pure workflow FY selection and sequence analysis
 live in `workflows.core`; Analytics queries stay in `payment_inspection`.
 Customer validation and invoice-YAML sales-order import are workflow APIs, with

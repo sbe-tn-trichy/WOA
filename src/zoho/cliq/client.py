@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import logging
-from typing import Any
+
 from zoho.core_sdk.base_client import BaseZohoClient
 
 logger = logging.getLogger("zoho_cliq")
+
 
 class ZohoCliqAPI(BaseZohoClient):
     """
@@ -15,7 +18,7 @@ class ZohoCliqAPI(BaseZohoClient):
             access_token=access_token,
             domain=domain or "in",
             base_url=base_url,
-            service_name="cliq"
+            service_name="cliq",
         )
 
     def send_notification(
@@ -23,7 +26,7 @@ class ZohoCliqAPI(BaseZohoClient):
         message: str,
         channel: str | None = None,
         raise_on_error: bool = False,
-    ) -> dict[str, Any] | None:
+    ) -> object:
         """Sends a summary message via direct Zoho Cliq API (v2)."""
         if not self.access_token:
             logger.warning("Cliq Access Token not provided. Skipping notification.")
@@ -31,16 +34,16 @@ class ZohoCliqAPI(BaseZohoClient):
                 from zoho.core_sdk.exceptions import ZohoCliqError
                 raise ZohoCliqError("Cliq Access Token not provided.")
             return None
-        
+
         if channel:
             endpoint = f"channels/{channel}/message"
         else:
             endpoint = f"bots/{self.bot_name}/message"
-            
-        payload = {
-            "text": message
+
+        payload: dict[str, object] = {
+            "text": message,
         }
-        
+
         try:
             return self.request("POST", endpoint, json=payload, timeout=10)
         except Exception as e:

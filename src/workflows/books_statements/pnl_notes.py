@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from collections.abc import Mapping
-from typing import Any
+from collections.abc import Mapping, Sequence
 
 from helpers import fetch_profit_and_loss_schedule_format
+from helpers.reports.profit_and_loss import BooksPnLClient
 
 
 NOTE_SHEET = "Notes to P & L 19 to 25"
@@ -18,7 +18,7 @@ NOTE_INPUTS = (
 
 
 def prepare_pnl_note_updates(
-    books: Any,
+    books: BooksPnLClient,
     *,
     from_date: str,
     to_date: str,
@@ -39,35 +39,49 @@ def prepare_pnl_note_updates(
     if not isinstance(partner_interest, Decimal) or not partner_interest.is_finite():
         raise ValueError("partner_interest must be a finite Decimal")
     groups: dict[str, dict[str, Decimal]] = {}
-    parents = report.get("profit_and_loss", [])
+    raw_parents = report.get("profit_and_loss")
+    parents_list: list[Mapping[str, object]] = [p for p in raw_parents if isinstance(p, Mapping)] if isinstance(raw_parents, Sequence) else []
     if "schedule_profit_and_loss" in report:
-        schedule = report["schedule_profit_and_loss"]
-        def accounts(nodes):
-            result = []
+        raw_schedule = report.get("schedule_profit_and_loss")
+        schedule = [s for s in raw_schedule if isinstance(s, Mapping)] if isinstance(raw_schedule, Sequence) else []
+        def accounts(nodes: Sequence[Mapping[str, object]]) -> list[Mapping[str, object]]:
+            result: list[Mapping[str, object]] = []
             for node in nodes:
                 if node.get("account_id") and not node.get("section"):
                     result.append(node)
-                result.extend(accounts(node.get("account_transactions", [])))
+                txs = node.get("account_transactions", [])
+                child_nodes = [c for c in txs if isinstance(c, Mapping)] if isinstance(txs, Sequence) else []
+                result.extend(accounts(child_nodes))
             return result
-        sections = {node["name"]: node for node in schedule}
-        expenses = sections.get("IV. Expenses", {}).get("account_transactions", [])
-        cogs = [node for node in expenses if node["name"].startswith(("1.", "2.", "3."))]
-        operating = [node for node in expenses if node["name"].startswith(("4.", "5.", "6.", "7."))]
-        parents = [{"account_transactions": [
-            {"name": "Operating Income", "account_transactions": accounts([sections.get("I. Revenue from operations", {})])},
-            {"name": "Non Operating Income", "account_transactions": accounts([sections.get("II. Other Income", {})])},
+        sections: dict[str, Mapping[str, object]] = {str(node.get("name")): node for node in schedule}
+        iv_exp = sections.get("IV. Expenses")
+        raw_expenses = iv_exp.get("account_transactions") if isinstance(iv_exp, Mapping) else []
+        expenses = [e for e in raw_expenses if isinstance(e, Mapping)] if isinstance(raw_expenses, Sequence) else []
+        cogs = [node for node in expenses if str(node.get("name", "")).startswith(("1.", "2.", "3."))]
+        operating = [node for node in expenses if str(node.get("name", "")).startswith(("4.", "5.", "6.", "7."))]
+        rev_op = sections.get("I. Revenue from operations")
+        rev_nodes = [rev_op] if isinstance(rev_op, Mapping) else []
+        other_inc = sections.get("II. Other Income")
+        other_nodes = [other_inc] if isinstance(other_inc, Mapping) else []
+        parents_list = [{"account_transactions": [
+            {"name": "Operating Income", "account_transactions": accounts(rev_nodes)},
+            {"name": "Non Operating Income", "account_transactions": accounts(other_nodes)},
             {"name": "Cost of Goods Sold", "account_transactions": accounts(cogs)},
             {"name": "Operating Expense", "account_transactions": accounts(operating)},
         ]}]
-    for parent in parents:
-        for section in parent.get("account_transactions", []):
+    for parent in parents_list:
+        raw_txs = parent.get("account_transactions")
+        tx_list = [t for t in raw_txs if isinstance(t, Mapping)] if isinstance(raw_txs, Sequence) else []
+        for section in tx_list:
             if section.get("name") in {
                 "Operating Income", "Cost of Goods Sold", "Operating Expense",
                 "Non Operating Income", "Non Operating Expense",
             }:
-                section_name = section["name"]
+                section_name = str(section["name"])
                 groups[section_name] = {}
-                for account in section.get("account_transactions", []):
+                accts_raw = section.get("account_transactions")
+                accts_list = [a for a in accts_raw if isinstance(a, Mapping)] if isinstance(accts_raw, Sequence) else []
+                for account in accts_list:
                     account_id = str(account.get("account_id") or "")
                     if account_id in groups[section_name]:
                         raise ValueError(f"Duplicate Books account: {account_id}")

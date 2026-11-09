@@ -2,25 +2,25 @@
 
 from __future__ import annotations
 
-from datetime import date
-from utils.file_utils import json
 from collections.abc import Iterator, Mapping, Sequence
-from typing import Any
+from datetime import date
 
+from utils.file_utils import json
+from zoho.core_sdk.base_client import BaseZohoClient
 from zoho.core_sdk.base_resource import BaseResource
 
 
 class Reports(BaseResource):
     """Read financial reports from the Books API."""
 
-    def __init__(self, client: Any) -> None:
+    def __init__(self, client: BaseZohoClient) -> None:
         super().__init__(client, "reports")
 
     def account_transactions(
         self, account_ids: Sequence[str], *, from_date: str, to_date: str,
         page: int = 1, per_page: int = 500, cash_based: bool = False,
         response_option: int = 0,
-    ) -> Mapping[str, Any]:
+    ) -> Mapping[str, object]:
         """Read account ledger rows (option 0) or count metadata (option 2).
 
         Preserve raw transaction groups, balance rows, and page context. Dates
@@ -92,7 +92,7 @@ class Reports(BaseResource):
     def trial_balance(
         self, *, from_date: str, to_date: str, rule: str | None = None,
         cash_based: bool = False, show_rows: str = "non_zero",
-    ) -> Mapping[str, Any]:
+    ) -> Mapping[str, object]:
         """Fetch opening, debit, credit and closing balances for a date range.
 
         Preserve the raw response, including Dr/Cr formatting and report groups.
@@ -157,7 +157,7 @@ class Reports(BaseResource):
     def general_ledger_details(
         self, account_ids: Sequence[str], *, from_date: str, to_date: str,
         page: int = 1, per_page: int = 500, cash_based: bool = False,
-    ) -> Mapping[str, Any]:
+    ) -> Mapping[str, object]:
         """Return one raw Detailed General Ledger page, preserving report groups.
 
         Uses the ``generalledgerdetails`` endpoint captured from Books' web app.
@@ -207,7 +207,7 @@ class Reports(BaseResource):
     def iter_general_ledger_details_pages(
         self, account_ids: Sequence[str], *, from_date: str, to_date: str,
         per_page: int = 500, cash_based: bool = False, max_pages: int = 100,
-    ) -> Iterator[Mapping[str, Any]]:
+    ) -> Iterator[Mapping[str, object]]:
         """Yield raw report pages; stop on repeated content or the request bound.
 
         Raise rather than silently return an incomplete report at ``max_pages``.
@@ -228,14 +228,15 @@ class Reports(BaseResource):
                 raise ValueError("Books Detailed General Ledger repeated a page")
             seen.add(signature)
             yield response
-            if not response["page_context"]["has_more_page"]:
+            page_ctx = response.get("page_context")
+            if not (isinstance(page_ctx, Mapping) and page_ctx.get("has_more_page")):
                 return
         raise ValueError("Books Detailed General Ledger exceeded max_pages")
 
     def general_ledger(
         self, *, from_date: str, to_date: str, rule: str,
         cash_based: bool = False,
-    ) -> Mapping[str, Any]:
+    ) -> Mapping[str, object]:
         """Fetch a rule-filtered General Ledger summary from the public API."""
         try:
             start, end = date.fromisoformat(from_date), date.fromisoformat(to_date)
@@ -284,7 +285,7 @@ class Reports(BaseResource):
     def profit_and_loss_schedule_format(
         self, *, from_date: str, to_date: str, rule: str,
         cash_based: bool = False,
-    ) -> Mapping[str, Any]:
+    ) -> Mapping[str, object]:
         """Read ``reports/scheduleprofitandloss`` using OAuth and custom dates."""
         return self._schedule_format("scheduleprofitandloss", "schedule_profit_and_loss",
                                      from_date, to_date, rule, cash_based)
@@ -292,7 +293,7 @@ class Reports(BaseResource):
     def balance_sheet_schedule_format(
         self, *, from_date: str, to_date: str, rule: str,
         cash_based: bool = False,
-    ) -> Mapping[str, Any]:
+    ) -> Mapping[str, object]:
         """Read ``reports/schedulebalancesheet`` using OAuth and custom dates."""
         return self._schedule_format("schedulebalancesheet", "schedule_balance_sheet",
                                      from_date, to_date, rule, cash_based)
@@ -305,7 +306,7 @@ class Reports(BaseResource):
         to_date: str,
         rule: str,
         cash_based: bool = False,
-    ) -> Mapping[str, Any]:
+    ) -> Mapping[str, object]:
         """Fetch the schedule P&L data endpoint with explicit dates and scope.
 
         Keep the raw schedule response; this is distinct from the ordinary P&L
