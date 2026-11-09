@@ -12,7 +12,7 @@ from workflows.polycab_credit_review.models import CreditMemoEvidence
 @pytest.fixture
 def setup_import(tmp_path):
     books = MagicMock()
-    policy = CreditImportPolicy('1', '2', '3', '4', '5', '6')
+    policy = CreditImportPolicy('1', '2', '3', '4', '5', '6', rma_item_id='8')
     memo = CreditMemoEvidence('100', 'TN/CN100', date(2026, 10, 8), Decimal('50'), '200', 'SBE2627INV-1', True)
     invoice = dict(invoice_id='7', invoice_number=memo.invoice_number, location_id='2',
                    customer_id='8', status='sent', balance=100)
@@ -66,6 +66,7 @@ def test_preview_has_no_mutations(setup_import):
 
 
 def test_rso_creates_and_cross_references_all_three(setup_import):
+    _, policy, _, _ = setup_import
     result = run_import(setup_import, apply=True)
     assert result['status'] == 'verified'
     for name in ('credit', 'journal', 'payment'):
@@ -77,7 +78,7 @@ def test_rso_creates_and_cross_references_all_three(setup_import):
     journal = result['records']['journal']
     assert [(x['account_id'], x['debit_or_credit']) for x in journal['line_items']] == [('5', 'debit'), ('6', 'credit')]
     assert result['records']['payment']['invoices'] == [{'invoice_id': '7', 'amount_applied': 50}]
-    assert result['records']['credit']['line_items'][0]['item_id'] == '1094368000028456138'
+    assert result['records']['credit']['line_items'][0]['item_id'] == policy.rma_item_id
 
 
 def test_scheme_only_uses_kitty(setup_import):
@@ -136,4 +137,4 @@ def test_wrong_saved_payment_allocation_stops_completion(setup_import):
 
 def test_policy_rejects_placeholder():
     with pytest.raises(ValueError, match='numeric'):
-        CreditImportPolicy('<vendor>', '2', '3', '4', '5', '6')
+        CreditImportPolicy('<vendor>', '2', '3', '4', '5', '6', rma_item_id='8')

@@ -35,7 +35,7 @@ jobs:
             pyproject.toml
             constraints.txt
       - run: uv venv --python 3.14.10
-      - run: uv pip install --python .venv -c constraints.txt -e ".[workflows,test,typing]"
+      - run: uv pip install --python .venv -c constraints.txt -e ".[workflows,test,typing,ocr]" "keyring==25.7.0"
       - run: uv pip check --python .venv
       - run: uv run --no-sync python -m ty check
       - run: uv run --no-sync python apps/analyze_project.py

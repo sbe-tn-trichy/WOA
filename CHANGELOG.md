@@ -9,6 +9,21 @@ This file keeps the current year's entries; older years are archived under
 
 ## 2026-11-09
 
+### Repair cross-platform CI checks
+
+- **Why:** Run 42576153227 exposed missing optional imports in type checking, tests that depended on deployment configuration, and a Windows checkout mismatch in the ERP manifest hash (APPS-003, HELPER-002).
+- **What:** Install OCR and keyring dependencies in the type-check job, supply explicit test IDs or mock configuration defaults, and preserve LF for the byte-verified ERP manifest.
+- **Verification:** macOS arm64 / CPython 3.14.10: 4,119 tests and four subtests passed. All 164 affected tests passed in a source copy with no deployment configuration and an empty home directory. ty, offline analysis and API reference checks passed. CRLF conversion reproduced the exact Windows failure hash. Annual rollover checked (2026). Hosted CI for the fix is pending.
+
+### Add local metadata directory and initialize analytics SQLite catalog
+
+- **Why:** Provide a local, git-ignored workspace directory (`metadata/analytics/`) for storing Zoho Analytics metadata SQLite databases without polluting version control.
+- **What:**
+  - Added `metadata/` to `.gitignore`.
+  - Created root `metadata/` and nested `metadata/analytics/` directory.
+  - Initialized canonical SQLite database `metadata/analytics/metadata.sqlite` conforming to Analytics schema version 5.
+- **Verification:** Verified `git check-ignore -v metadata/analytics/metadata.sqlite` matches rule `.gitignore:24:metadata/`; verified SQLite database integrity with `PRAGMA integrity_check` returning `ok` and `schema_version` equal to `5`; ran `apps/analyze_project.py` with 0 issues; annual rollover checked (2026); no live API mutations.
+
 ### Complete Phase 5 applications and distribution milestone type safety migration (CHK-5.1 to CHK-5.3)
 
 - **Why:** Deliver CHK-5.1, CHK-5.2, and CHK-5.3 to achieve 100% full-repository type safety across all applications in `apps/` and the Zoho SDK in `src/zoho/`, eliminate untyped `Any`, establish PEP 561 distribution readiness via `src/zoho/py.typed`, and expand `[tool.ty.src].include` to full `"src"` and `"apps"` coverage with 0 diagnostics and 0 regressions.

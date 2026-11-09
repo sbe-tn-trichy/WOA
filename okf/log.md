@@ -2,6 +2,8 @@
 
 ## 2026-11-09
 
+- Documented the optional imports required by the CI type-check job and the use of test fixture IDs for tenant-scoped workflows. See the [project entry](../CHANGELOG.md#repair-cross-platform-ci-checks).
+
 - Completed Phase 5 type safety across all CLI and server applications in `apps/` and finalized the distribution milestone, adding PEP 561 marker `src/zoho/py.typed` and expanding `[tool.ty.src].include` to full `"src"` and `"apps"` coverage at 0 diagnostics. See the [project entry](../CHANGELOG.md#complete-phase-5-applications-and-distribution-milestone-type-safety-migration-chk-51-to-chk-53).
 
 - Completed Phase 4 strict type safety across all financial and operational domain workflows in `src/workflows/`, eliminating `Any` types, defining strict `TypedDict` and caller `Protocol` boundaries, and promoting all 32 workflow packages to `[tool.ty.src].include` (447 total files covered at 0 diagnostics). See the [project entry](../CHANGELOG.md#complete-phase-4-financial-and-operational-workflows-and-chk-50-apps-bootstrap-standardization).

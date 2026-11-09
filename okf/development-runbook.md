@@ -278,7 +278,10 @@ uv using `uv pip install --python .venv -c constraints.txt -e
 ".[workflows,test,typing]"` only when environment provisioning is authorized.
 CI provisions a fresh `.venv` with uv and applies the same constraints to its
 install jobs. CI uses `uv run --no-sync` to execute checks in that environment
-without resolving or changing installed packages. `constraints.txt` remains the
+without resolving or changing installed packages. The type-check job also installs
+the OCR extra and keyring so ty can resolve their optional imports. Tests that
+exercise tenant-scoped workflows supply fixture IDs so a clean checkout can run
+them without deployment configuration. `constraints.txt` remains the
 application baseline. Use explicit installs rather than automatic project syncing.
 Library consumers retain
 compatibility ranges in `pyproject.toml`; constraints are an application policy,

@@ -9,16 +9,22 @@ from typing import Any
 from .location_proposals import LocationProposal
 
 from workflows.core.matching import parse_currency_amount as _amount
+from workflows.runtime.config import Config
 
 
-ACCOUNT_ID = "1094368000002033114"
+ACCOUNT_ID = Config.INTER_LOCATION_CLEARING_ACCOUNT_ID
 
 
 def _date(value: str) -> str:
     return datetime.strptime(value, "%d/%m/%Y").strftime("%Y-%m-%d")
 
 
-def verify_proposed_pair(books: Any, proposal: LocationProposal) -> dict[str, str]:
+def verify_proposed_pair(
+    books: Any,
+    proposal: LocationProposal,
+    *,
+    clearing_account_id: str | None = None,
+) -> dict[str, str]:
     """Check a proposal against current payment, invoice, vendor, and bill records."""
     if proposal["status"] != "proposed" or proposal["matching_evidence"] != "Exact reference":
         raise ValueError("Only exact-reference proposals can be applied")
@@ -35,7 +41,11 @@ def verify_proposed_pair(books: Any, proposal: LocationProposal) -> dict[str, st
     source = move["from_location_id"]
     if str(payment.get("payment_id")) != payment_id or str(vendor.get("payment_id")) != vendor_id:
         raise ValueError(f"Books returned a different payment for {payment_id}")
-    if str(payment.get("account_id")) != ACCOUNT_ID or str(vendor.get("paid_through_account_id")) != ACCOUNT_ID:
+    expected_clearing_id = clearing_account_id or Config.INTER_LOCATION_CLEARING_ACCOUNT_ID
+    if expected_clearing_id:
+        if str(payment.get("account_id")) != expected_clearing_id or str(vendor.get("paid_through_account_id")) != expected_clearing_id:
+            raise ValueError(f"Clearing account changed for {payment_id}")
+    elif str(payment.get("account_id")) != str(vendor.get("paid_through_account_id")):
         raise ValueError(f"Clearing account changed for {payment_id}")
     if str(payment.get("location_id")) not in (source, target) or str(vendor.get("location_id")) != target:
         raise ValueError(f"Payment locations changed for {payment_id}")

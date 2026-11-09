@@ -1,0 +1,2 @@
+# The ERP generation contract verifies the manifest byte for byte.
+src/zoho/erp/openapi/manifest.json text eol=lf

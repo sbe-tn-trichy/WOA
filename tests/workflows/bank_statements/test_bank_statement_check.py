@@ -132,12 +132,13 @@ def test_cli_replay_and_snapshot_scope(tmp_path, monkeypatch):
     from apps.check_hdfc_statement import main
     path, saved, output = tmp_path / 'bank.csv', tmp_path / 'saved.json', tmp_path / 'output'
     path.write_text(HEADER + '01/04/26,UPI Customer,00123,01/04/26,,100,200\n')
-    snapshot = {'schema_version': 1, 'workspace_id': '264324000000002043',
-        'view_id': '264324000005829009', 'account_id': '123', 'start': str(DAY), 'end': str(DAY),
+    snapshot = {'schema_version': 1, 'workspace_id': '456',
+        'view_id': '789', 'account_id': '123', 'start': str(DAY), 'end': str(DAY),
         'captured_at': 'test', 'last_successful_metadata_sync_at': 'cached-time', 'rows': [analytics_row()]}
     saved.write_text(json.dumps(snapshot))
     monkeypatch.setattr('apps.check_hdfc_statement.get_analytics_client', Mock(side_effect=AssertionError('network')))
-    args = [str(path), '--account-id', '123', '--saved', str(saved), '--output', str(output)]
+    args = [str(path), '--account-id', '123', '--workspace-id', '456', '--view-id', '789',
+            '--saved', str(saved), '--output', str(output)]
     assert main(args) == 0
     assert 'Matched: 1' in (output / 'report.md').read_text()
     assert json.loads((output / 'comparison.json').read_text())['csv_count'] == 1

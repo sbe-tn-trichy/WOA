@@ -14,13 +14,16 @@ from apps import update_inter_location_contra_query_table as update
     [
         (manage, [], None, False),
         (create, [], None, False),
-        (update, [], "264324000008274019", False),
+        (update, [], "789", False),
         (update, ["--view-id", "custom", "--apply"], "custom", True),
         (create, ["--name", "Reviewed table", "--apply"], None, True),
     ],
 )
 def test_commands_share_execution(monkeypatch, capsys, command, argv, view_id, apply):
     client = object()
+    monkeypatch.setattr(manage.Config, "ANALYTICS_WORKSPACE_ID", "123")
+    monkeypatch.setattr(manage.Config, "INTER_LOCATION_CLEARING_ACCOUNT_ID", "456")
+    monkeypatch.setattr(manage.Config, "INTER_LOCATION_CONTRA_VIEW_ID", "789")
     monkeypatch.setattr(manage, "get_analytics_client", lambda **kwargs: client)
     sync = Mock(return_value={
         "validated_pair_count": 2, "preview_row_count": 3,
@@ -30,8 +33,8 @@ def test_commands_share_execution(monkeypatch, capsys, command, argv, view_id, a
     assert command.main(argv) == 0
     assert sync.call_args.args == (client,)
     assert sync.call_args.kwargs == {
-        "workspace_id": "264324000000002043",
-        "account_id": "1094368000002033114",
+        "workspace_id": "123",
+        "account_id": "456",
         "view_id": view_id,
         "name": "Reviewed table" if "--name" in argv else "Inter Location Contra FY25-27",
         "apply": apply,
