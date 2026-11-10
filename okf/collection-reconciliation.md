@@ -162,9 +162,9 @@ for cash-to-bank transfer proposals and **Salary** withdrawals for salary
 expense proposals, excluding them from customer payment matching. Incoming
 salary lines and outgoing cash-deposit lines do not qualify. Salary takes
 precedence over a TA suffix. Refresh live data to classify existing queue rows.
-Salary uses `PAYMENT_SALARY_EXPENSE_ACCOUNT_ID` (default `1094368000000000543`,
+Salary uses `PAYMENT_SALARY_EXPENSE_ACCOUNT_ID` (configured in `config.yaml`,
 Salaries and Employee Wage); cash transfers use `PAYMENT_CASH_ACCOUNT_ID`
-(default `1094368000005226023`, Cash-SBE). Both accounts are validated by direct
+(configured in `config.yaml`, Cash account). Both accounts are validated by direct
 detail reads for active expense/cash type. Transfers use the reviewed line's
 bank as destination and the Books `transfer_fund` categorization endpoint.
 The Expenses view and expense multiselect include salary. Cash transfers have
@@ -215,8 +215,7 @@ name matches are suggestions only. A withdrawal whose description ends in
 `/TA` is proposed as Employee Travel Expense. A reviewer must explicitly
 approve it, after which the workflow re-reads the uncategorized bank line,
 checks its date, amount, and description, resolves one active expense account,
-and calls Books' categorize-as-expense endpoint. The review app uses
-`PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID` (default `1094368000029132050`), overridable
+and calls Books' categorize-as-expense endpoint. The review app uses `PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID` (configured in `config.yaml`), overridable
 with `--travel-expense-account-id`. The workflow validates the selected ID's
 active expense type through a direct account detail read, since the Books account
 list can omit the selected account; without an ID it falls back to the exact account name. The
@@ -265,8 +264,8 @@ proposed.
 
 Only a unique date, amount, and reference match is eligible for acceptance.
 The production review queue also validates the Creator customer name against
-historical categorized records in Analytics `Payment Customer Finder` view
-`264324000006111037` in workspace `264324000000002043`. The query exposes the source bank record’s `Statement Line ID` so a supplied ID can identify the bank line when reviewing a Creator payment. This is a bank-line identifier, not a Creator payment ID; joined transaction rows may repeat it. The workflow extracts
+historical categorized records in the Analytics `Payment Customer Finder` view
+(configured via `ANALYTICS_CUSTOMER_FINDER_VIEW_ID`) in the configured workspace (`ANALYTICS_WORKSPACE_ID`). The query exposes the source bank record’s `Statement Line ID` so a supplied ID can identify the bank line when reviewing a Creator payment. This is a bank-line identifier, not a Creator payment ID; joined transaction rows may repeat it. The workflow extracts
 remitter identifiers (UPI VPA, phone numbers, remitter names) from the bank line
 narration and executes targeted SQL queries against the Finder view rather than
 downloading the full table. If historical records identify exactly one customer, that customer must confirm
@@ -422,6 +421,14 @@ incomplete-checkpoint outcomes so the operation is safely repeatable. A failed
 Books update aborts the run without recording a successful repair.
 
 # Request Efficiency
+
+The review implementation separates concurrent data fetching, caching, and proposal
+normalization (`workflows.collection_reconciliation.review_fetch`) from review-queue
+state transitions, categorization, and Books/Creator checkpointing
+(`workflows.collection_reconciliation.review`). Generic Creator verification, Books
+bank-transaction fetch/matching/categorization, account/vendor/location resolution, and
+Analytics SQL/export fallback live in `helpers`, while invoice previews, cheque
+checkpoints, and payment creation live in `workflows.collection_payments`.
 
 Refresh overlaps Creator payment reads with Books bank reads using two workers.
 Each client is used sequentially, and request-metric context is propagated into

@@ -35,18 +35,22 @@ def main() -> int:
                 <= date(2026, 3, 31)] if isinstance(raw_proposals, Sequence) else []
     payments.sort(key=lambda p: (str(p.get("date", "")), str(p.get("payment_id", ""))))
     counts = Counter(p.get("status") for p in payments)
+    prefix = str(payments[0].get("expected_number_prefix") or "") if payments else ""
+    if not prefix:
+        raise ValueError("No prefix found in proposals; ensure proposals include expected_number_prefix")
+    limit = 15
     batch_moves = plan_customer_payment_moves(
-        get_books_client(), payments, prefix="SB2526CP-", limit=15,
+        get_books_client(), payments, prefix=prefix, limit=limit,
         excluded_payment_ids=frozenset(Config.INTER_LOCATION_EXCLUDED_PAYMENT_IDS))
-    if len(batch_moves) != 15:
-        raise ValueError(f"Expected 15 live Books-verified candidates; found {len(batch_moves)}")
+    if not batch_moves:
+        raise ValueError("No live Books-verified candidates found")
     by_id = {str(p.get("payment_id")): p for p in payments}
     proposed_numbers = {move["payment_id"]: move["new_number"] for move in batch_moves}
     lines = ["# FY 2025–26 inter-location payment proposals", "",
              f"Source: Zoho Analytics Query Table {report.get('view_id')}. "
              f"{len(payments)} payments: {counts['proposed']} proposed, "
              f"{counts['manual_review']} manual review.", "",
-             "## Next 15 customer-payment candidates", "",
+             f"## Next {len(batch_moves)} customer-payment candidates", "",
              "These destination numbers are planned from current Books data; they are not reserved.", "",
              "| Payment ID | Date | Amount | Bank | From | To | Invoice | Destination number |",
              "| --- | --- | ---: | --- | --- | --- | --- | --- |"]

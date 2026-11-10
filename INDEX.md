@@ -612,7 +612,7 @@ The `ZANALYTICS-ORGID` header is injected into every request.
 
 ```python
 rows = client.queries.execute(
-    workspace_id="264324000000002043",
+    workspace_id="<your-workspace-id>",
     sql_query='SELECT * FROM "Payment Customer Finder" LIMIT 5',
 )
 ```

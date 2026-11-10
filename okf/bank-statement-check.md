@@ -15,8 +15,7 @@ injected Analytics client. Run the helper with:
 
 The configured HDFC Books account is the default; `--account-id` selects another
 explicit account. Workspace and table IDs are configurable with `--workspace-id`
-and `--view-id`. Their defaults are workspace `264324000000002043` and table
-`264324000005829009`. The CSV supplies the inclusive posting-date range. The
+and `--view-id` (defaulting to `Config.ANALYTICS_WORKSPACE_ID` and `Config.ANALYTICS_BANK_STATEMENT_VIEW_ID`). The CSV supplies the inclusive posting-date range. The
 Analytics SQL filters by account and range, includes all statement statuses, and
 uses the table name and required columns from `AnalyticsCatalog`. It never
 refreshes metadata. `--catalog-dir` defaults to `workspace_metadata/<workspace-id>`;

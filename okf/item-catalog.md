@@ -40,3 +40,24 @@ New callers should use `workflows.item_catalog` and the generic app.
 
 Neoseal-specific auditing and name/SKU updates remain owned by
 [Neoseal item audit](neoseal-item-audit.md).
+
+## Accounts and Items SQLite snapshot
+
+Run the Analytics snapshot from the repository root:
+
+```sh
+.venv/bin/python apps/inventory/sync_analytics_items.py
+```
+
+The command downloads the `Accounts (Zoho Books)` and `Items (Zoho Books)`
+views using the configured Analytics workspace. It resolves their IDs and
+columns from `data/analytics/metadata.sqlite` and prints the last successful
+metadata sync time. Use `--catalog-dir`, `--workspace-id`, or `--db` to override
+the defaults.
+
+The default destination is `data/analytics/items.sqlite`. It holds `Accounts`
+and `Items` with source column names, text values, and their source IDs as
+primary keys. `Snapshot` records the workspace, view IDs, download time, and
+row counts. Each refresh verifies both exports against source row counts and
+replaces both local tables in a single transaction. Use
+`workflows.item_catalog.sync_analytics_items()` to call the workflow from Python.

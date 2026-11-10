@@ -47,6 +47,7 @@ Shared HTTP transport, authentication managers, base resource abstractions, exce
   - [Function `read_pdf_pages`](#utils-file_utils-pdf-read_pdf_pages)
 - [`utils.general_utils.sequences`](#utils-general_utils-sequences)
   - [Function `parse_doc_number`](#utils-general_utils-sequences-parse_doc_number)
+  - [Function `numeric_affixes`](#utils-general_utils-sequences-numeric_affixes)
 - [`utils.general_utils.module_aliases`](#utils-general_utils-module_aliases)
   - [Class `_AliasLoader`](#utils-general_utils-module_aliases-_aliasloader)
   - [Class `_AliasFinder`](#utils-general_utils-module_aliases-_aliasfinder)
@@ -514,10 +515,10 @@ Extract page text with normalized newlines and close native handles.
 
 **Source:** [`src/utils/general_utils/sequences.py`](src/utils/general_utils/sequences.py)
 
-Generic document-number parsing shared by resources and workflows.
+Generic document-number and numeric-run parsing shared across layers.
 
 **Declared Exports (`__all__`):**
-`parse_doc_number`
+`numeric_affixes`, `parse_doc_number`
 
 ### Function `parse_doc_number`
 
@@ -526,6 +527,14 @@ def parse_doc_number(doc_no: str) -> tuple[str, int, int]
 ```
 
 Return prefix, trailing integer and observed width; width zero means no suffix.
+
+### Function `numeric_affixes`
+
+```python
+def numeric_affixes(value: object, length: int = 4, is_prefix: bool = False) -> set[str]
+```
+
+Return the first or last ``length`` digits of each numeric run in ``value``.
 
 ---
 

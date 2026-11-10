@@ -6,6 +6,7 @@ from zoho.core_sdk.base_client import BaseZohoClient
 from .custom.contacts import Vendors
 from .custom.sales import SalesReturns
 from .custom.gst import GST
+from .custom.imports import Imports
 from .custom.contacts import CustomFields
 from .custom.reports import Reports
 from .openapi import BooksResources, RESOURCE_TYPES
@@ -46,6 +47,7 @@ class ZohoBooksAPI(BaseZohoClient, BooksResources):
         self.reports = Reports(self)
         self.gst = GST(self)
         self.custom_fields = CustomFields(self)
+        self.imports = Imports(self)
         for name, resource_type in RESOURCE_TYPES.items():
             setattr(self, name, resource_type(self))
 

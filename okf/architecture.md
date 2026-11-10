@@ -31,7 +31,7 @@ utils (Shared Transport & Primitives) <-- zoho (API Clients & Auth) <-- helpers 
    - `utils.file_utils.pdf.read_pdf_pages` extracts text through pypdfium2, normalizes CRLF and closes document/page/text handles. Supplier-specific interpretation stays in each workflow.
    - `utils.file_utils.yaml` uses YAMLRocks, preserves legacy scalar interpretation and validates source tags before conversion so custom/Python tags and multi-document configuration fail closed.
    - `utils.general_utils.encoding.detect_encoding` detects character encoding via Rust chardetng.
-   - `utils.general_utils.sequences.parse_doc_number` owns the SDK-safe parsing primitive, re-exported by `helpers` and `helpers.formatting`.
+   - `utils.general_utils.sequences` owns `parse_doc_number` (re-exported by `helpers` and `helpers.formatting`) and `numeric_affixes`; `utils.general_utils.dates.utc_now_iso` provides UTC ISO timestamps.
    - Must not import from `zoho`, `helpers`, `workflows`, `google_sheets`, `apps`, or `scripts`.
 
 1. **Core / Client Layer (`zoho.books`, `zoho.wd`, `zoho.creator`, etc.)**:
@@ -41,7 +41,7 @@ utils (Shared Transport & Primitives) <-- zoho (API Clients & Auth) <-- helpers 
    - Generic REST endpoint wrappers and authentication; `src/zoho/` contains the core SDK only and does not import `helpers`.
 
    **Composite helpers (`src/helpers/`, alongside `src/zoho/`):**
-   - Public composite operations are exported from `helpers`. Implementations are grouped into catalog, report, formatting and operation packages.
+   - Public composite operations are exported from `helpers`. Implementations are grouped into catalog, report, formatting and operation packages (including Creator read-back verification in `helpers.operations.creator`, uncategorized bank-transaction fetch/match/categorization in `helpers.operations.bank_transactions`, COA/location/vendor resolvers, and Analytics batched SQL/export fallback in `helpers.reports.analytics`).
    - Helpers may import SDK clients and utilities, but never workflows, apps or scripts.
    - The former `zoho.helpers` import path is removed; callers must import `helpers`.
    - Import `get_bins_for_items` for warehouse bin stock queries. The former `getBinsForItems` spelling was removed.

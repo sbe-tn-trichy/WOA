@@ -59,6 +59,45 @@ def transfer_proposals(rows: Sequence[Mapping[str, Any]]) -> list[BankTransferPr
     return proposals
 
 
+def merge_transfer_proposals(
+    bank_transactions: Sequence[Mapping[str, Any]],
+    previous_transfers: Sequence[BankTransferProposal],
+) -> tuple[list[BankTransferProposal], dict[tuple[str, str], list[BankTransferProposal]]]:
+    """Merge live transfer proposals with preserved non-pending proposals."""
+    old_transfers = {pair["id"]: pair for pair in previous_transfers}
+    reserved_transfer_lines = {
+        bank_line_identity(pair[side])
+        for pair in old_transfers.values()
+        if pair.get("status") not in {"pending", "completed"}
+        for side in ("source", "destination")
+    }
+    bank_transfers = [
+        pair
+        for pair in transfer_proposals(bank_transactions)
+        if (
+            pair["id"] in old_transfers
+            and old_transfers[pair["id"]].get("status") != "pending"
+        )
+        or not any(
+            bank_line_identity(pair[side]) in reserved_transfer_lines
+            for side in ("source", "destination")
+        )
+    ]
+    for index, pair in enumerate(bank_transfers):
+        old = old_transfers.get(pair["id"])
+        if old and old.get("status") != "pending":
+            bank_transfers[index] = old
+    current_pair_ids = {pair["id"] for pair in bank_transfers}
+    for pair_id, pair in old_transfers.items():
+        if pair_id not in current_pair_ids and pair.get("status") != "pending":
+            bank_transfers.append(pair)
+    transfer_lines: dict[tuple[str, str], list[BankTransferProposal]] = {}
+    for pair in bank_transfers:
+        for side in ("source", "destination"):
+            transfer_lines.setdefault(bank_line_identity(pair[side]), []).append(pair)
+    return bank_transfers, transfer_lines
+
+
 def validate_live_pair(proposal: BankTransferProposal, rows: Sequence[Mapping[str, Any]]) -> None:
     """Check identity, reviewed values and mutual uniqueness against a fresh feed."""
     fresh = next((pair for pair in transfer_proposals(rows) if pair['id'] == proposal['id']), None)

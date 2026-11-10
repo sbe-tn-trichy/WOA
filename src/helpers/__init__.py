@@ -26,6 +26,12 @@ from .reports.accounts import (
     fetch_bank_accounts_map,
     find_bank_account_by_name,
     resolve_bank_account_by_name,
+    resolve_chart_of_account,
+    resolve_location_by_name,
+)
+from .reports.analytics import (
+    build_batched_like_queries,
+    query_or_export_analytics_rows,
 )
 from .catalog.bins import (
     get_bins_by_item_map,
@@ -36,6 +42,7 @@ from .catalog.contacts import (
     find_contact_by_gstin,
     find_contact_by_name,
     CustomerSearchResult,
+    resolve_vendor_by_name,
     search_customers,
 )
 from .catalog.custom_fields import (
@@ -77,6 +84,17 @@ from .catalog.items import (
     resolve_inventory_item_by_sku_or_name,
     resolve_inventory_sku,
 )
+from helpers.operations.bank_transactions import (
+    categorize_bank_transaction,
+    fetch_uncategorized_bank_transactions,
+    find_bank_match_candidate,
+    get_uncategorized_bank_transaction,
+    match_bank_transaction,
+)
+from helpers.operations.creator import (
+    require_creator_success,
+    update_and_verify_creator_record,
+)
 from helpers.operations.transactions import (
     CLOSED_DOCUMENT_STATUSES,
     allocate_documents_fifo,
@@ -113,6 +131,7 @@ __all__ = [
     "find_contact_by_gstin",
     "find_contact_by_name",
     "CustomerSearchResult",
+    "resolve_vendor_by_name",
     "search_customers",
     "fetch_active_customers_map",
     # Items and Bins
@@ -138,12 +157,24 @@ __all__ = [
     "get_month_range",
     "get_previous_month_range",
     "get_financial_year_range",
-    # Bank accounts
+    # Bank accounts, COA, locations & analytics
     "find_bank_account_by_name",
     "resolve_bank_account_by_name",
+    "resolve_chart_of_account",
+    "resolve_location_by_name",
     "fetch_bank_accounts_map",
     "extract_bank_withdrawals",
     "extract_bank_deposits",
+    "build_batched_like_queries",
+    "query_or_export_analytics_rows",
+    # Bank transactions & Creator operations
+    "categorize_bank_transaction",
+    "fetch_uncategorized_bank_transactions",
+    "find_bank_match_candidate",
+    "get_uncategorized_bank_transaction",
+    "match_bank_transaction",
+    "require_creator_success",
+    "update_and_verify_creator_record",
     # Transactions
     "CLOSED_DOCUMENT_STATUSES",
     "find_transaction_by_number",

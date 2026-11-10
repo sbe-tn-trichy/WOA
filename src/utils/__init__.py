@@ -21,10 +21,13 @@ from .file_utils import (
     yaml,
 )
 from .general_utils import (
+    dates,
     detect_encoding,
     encoding,
+    numeric_affixes,
     parse_doc_number,
     sequences,
+    utc_now_iso,
 )
 from .http_utils import (
     DEFAULT_RETRY_AFTER,
@@ -78,10 +81,13 @@ __all__ = [
     "json",
     "yaml",
     "pdf",
+    "dates",
     "sequences",
     "encoding",
     # Functions and classes
+    "numeric_affixes",
     "parse_doc_number",
+    "utc_now_iso",
     "JSONDecodeError",
     "dump",
     "dumps",

@@ -15,6 +15,7 @@ def sources(tmp_path: Path, *, customers=None, addresses=None, persons=None) -> 
             'Customer ID': '10000000000000000001', 'Customer Name': ' Shop ',
             'Display Name': 'Other name', 'Credit Limit': '0012.30',
             'Payment Terms Label': 'Due On Receipt', 'Beat': ' North  Route ',
+            'Branch': ' Electricals ', 'Optical Division': ' Retail ',
             'Status': 'Active', 'Status_1': 'Recovery', 'Default Address ID': '01',
             'PAN Number': 'abcde1234f', 'GSTIN': '33ABCDE1234F1Z5',
             'Phone': '0123-456-789', 'Email': 'AbC@EXAMPLE.COM',
@@ -46,13 +47,13 @@ def sources(tmp_path: Path, *, customers=None, addresses=None, persons=None) -> 
     return source
 
 
-def test_four_tables_preserve_sources_and_normalize(tmp_path):
+def test_two_tables_preserve_sources_and_normalize(tmp_path):
     source = sources(tmp_path)
     result = build_normalized_customers(source, tmp_path / 'customers.db', organization_id='org')
     db = sqlite3.connect(result.database)
     db.row_factory = sqlite3.Row
     assert {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")} == {
-        'Customers', 'Customer Addresses', 'Customer Financials', 'Customer Beat'}
+        'Customers', 'Customer Addresses'}
     customer = dict(db.execute('SELECT * FROM Customers').fetchone())
     assert customer['Customer Name'] == 'Shop'
     assert customer['Display Name'] == 'Other name'
@@ -61,13 +62,14 @@ def test_four_tables_preserve_sources_and_normalize(tmp_path):
     assert customer['Email'] == 'AbC@example.com'
     assert customer['New Future Field'] == 'kept'
     assert customer['Notes'] == ' preserve\n spacing '
-    assert 'Credit Limit' not in customer and 'Beat' not in customer
-    finance = db.execute('SELECT * FROM "Customer Financials"').fetchone()
+    assert customer['Credit Limit'] == '0012.30'
+    assert customer['Payment Terms Label'] == 'Due on Receipt'
+    assert customer['PAN Number'] == 'ABCDE1234F'
+    assert customer['Beat'] == 'North Route'
+    finance = db.execute('SELECT * FROM "financials"').fetchone()
     assert finance['Credit Limit'] == '0012.30'
     assert finance['Payment Terms Label'] == 'Due on Receipt'
     assert finance['PAN Number'] == 'ABCDE1234F'
-    beat = db.execute('SELECT * FROM "Customer Beat"').fetchone()
-    assert beat['Beat'] == 'North Route'
     address = db.execute('SELECT * FROM "Customer Addresses"').fetchone()
     assert address['Address ID'] == '01' and address['Shipping Code'] == '001234'
     assert address['Billing Street'] == '1,  Road'
@@ -80,6 +82,15 @@ def test_four_tables_preserve_sources_and_normalize(tmp_path):
     report = json.loads(result.report.read_text(encoding='utf-8'))
     assert report['cloud_updates'] == 0 and report['contact_persons_preserved'] == 2
     assert any('Phone needs review' in i['reason'] for i in report['review_issues'])
+    views = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='view'")}
+    assert views == {'Customer_core', 'addresses', 'financials', 'Electrical Customers', 'Zeiss Customers'}
+    assert dict(db.execute('SELECT * FROM "Electrical Customers"').fetchone()) == customer
+    assert db.execute('SELECT * FROM "Zeiss Customers"').fetchall() == []
+    db.execute('UPDATE Customers SET Branch = ?', ('Zeiss',))
+    assert db.execute('SELECT * FROM "Electrical Customers"').fetchall() == []
+    assert db.execute('SELECT Branch FROM "Zeiss Customers"').fetchone()[0] == 'Zeiss'
+    core_cols = [c[1] for c in db.execute('PRAGMA table_info("Customer_core")').fetchall()]
+    assert 'Branch' in core_cols and 'Optical Division' in core_cols
     assert not db.execute('PRAGMA foreign_key_check').fetchall()
     db.close()
 
@@ -130,7 +141,7 @@ def test_empty_children_and_non_equivalent_labels(tmp_path):
     assert report['counts']['Customer Addresses'] == 0
     assert any('Similar beat names' in issue['reason'] for issue in report['review_issues'])
     db = sqlite3.connect(result.database)
-    assert db.execute('SELECT "Payment Terms Label" FROM "Customer Financials" LIMIT 1').fetchone()[0] == 'Due end of next month'
+    assert db.execute('SELECT "Payment Terms Label" FROM Customers LIMIT 1').fetchone()[0] == 'Due end of next month'
     assert db.execute('SELECT "Contact Persons" FROM Customers LIMIT 1').fetchone()[0] == '[]'
     db.close()
 

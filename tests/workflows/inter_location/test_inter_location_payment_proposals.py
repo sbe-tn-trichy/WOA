@@ -38,8 +38,8 @@ def test_holds_mixed_missing_or_unavailable_allocations(summaries):
 
 
 def test_holds_clearing_account_and_rejects_conflicting_rows():
-    clearing = row(**{"Bank Account ID": "1094368000002033114"})
-    assert propose_payment_locations([clearing], summary())[0]["status"] == "manual_review"
+    clearing = row(**{"Bank Account ID": "mock-clearing-acc"})
+    assert propose_payment_locations([clearing], summary(), clearing_account_id="mock-clearing-acc")[0]["status"] == "manual_review"
     with pytest.raises(ValueError, match="Conflicting"):
         propose_payment_locations([row(), row(**{"Amount": "INR 200.00"})], summary())
 
@@ -55,6 +55,7 @@ def test_summary_queries_cover_all_allocations():
 
 
 def test_number_prefix_follows_destination_fiscal_year_and_payment_type():
-    assert expected_payment_prefix("1094368000000443455", "FY 2025-26", "Customer Payment") == "SBE2526CP-"
-    assert expected_payment_prefix("1094368000044509446", "FY 2026-27", "Vendor Payment") == "SB2627VP-"
-    assert expected_payment_prefix("unknown", "FY 2026-27", "Customer Payment") == ""
+    prefixes = {"loc-sbe": "SBE", "loc-sb": "SB"}
+    assert expected_payment_prefix("loc-sbe", "FY 2025-26", "Customer Payment", location_prefixes=prefixes) == "SBE2526CP-"
+    assert expected_payment_prefix("loc-sb", "FY 2026-27", "Vendor Payment", location_prefixes=prefixes) == "SB2627VP-"
+    assert expected_payment_prefix("unknown", "FY 2026-27", "Customer Payment", location_prefixes=prefixes) == ""

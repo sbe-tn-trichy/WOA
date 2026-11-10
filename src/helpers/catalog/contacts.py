@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
-from zoho.core_sdk.validation import require_records
+from zoho.core_sdk.validation import require_records, require_text
 from ..formatting.gst import normalize_gstin, is_valid_gstin
-from ..operations.records import SearchResource, distinct_records
+from ..operations.records import AmbiguousMatchError, SearchResource, distinct_records, unique_record
 from .custom_fields import get_custom_field_value
 
 logger = logging.getLogger("helpers.catalog.contacts")
@@ -232,3 +232,37 @@ def fetch_active_customers_map(
         raise
 
     return customer_map
+
+
+def resolve_vendor_by_name(
+    books_client: _CustomerSearchClient,
+    vendor_name: str,
+    *,
+    aliases: Sequence[str] = (),
+    active_only: bool = True,
+    deduplicate: bool = True,
+) -> dict[str, object] | None:
+    """Resolve one Books vendor contact by exact case-insensitive name or alias."""
+    target = require_text(vendor_name, "Vendor name")
+    accepted = {target.casefold(), *(a.strip().casefold() for a in aliases if a.strip())}
+    rows = require_records(
+        books_client.contacts.list_all(
+            params={"contact_type": "vendor", "search_text": target},
+            resource_key="contacts",
+        ),
+        "Books vendor search",
+    )
+    matches = [
+        row
+        for row in rows
+        if str(row.get("contact_name") or "").strip().casefold() in accepted
+        and str(row.get("contact_type") or "").strip().casefold() == "vendor"
+        and str(row.get("contact_id") or "").strip()
+        and (
+            not active_only
+            or str(row.get("status") or "").strip().casefold() == "active"
+        )
+    ]
+    if not deduplicate and len(matches) > 1:
+        raise AmbiguousMatchError(f"Expected one vendor match for {target}, found {len(matches)}")
+    return unique_record(matches, "contact_id")

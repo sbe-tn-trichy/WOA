@@ -1,9 +1,9 @@
 {
-  "spreadsheet_id": "1h4f1_4TUw6SHrVNIxs_adosMpUbI1N2OyHw7c_k_ZWc",
-  "source_url": "https://docs.google.com/spreadsheets/d/1h4f1_4TUw6SHrVNIxs_adosMpUbI1N2OyHw7c_k_ZWc/edit",
+  "spreadsheet_id": "REPLACE_WITH_GOOGLE_SPREADSHEET_ID",
+  "source_url": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SPREADSHEET_ID/edit",
   "from_date": "2024-04-01",
   "to_date": "2025-03-31",
-  "excluded_location_id": "1094368000044509446",
+  "excluded_location_id": "REPLACE_WITH_EXCLUDED_BOOKS_LOCATION_ID",
   "lines": [
     {
       "label": "Trading & P&L A/c: Opening Stock",

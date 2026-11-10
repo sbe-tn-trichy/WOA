@@ -13,14 +13,14 @@ def proposal():
             "transaction_id": "cp", "from_location_id": "a", "to_location_id": "b"}]}
 
 
-def books(invoice_location="b"):
+def books(invoice_location="b", account_id="clearing-account-123"):
     result = Mock()
     result.customer_payments.get.return_value = {"payment": {
-        "payment_id": "cp", "account_id": "1094368000002033114", "location_id": "a",
+        "payment_id": "cp", "account_id": account_id, "location_id": "a",
         "date": "2026-01-01", "amount": 10, "reference_number": "ref",
         "invoices": [{"invoice_id": "i"}]}}
     result.vendor_payments.get.return_value = {"vendorpayment": {
-        "payment_id": "vp", "paid_through_account_id": "1094368000002033114",
+        "payment_id": "vp", "paid_through_account_id": account_id,
         "location_id": "b", "date": "2026-01-01", "amount": 10,
         "reference_number": "ref", "bills": [{"bill_id": "x"}]}}
     result.invoices.get.return_value = {"invoice": {"invoice_number": "INV", "location_id": invoice_location}}
@@ -30,23 +30,23 @@ def books(invoice_location="b"):
 
 def test_preflight_checks_documents_without_update():
     client = books()
-    verified = verify_proposed_pair(client, proposal())
+    verified = verify_proposed_pair(client, proposal(), clearing_account_id="clearing-account-123")
     assert verified["to_location_id"] == "b"
     client.customer_payments.update.assert_not_called()
 
 
 def test_preflight_blocks_changed_invoice_location():
     with pytest.raises(ValueError, match="Invoice location changed"):
-        verify_proposed_pair(books(invoice_location="a"), proposal())
+        verify_proposed_pair(books(invoice_location="a"), proposal(), clearing_account_id="clearing-account-123")
 
 
 def test_apply_updates_location_only_and_verifies_pair():
     client = books()
-    verified = verify_proposed_pair(client, proposal())
+    verified = verify_proposed_pair(client, proposal(), clearing_account_id="clearing-account-123")
     after = dict(client.customer_payments.get.return_value["payment"])
     after["location_id"] = "b"
     client.customer_payments.get.side_effect = [client.customer_payments.get.return_value, {"payment": after}]
     client.customer_payments.update.return_value = {"code": 0}
-    result = apply_verified_move(client, verified)
+    result = apply_verified_move(client, verified, clearing_account_id="clearing-account-123")
     client.customer_payments.update.assert_called_once_with("cp", {"location_id": "b"})
     assert result["status"] == "moved"

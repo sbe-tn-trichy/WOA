@@ -13,6 +13,10 @@ Reusable financial helpers: fiscal-year date parsing, sequence numbering, accoun
 - [`helpers.reports.accounts`](#helpers-reports-accounts)
   - [Class `BooksBankAccountsResource`](#helpers-reports-accounts-booksbankaccountsresource)
   - [Class `BooksBankAccountsClient`](#helpers-reports-accounts-booksbankaccountsclient)
+  - [Class `_ChartOfAccountsResource`](#helpers-reports-accounts-_chartofaccountsresource)
+  - [Class `BooksAccountsAndLocationsClient`](#helpers-reports-accounts-booksaccountsandlocationsclient)
+  - [Function `resolve_chart_of_account`](#helpers-reports-accounts-resolve_chart_of_account)
+  - [Function `resolve_location_by_name`](#helpers-reports-accounts-resolve_location_by_name)
   - [Function `resolve_bank_account_by_name`](#helpers-reports-accounts-resolve_bank_account_by_name)
   - [Function `find_bank_account_by_name`](#helpers-reports-accounts-find_bank_account_by_name)
   - [Function `fetch_bank_accounts_map`](#helpers-reports-accounts-fetch_bank_accounts_map)
@@ -32,6 +36,7 @@ Reusable financial helpers: fiscal-year date parsing, sequence numbering, accoun
   - [Function `find_contact_by_gstin`](#helpers-catalog-contacts-find_contact_by_gstin)
   - [Function `find_contact_by_name`](#helpers-catalog-contacts-find_contact_by_name)
   - [Function `fetch_active_customers_map`](#helpers-catalog-contacts-fetch_active_customers_map)
+  - [Function `resolve_vendor_by_name`](#helpers-catalog-contacts-resolve_vendor_by_name)
 - [`helpers.catalog.custom_fields`](#helpers-catalog-custom_fields)
   - [Class `BooksCustomFieldsResource`](#helpers-catalog-custom_fields-bookscustomfieldsresource)
   - [Class `BooksCustomFieldsClient`](#helpers-catalog-custom_fields-bookscustomfieldsclient)
@@ -181,6 +186,60 @@ def list_all(self, *, resource_key: str | None = None) -> object
 | Attribute | Type | Default Value | Notes |
 |---|---|---|---|
 | `bank_accounts` | `BooksBankAccountsResource` | - | - |
+
+### Class `_ChartOfAccountsResource`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `_ChartOfAccountsResource.get`
+
+```python
+def get(self, identifier: str) -> Mapping[str, object]
+```
+
+##### `_ChartOfAccountsResource.list_all`
+
+```python
+def list_all(self) -> object
+```
+
+### Class `BooksAccountsAndLocationsClient`
+
+**Bases:** `Protocol`
+
+#### Methods
+
+##### `BooksAccountsAndLocationsClient.chart_of_accounts`
+
+```python
+@property
+def chart_of_accounts(self) -> _ChartOfAccountsResource
+```
+
+##### `BooksAccountsAndLocationsClient.locations`
+
+```python
+@property
+def locations(self) -> SearchResource
+```
+
+### Function `resolve_chart_of_account`
+
+```python
+def resolve_chart_of_account(books_client: BooksAccountsAndLocationsClient, *, account_id: str = '', account_name: str = '', account_types: Collection[str] = (), active_only: bool = True) -> dict[str, object] | None
+```
+
+Resolve one chart-of-accounts record by ID or case-insensitive name.
+
+### Function `resolve_location_by_name`
+
+```python
+def resolve_location_by_name(books_client: BooksAccountsAndLocationsClient, location_name: str, *, active_only: bool = True) -> dict[str, object] | None
+```
+
+Resolve one Books location/branch by case-insensitive name.
 
 ### Function `resolve_bank_account_by_name`
 
@@ -405,6 +464,14 @@ def fetch_active_customers_map(books_client: BooksContactsClient, key_field: str
 Fetch all customers from Zoho Books and return an indexed dictionary.
 
 Keys are extracted from either direct attributes or custom fields using `key_field`.
+
+### Function `resolve_vendor_by_name`
+
+```python
+def resolve_vendor_by_name(books_client: _CustomerSearchClient, vendor_name: str, *, aliases: Sequence[str] = (), active_only: bool = True, deduplicate: bool = True) -> dict[str, object] | None
+```
+
+Resolve one Books vendor contact by exact case-insensitive name or alias.
 
 ---
 

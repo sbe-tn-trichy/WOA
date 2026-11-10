@@ -78,11 +78,10 @@ Supported configuration keys:
   the YAML on every call, validate alias uniqueness and scopes, and fail before
   network access on invalid configuration.
 
-- `PAYMENT_CASH_ACCOUNT_ID`: Cash-deposit transfer source, default `1094368000005226023`.
-- `PAYMENT_SALARY_EXPENSE_ACCOUNT_ID`: Salary expense account, default `1094368000000000543`.
+- `PAYMENT_CASH_ACCOUNT_ID`: Cash-deposit transfer source account ID.
+- `PAYMENT_SALARY_EXPENSE_ACCOUNT_ID`: Salary expense account ID.
 
-- `PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID`: Bank review TA expense account; defaults
-  to `1094368000029132050`. The review CLI accepts `--travel-expense-account-id`.
+- `PAYMENT_TRAVEL_EXPENSE_ACCOUNT_ID`: Bank review TA expense account ID. The review CLI accepts `--travel-expense-account-id`.
 
 - `TOKEN_URL`: HTTP URL for retrieving runtime OAuth access tokens.
 - `ORG_ID`: Zoho Books organization ID.

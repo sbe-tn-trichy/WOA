@@ -21,6 +21,8 @@ def _references(key: str, source: str, names: tuple[str, ...]) -> tuple[Workflow
 
 
 DEFAULT_REFERENCES = (
+    *_references("analytics_item_snapshot", "src/workflows/item_catalog/analytics_snapshot.py",
+                 ("Accounts (Zoho Books)", "Items (Zoho Books)")),
     *_references("customer_analytics_sync", "src/workflows/customer_analytics_sync.py",
                  ("Customers (Zoho Books)", "Customer Addresses (Zoho Books)",
                   "Customer Contact Persons (Zoho Books)")),

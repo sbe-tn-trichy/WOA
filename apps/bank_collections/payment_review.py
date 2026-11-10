@@ -25,7 +25,7 @@ from workflows.collection_reconciliation import (
     OnlinePaymentReviewService,
 )
 from workflows.runtime.auth import get_analytics_client, get_books_client, get_creator_client
-from workflows.runtime.config import Config
+from workflows.runtime.config import Config, get_config
 from workflows.core import RequestMetrics
 
 _TEMPLATE_PATH = _bootstrap._ROOT / "apps" / "static" / "payment_review.html"
@@ -259,6 +259,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             travel_expense_account_id=args.travel_expense_account_id,
             salary_expense_account_id=Config.PAYMENT_SALARY_EXPENSE_ACCOUNT_ID,
             cash_account_id=Config.PAYMENT_CASH_ACCOUNT_ID,
+            cash_account_name=str(get_config("PAYMENT_CASH_ACCOUNT_NAME", "Cash-SBE")),
+            vendor_advance_vendor_name=str(get_config("POLYCAB_VENDOR_NAME", "Polycab")),
+            vendor_advance_location_name=str(get_config("EXPECTED_LOCATION_NAME", "Sri Bharath Electricals")),
             bank_accounts=bank_accounts,
             payment_reports=(
                 ("Online", str(Config.PAYMENT_CREATOR_REPORTS["online"])),

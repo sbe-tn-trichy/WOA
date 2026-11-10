@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
+from typing import Any
 
 from zoho.core_sdk.validation import require_records, require_text
 from workflows.collection_payments.types import InvoiceAllocation
@@ -13,6 +14,7 @@ from helpers import (
     allocate_documents_fifo,
     fetch_open_invoices,
 )
+from helpers.operations.transactions import BooksInvoicesClient
 from workflows.runtime.exceptions import ReconciliationError
 from workflows.core.matching import to_decimal as _decimal, to_text as _text
 
@@ -66,3 +68,67 @@ def allocate_invoices_oldest_due_first(
             allocation["balance"] = raw_balance
         allocations.append(allocation)
     return allocations, remaining
+
+
+def attach_invoice_preview(
+    books_client: BooksInvoicesClient,
+    entry: MutableMapping[str, Any],
+    invoice_cache: dict[str, list[dict[str, object]]],
+) -> None:
+    """Populate FIFO open-invoice allocation preview fields on a review queue entry."""
+    creator_data = entry.get("creator")
+    creator = creator_data if isinstance(creator_data, Mapping) else {}
+    customer_id = _text(creator.get("books_customer_id"))
+    if not entry.get("bank") or not customer_id:
+        entry.update(
+            {
+                "invoice_allocations": [],
+                "unallocated_amount": float(abs(_decimal(creator.get("amount")) or Decimal("0"))),
+                "allocation_status": "unavailable",
+                "allocation_error": (
+                    "Creator customer has no Zoho Books Customer_Id."
+                    if entry.get("bank") and not customer_id
+                    else ""
+                ),
+            }
+        )
+        entry["reviewable"] = False
+        return
+    try:
+        if customer_id not in invoice_cache:
+            invoice_cache[customer_id] = fetch_open_invoices(books_client, customer_id)
+        allocations, unallocated = allocate_invoices_oldest_due_first(
+            creator.get("amount"),
+            invoice_cache[customer_id],
+        )
+    except Exception as exc:
+        entry.update(
+            {
+                "invoice_allocations": [],
+                "unallocated_amount": 0,
+                "allocation_status": "unavailable",
+                "allocation_error": f"Could not load open invoices: {exc}",
+                "reviewable": False,
+            }
+        )
+        return
+    entry.update(
+        {
+            "invoice_allocations": allocations,
+            "unallocated_amount": float(unallocated),
+            "allocation_status": (
+                "fully_allocated"
+                if unallocated == 0
+                else "partially_allocated"
+                if allocations
+                else "no_open_invoices"
+            ),
+            "allocation_error": (
+                "No open customer invoices are available; push is blocked to prevent "
+                "unused credit."
+                if not allocations
+                else ""
+            ),
+            "reviewable": bool(allocations),
+        }
+    )

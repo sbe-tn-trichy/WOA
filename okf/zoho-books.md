@@ -315,6 +315,59 @@ counts = api.reports.account_transactions(
 )
 ```
 
+## Import file uploads
+
+`imports.upload_file(file_path, *, entity, duplicate_handling, charencoding="UTF-8",
+delimiter=",", is_new_flow=False)` stages a nonempty CSV using multipart
+`POST /import/uploadfile`. The caller must explicitly choose `overwrite`,
+`skip`, or `create_new`. These values are passed unchanged to Books; all three
+are covered by mocked request tests, while only `overwrite` was verified live.
+The SDK sends the real file as `importfile`, pins the organization to the
+client, and uses OAuth through the normal public API host; browser cookies and
+CSRF headers are unnecessary. `Imports` is exported from `zoho.books.custom`.
+
+The browser-observed route was verified with OAuth for contact CSV uploads.
+Its response includes `data.import_id` and detected column mappings. Uploading
+does not commit the import or establish that contacts changed. Other entities
+and options have not been verified live.
+
+`imports.confirm(import_id, *, is_new_flow=False)` separately confirms a reviewed
+staged import through `PUT /import/{import_id}` with query-scoped
+`organization_id` pinned to the client. Books rejects confirmation when the
+organization ID is repeated in both the query and form body (code 12). IDs must be ASCII numeric strings.
+This is a live mutation: validate the exact upload ID, column mappings and
+duplicate handling before calling, retain a recovery checkpoint, and verify
+the saved records afterward. No mapping API is implemented. Confirmation's
+OAuth route was verified live for a 13-contact update. A code-zero response
+reported 13 updated, zero created/skipped and no errors; individual contact
+read-back verified Branch values, display names and unrelated custom fields.
+Do not equate a successful staging response with this separate confirmation.
+
+Empty CSV cells require separate verification. A live Phone cleanup returned
+`is_empty_overwrite_feature_enabled=false`; its one-contact import reported success
+but retained the existing Phone. Do not infer a cleared field from import counts.
+When empty overwrite is unavailable, update the primary contact person's
+`phone` through `contacts.bulk_update`; top-level `phone: ""` was also ignored
+despite successful responses. Preserve all contact-person IDs in the payload,
+add `phone: ""` only to the primary person, and verify the returned people
+against the saved snapshot with only that Phone changed. Retain recovery
+checkpoints and verify with fresh read-back. Import populated Phone values separately.
+Books may remove a contact-person record when clearing its only populated value.
+Check the saved person snapshot before treating such a removal as harmless;
+names, email, Mobile, custom fields or portal associations must not be lost.
+
+For customer updates, verify that `Customer Number`, `Display Name` and Branch
+map to the intended fields (`CF.Branch` for this organization's custom field).
+Use UTF-8 without a BOM: Books retained the BOM in the first header and failed
+to automatically map Customer Number until it was removed. The SDK preserves
+file bytes and returns the raw staging response for caller validation.
+
+```python
+staged = api.imports.upload_file(
+    "customer_updates.csv", entity="contact", duplicate_handling="overwrite"
+)
+```
+
 ## Bulk contact updates
 
 `contacts.bulk_update(contacts, params=None)` updates multiple contacts through

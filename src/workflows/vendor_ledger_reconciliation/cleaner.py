@@ -321,7 +321,7 @@ def clean_ledger_file(file_path: str, vendor_key: str | None = None) -> list[dic
 
     # Auto-detect vendor if not specified
     if not vendor_key:
-        if filename.startswith("277498") or "polycab" in filename:
+        if "polycab" in filename or "277498" in filename:
             vendor_key = "polycab"
         elif "zeiss" in filename:
             vendor_key = "zeiss"

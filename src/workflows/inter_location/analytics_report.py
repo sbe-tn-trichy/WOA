@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from workflows.runtime.config import Config
+
 
 def build_inter_location_query(account_id: str) -> str:
     """Return one row per cross-location customer/vendor or customer/journal pair."""
@@ -155,13 +157,16 @@ def sync_inter_location_contra_query_table(
     analytics: Any,
     *,
     workspace_id: str,
-    account_id: str = "1094368000002033114",
+    account_id: str | None = None,
     view_id: str | None = None,
     name: str = "Inter Location Contra FY25-27",
     apply: bool = False,
     description: str = "Live clearing-account contra pairs across locations, FY 2025-26 and FY 2026-27; blank references require pairing review.",
 ) -> dict[str, Any]:
     """Single unified workflow function for previewing, creating, or updating the Analytics Query Table."""
+    effective_account_id = str(account_id or Config.INTER_LOCATION_CLEARING_ACCOUNT_ID).strip()
+    if not effective_account_id:
+        raise ValueError("A valid numeric clearing account ID is required")
     from workflows.analytics_catalog import AnalyticsCatalog, WorkflowViewReference
 
     references = []
@@ -175,7 +180,7 @@ def sync_inter_location_contra_query_table(
         existing = [view for view in store.find_views() if view["name"] == name]
         if view_id and not any(view["view_id"] == view_id for view in store.find_views()):
             raise ValueError(f"Unknown query table: {view_id}")
-    sql = build_inter_location_document_query(account_id)
+    sql = build_inter_location_document_query(effective_account_id)
     # The bulk SQL preview is a GET request. Preview the three UNION branches
     # separately so the encoded URL stays below the server's URI limit.
     branches = sql.rsplit("\nUNION ALL\n", 2)

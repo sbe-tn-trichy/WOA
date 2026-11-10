@@ -80,7 +80,12 @@ def verify_proposed_pair(
             "date": str(payment["date"]), "amount": str(payment["amount"]), "reference": reference}
 
 
-def apply_verified_move(books: Any, verified: Mapping[str, str]) -> dict[str, str]:
+def apply_verified_move(
+    books: Any,
+    verified: Mapping[str, str],
+    *,
+    clearing_account_id: str | None = None,
+) -> dict[str, str]:
     """Move one customer payment and immediately verify both paired locations."""
     payment_id = verified["payment_id"]
     target = verified["to_location_id"]
@@ -96,9 +101,14 @@ def apply_verified_move(books: Any, verified: Mapping[str, str]) -> dict[str, st
         status = "already_at_target"
     payment = books.customer_payments.get(payment_id)["payment"]
     vendor = books.vendor_payments.get(verified["vendor_id"])["vendorpayment"]
+    expected_clearing_id = clearing_account_id or Config.INTER_LOCATION_CLEARING_ACCOUNT_ID
+    clearing_mismatch = (
+        (str(payment.get("account_id")) != expected_clearing_id or str(vendor.get("paid_through_account_id")) != expected_clearing_id)
+        if expected_clearing_id
+        else (str(payment.get("account_id")) != str(vendor.get("paid_through_account_id")))
+    )
     if (str(payment.get("location_id")) != target or str(vendor.get("location_id")) != target
-            or str(payment.get("account_id")) != ACCOUNT_ID
-            or str(vendor.get("paid_through_account_id")) != ACCOUNT_ID
+            or clearing_mismatch
             or str(payment.get("reference_number")) != verified["reference"]
             or str(vendor.get("reference_number")) != verified["reference"]
             or str(payment.get("date")) != verified["date"]

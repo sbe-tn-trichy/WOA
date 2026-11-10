@@ -7,6 +7,7 @@ Public functions:
 """
 
 import logging
+import os
 from collections.abc import Callable, Mapping, Sequence
 from datetime import date
 from typing import Protocol
@@ -315,7 +316,7 @@ def reconcile_vendor(
 
     if not vendor_id:
         filename = vendor_ledger_path.lower()
-        if "277498" in filename or "polycab" in filename:
+        if "polycab" in filename or "277498" in filename:
             vendor_id = Config.POLYCAB_VENDOR_ID
         elif "zeiss" in filename:
             vendor_id = Config.ZEISS_VENDOR_ID

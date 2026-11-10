@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import Protocol
 
-from zoho.core_sdk.validation import require_records
+from zoho.core_sdk.validation import require_records, require_text
 from ..operations.records import SearchResource, unique_record
 
 logger = logging.getLogger("helpers.reports.accounts")
@@ -19,6 +19,86 @@ class BooksBankAccountsResource(Protocol):
 
 class BooksBankAccountsClient(Protocol):
     bank_accounts: BooksBankAccountsResource
+
+
+class _ChartOfAccountsResource(Protocol):
+    def get(self, identifier: str) -> Mapping[str, object]: ...
+    def list_all(self) -> object: ...
+
+
+class BooksAccountsAndLocationsClient(Protocol):
+    @property
+    def chart_of_accounts(self) -> _ChartOfAccountsResource: ...
+    @property
+    def locations(self) -> SearchResource: ...
+
+
+def resolve_chart_of_account(
+    books_client: BooksAccountsAndLocationsClient,
+    *,
+    account_id: str = "",
+    account_name: str = "",
+    account_types: Collection[str] = (),
+    active_only: bool = True,
+) -> dict[str, object] | None:
+    """Resolve one chart-of-accounts record by ID or case-insensitive name."""
+    target_id = account_id.strip()
+    target_name = account_name.strip().casefold()
+    if not target_id and not target_name:
+        raise ValueError("Either account_id or account_name is required.")
+
+    if target_id:
+        response = books_client.chart_of_accounts.get(target_id)
+        account = response.get("chart_of_account") if isinstance(response, Mapping) else None
+        rows = [dict(account)] if isinstance(account, Mapping) else []
+    else:
+        rows = require_records(
+            books_client.chart_of_accounts.list_all(),
+            "Books chart of accounts",
+        )
+
+    allowed_types = {t.strip().casefold() for t in account_types if t.strip()}
+    matches = [
+        row
+        for row in rows
+        if (
+            str(row.get("account_id") or "").strip() == target_id
+            if target_id
+            else str(row.get("account_name") or "").strip().casefold() == target_name
+        )
+        and str(row.get("account_id") or "").strip()
+        and (
+            not allowed_types
+            or str(row.get("account_type") or "").strip().casefold() in allowed_types
+        )
+        and (not active_only or row.get("is_active") is not False)
+    ]
+    return unique_record(matches, "account_id")
+
+
+def resolve_location_by_name(
+    books_client: BooksAccountsAndLocationsClient,
+    location_name: str,
+    *,
+    active_only: bool = True,
+) -> dict[str, object] | None:
+    """Resolve one Books location/branch by case-insensitive name."""
+    target = require_text(location_name, "Location name").casefold()
+    rows = require_records(books_client.locations.list_all(), "Books locations")
+    matches = [
+        row
+        for row in rows
+        if str(row.get("location_name") or "").strip().casefold() == target
+        and str(row.get("location_id") or "").strip()
+        and (
+            not active_only
+            or (
+                row.get("is_active") is not False
+                and str(row.get("status") or "").strip().casefold() != "inactive"
+            )
+        )
+    ]
+    return unique_record(matches, "location_id")
 
 
 def resolve_bank_account_by_name(

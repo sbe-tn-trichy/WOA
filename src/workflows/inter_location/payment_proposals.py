@@ -6,6 +6,8 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
 
+from workflows.runtime.config import Config
+
 
 class PaymentLocationProposal(TypedDict):
     payment_type: str
@@ -25,16 +27,16 @@ class PaymentLocationProposal(TypedDict):
     reason: str
 
 
-_OBSERVED_PAYMENT_PREFIXES = {
-    "1094368000000443455": "SBE",
-    "1094368000044509446": "SB",
-    "1094368000000950615": "BL",
-}
-
-
-def expected_payment_prefix(location_id: str, financial_year: str, payment_type: str) -> str:
+def expected_payment_prefix(
+    location_id: str,
+    financial_year: str,
+    payment_type: str,
+    *,
+    location_prefixes: Mapping[str, str] | None = None,
+) -> str:
     """Observed location/FY/type prefix; exact series and next suffix need Books review."""
-    location = _OBSERVED_PAYMENT_PREFIXES.get(location_id)
+    prefixes = location_prefixes if location_prefixes is not None else Config.LOCATION_PAYMENT_PREFIXES
+    location = prefixes.get(location_id)
     year = {"FY 2025-26": "2526", "FY 2026-27": "2627"}.get(financial_year)
     kind = {"Customer Payment": "CP", "Vendor Payment": "VP"}.get(payment_type)
     return f"{location}{year}{kind}-" if location and year and kind else ""
@@ -80,9 +82,11 @@ def propose_payment_locations(
     rows: Sequence[Mapping[str, Any]],
     allocation_summaries: Mapping[str, Mapping[str, Mapping[str, Any]]],
     *,
-    clearing_account_id: str = "1094368000002033114",
+    clearing_account_id: str | None = None,
+    location_prefixes: Mapping[str, str] | None = None,
 ) -> list[PaymentLocationProposal]:
     """Propose only a uniform document location; hold conflicts and contra account rows."""
+    effective_clearing_id = clearing_account_id or Config.INTER_LOCATION_CLEARING_ACCOUNT_ID
     grouped: dict[tuple[str, str], list[Mapping[str, Any]]] = defaultdict(list)
     for row in rows:
         issue = str(row.get("Issue Type") or "")
@@ -117,7 +121,7 @@ def propose_payment_locations(
               str(summary.get("Max Document Location ID") or "") != target or
               int(summary.get("Allocation Count") or 0) != int(summary.get("Found Count") or 0)):
             status, reason = "manual_review", "Allocated documents have multiple or missing locations"
-        elif account == clearing_account_id:
+        elif effective_clearing_id and account == effective_clearing_id:
             status, reason = "manual_review", "Clearing-account contra requires four-way review"
         else:
             status, reason = "proposed", "All allocated documents use the target location; verify current Books state before update"
@@ -131,7 +135,11 @@ def propose_payment_locations(
             "document_numbers": sorted({str(row.get("Credit Reference") or "") for row in payment_rows
                                         if row.get("Credit Reference")}),
             "expected_number_prefix": expected_payment_prefix(
-                target, str(first.get("Financial Year") or ""), payment_type),
+                target,
+                str(first.get("Financial Year") or ""),
+                payment_type,
+                location_prefixes=location_prefixes,
+            ),
             "status": status, "reason": reason,
         })
     return sorted(proposals, key=lambda p: (p["bank_account_name"], p["financial_year"], p["date"], p["payment_id"]))

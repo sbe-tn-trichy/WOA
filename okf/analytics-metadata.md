@@ -151,8 +151,8 @@ folder hierarchy and view IDs through targeted live read-back after moves.
 
 ## Detailed General Ledger
 
-Workspace `264324000000002043` contains **detailed general ledger**
-(`264324000008493010`). The query left-joins Accrual Transactions (Zoho Books)
+The Analytics workspace (configured via `ANALYTICS_WORKSPACE_ID`) contains **detailed general ledger**
+(configured via `ANALYTICS_DETAILED_GL_VIEW_ID`). The query left-joins Accrual Transactions (Zoho Books)
 to Accounts (Zoho Books) on Account ID, exposing Account Name and Account Type
 alongside posting details, debit, credit, and location ID. Its fixed date range
 is FY 2025–26: 1 April 2025 inclusive through 1 April 2026 exclusive.
@@ -180,9 +180,9 @@ export when changing the definition.
 
 ## Undeposited Funds Deposit Report
 
-Workspace `264324000000002043` contains **Undeposited Funds - Deposit Report**
-(`264324000008503041`), backed by **Undeposited Funds - Deposits and Payment Candidates**
-(`264324000008503027`) for account `1094368000000000456`. It groups deposit credit
+The workspace contains **Undeposited Funds - Deposit Report**
+(configured via `ANALYTICS_UNDEPOSITED_REPORT_VIEW_ID`), backed by **Undeposited Funds - Deposits and Payment Candidates**
+(configured via `ANALYTICS_UNDEPOSITED_CANDIDATES_VIEW_ID`) for the undeposited funds account. It groups deposit credit
 lines by deposit entity ID and date, with total value and ambiguous/unmatched line
 counts. Candidate payments match customer, location, full amount and a payment
 date on or before deposit date. These are inferred candidates, may recur across

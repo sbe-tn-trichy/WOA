@@ -39,13 +39,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--execute", action="store_true", help="Apply the reviewed plan; default is dry-run")
     parser.add_argument("--resume", type=Path, help="Resume the exact plan in a prior audit JSON")
     parser.add_argument("--fy", default="2025-26")
-    parser.add_argument("--source-prefix", default="SBE2627CP-")
-    parser.add_argument("--destination-prefix", default="SBE2526CP-")
+    parser.add_argument("--source-prefix", default=os.environ.get("RENUMBER_SOURCE_PREFIX", ""),
+                        help="Prefix of payments to renumber")
+    parser.add_argument("--destination-prefix", default=os.environ.get("RENUMBER_DESTINATION_PREFIX", ""),
+                        help="Target prefix for renumbered payments")
     parser.add_argument("--width", type=int, default=5)
     parser.add_argument("--starting-sequence", type=int)
     parser.add_argument("--workspace-id", default=Config.ANALYTICS_WORKSPACE_ID)
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).resolve().parents[1] / "output")
     args = parser.parse_args(argv, namespace=Arguments())
+    if not args.resume and (not args.source_prefix or not args.destination_prefix):
+        parser.error("--source-prefix and --destination-prefix are required when planning a renumber run")
     audit: dict[str, object]
     previous: list[RenumberResult]
     if args.resume:

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any
 
-from ..core.matching import to_text
+from ..core.matching import get_bank_reference, parse_date, to_decimal, to_text
+from workflows.collection_payments.types import BankStatementRecord, BankTransferProposal
+from workflows.runtime.exceptions import ReconciliationError
 
 
 _SPACES = re.compile(r"[^a-z0-9]+")
@@ -166,3 +168,244 @@ def bank_line_kind(transaction: Mapping[str, Any]) -> str:
     if kind in {"credit", "withdrawal", "expense"}:
         return "withdrawal"
     return "other"
+
+
+def suggest_names_for_tokens(
+    tokens: Sequence[str],
+    historical_rows: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    """Return sorted customer names from ``historical_rows`` matching any token."""
+    if not tokens or not historical_rows:
+        return []
+    tokens_lower = [t.casefold() for t in tokens if t]
+    names = {
+        to_text(row.get("Customer Name")).strip()
+        for row in historical_rows
+        if isinstance(row, Mapping)
+        and to_text(row.get("Customer Name"))
+        and any(t in to_text(row.get("Description")).casefold() for t in tokens_lower)
+    }
+    return sorted((n for n in names if n), key=str.casefold)
+
+
+def check_customer_name(
+    entry: MutableMapping[str, Any],
+    historical_rows: Sequence[Mapping[str, Any]],
+    *,
+    customer_finder_view_id: str,
+) -> None:
+    """Verify Creator customer name against historical Analytics remitter records."""
+    if not customer_finder_view_id or not entry.get("bank"):
+        return
+
+    bank_desc = entry["bank"].get("description")
+    tokens = extract_remitter_tokens(bank_desc)
+    if not tokens:
+        entry["customer_name_valid"] = None
+        entry["customer_name_reason"] = "No remitter identifiers in bank narration for Analytics lookup."
+        entry["historical_customer_names"] = []
+        return
+
+    tokens_lower = [t.casefold() for t in tokens if t]
+    matching_rows = [
+        row
+        for row in historical_rows
+        if isinstance(row, Mapping)
+        and to_text(row.get("Customer Name"))
+        and any(t in to_text(row.get("Description")).casefold() for t in tokens_lower)
+    ]
+
+    if not matching_rows:
+        entry["customer_name_valid"] = None
+        entry["customer_name_reason"] = "No historical customer match found in Analytics."
+        entry["historical_customer_names"] = []
+        return
+
+    historical_names = sorted(
+        {
+            to_text(row.get("Customer Name")).strip()
+            for row in matching_rows
+            if to_text(row.get("Customer Name")).strip()
+        },
+        key=str.casefold,
+    )
+    entry["historical_customer_names"] = historical_names
+
+    if len(historical_names) > 1:
+        entry["customer_name_valid"] = None
+        entry["customer_name_reason"] = (
+            "Note: Analytics history matches multiple customers; "
+            "customer identity is inconclusive. Review may proceed. Matches: "
+            + ", ".join(historical_names)
+        )
+        return
+
+    expected = " ".join(to_text(entry["creator"].get("customer_name")).split()).casefold()
+
+    def _matches_expected(name: str) -> bool:
+        clean_name = " ".join(name.split()).casefold()
+        return (
+            clean_name == expected
+            or expected.startswith(clean_name + " ")
+            or clean_name.startswith(expected + " ")
+            or clean_name.split(" - ")[0] == expected.split(" - ")[0]
+        )
+
+    if any(_matches_expected(n) for n in historical_names):
+        entry["customer_name_valid"] = True
+        entry["customer_name_reason"] = "Customer name confirmed by Analytics history."
+    else:
+        other_names = ", ".join(historical_names)
+        entry["customer_name_valid"] = False
+        entry["customer_name_reason"] = (
+            f"Conflict: Analytics historical records for this remitter belong to "
+            f"'{other_names}', not '{entry['creator'].get('customer_name')}'."
+        )
+
+
+def display_bank_transaction(transaction: Mapping[str, Any]) -> dict[str, Any]:
+    """Shape a Books bank line into its review-queue display dictionary."""
+    account_id = to_text(transaction.get("_review_bank_account_id"))
+    return {
+        "transaction_id": to_text(transaction.get("transaction_id") or transaction.get("id")),
+        "transaction_number": to_text(transaction.get("transaction_number") or transaction.get("transaction_no")),
+        "date": to_text(transaction.get("date") or transaction.get("transaction_date")),
+        "amount": to_text(transaction.get("amount")),
+        "reference": to_text(get_bank_reference(transaction, account_id)),
+        "description": to_text(transaction.get("description") or transaction.get("narration")),
+    }
+
+
+def build_bank_statement_views(
+    bank_transactions: Sequence[Mapping[str, Any]],
+    bank_comparisons: Sequence[Mapping[str, Any]],
+    bank_transfers: Sequence[BankTransferProposal],
+    transfer_lines: Mapping[tuple[str, str], list[BankTransferProposal]],
+    previous: Mapping[str, Any],
+    customer_finder: CustomerFinderIndex,
+    used_transaction_ids: set[str],
+    *,
+    travel_expense_account_name: str,
+    cash_account_name: str,
+    vendor_advance_vendor_name: str,
+    vendor_advance_location_name: str,
+) -> tuple[list[dict[str, Any]], list[BankStatementRecord]]:
+    """Build ``bank_suggestions`` and ``bank_records`` for a refreshed review batch."""
+    previous_bank = {to_text(row.get("transaction_id")): row for row in previous.get("bank_suggestions", [])}
+    creator_claims: dict[tuple[str, str], list[str]] = {}
+    for comparison in bank_comparisons:
+        candidates = (
+            [{**comparison["bank"], "bank_account_id": comparison["bank_account_id"]}]
+            if comparison.get("bank")
+            else []
+        )
+        candidates += comparison["ambiguous_candidates"] + comparison["possible_candidates"]
+        for key in {(cand.get("bank_account_id", ""), cand["transaction_id"]) for cand in candidates}:
+            creator_claims.setdefault(key, []).append(comparison["id"])
+
+    non_customer_kinds = {"travel_allowance", "electricity", "salary", "cash_deposit", "vendor_advance"}
+    bank_suggestions: list[dict[str, Any]] = []
+    bank_records: list[BankStatementRecord] = []
+    for transaction in bank_transactions:
+        transaction_id = to_text(transaction.get("transaction_id") or transaction.get("id"))
+        if not transaction_id:
+            continue
+        kind = bank_line_kind(transaction)
+        account_id = to_text(transaction.get("_review_bank_account_id"))
+        displayed = {
+            **display_bank_transaction(transaction),
+            "bank_name": to_text(transaction.get("_review_bank_name")),
+            "bank_account_id": account_id,
+            "kind": kind,
+            "customer_suggestions": customer_finder.suggest(transaction) if kind not in non_customer_kinds else [],
+            "expense_account_name": (
+                travel_expense_account_name if kind == "travel_allowance"
+                else "Electricity" if kind == "electricity"
+                else "Salary" if kind == "salary" else ""
+            ),
+            "transfer_account_name": cash_account_name if kind == "cash_deposit" else "",
+            "vendor_name": vendor_advance_vendor_name if kind == "vendor_advance" else "",
+            "location_name": vendor_advance_location_name if kind == "vendor_advance" else "",
+            "categorization_status": "pending",
+        }
+        identity = (account_id, transaction_id)
+        if identity in transfer_lines:
+            pairs = transfer_lines[identity]
+            if all(pair["status"] == "completed" for pair in pairs):
+                continue
+            displayed.update(kind="bank_transfer", customer_suggestions=[], transfer_ids=[pair["id"] for pair in pairs])
+        if previous_bank.get(transaction_id, {}).get("categorization_status") == "categorized":
+            continue
+        creator_candidates = creator_claims.get((account_id, transaction_id), [])
+        bank_records.append({**displayed, "creator_entry_ids": creator_candidates})  # type: ignore[typeddict-item]
+        if transaction_id not in used_transaction_ids:
+            bank_suggestions.append(displayed)
+
+    visible_ids = {
+        (to_text(row.get("bank_account_id")), to_text(row.get("transaction_id")))
+        for row in bank_records
+    }
+    for pair in bank_transfers:
+        source = pair["source"]
+        src_id = (to_text(source.get("bank_account_id")), to_text(source.get("transaction_id")))
+        if pair["status"] not in {"pending", "completed"} and src_id not in visible_ids:
+            bank_records.append({  # type: ignore[typeddict-item]
+                **source,
+                "kind": "bank_transfer",
+                "transfer_ids": [pair["id"]],
+                "creator_entry_ids": [],
+                "categorization_status": "pending",
+                "recovery_checkpoint": True,
+            })
+            visible_ids.add(src_id)
+    return bank_suggestions, bank_records
+
+
+def collect_review_remitter_tokens(
+    raw_entries: Sequence[Mapping[str, Any]],
+    bank_transactions: Sequence[Mapping[str, Any]],
+    transfer_lines: Mapping[tuple[str, str], Any],
+) -> list[str]:
+    """Collect sorted unique remitter tokens from proposals and non-transfer bank lines."""
+    tokens: set[str] = set()
+    for entry in raw_entries:
+        bank = entry.get("bank")
+        if isinstance(bank, Mapping):
+            tokens.update(extract_remitter_tokens(bank.get("description")))
+        for key in ("ambiguous_candidates", "possible_candidates"):
+            for cand in entry.get(key, []):
+                tokens.update(extract_remitter_tokens(cand.get("description")))
+    for tx in bank_transactions:
+        identity = (
+            to_text(tx.get("_review_bank_account_id") or tx.get("bank_account_id")),
+            to_text(tx.get("transaction_id") or tx.get("id")),
+        )
+        if identity not in transfer_lines and not is_travel_allowance_withdrawal(tx):
+            tokens.update(extract_remitter_tokens(tx.get("description")))
+    return sorted(tokens)
+
+
+def validate_live_bank_line_for_categorization(
+    current: Mapping[str, Any],
+    proposal: Mapping[str, Any],
+    expected_kind: str,
+) -> dict[str, object]:
+    """Verify live Books bank line matches the reviewed proposal and build base payload."""
+    if bank_line_kind(current) != expected_kind:
+        raise ReconciliationError("The live bank line classification changed. Refresh before categorizing.")
+    if (
+        parse_date(current.get("date") or current.get("transaction_date")) != parse_date(proposal.get("date"))
+        or to_decimal(current.get("amount")) != to_decimal(proposal.get("amount"))
+        or to_text(current.get("description") or current.get("narration")) != to_text(proposal.get("description"))
+        or to_text(current.get("reference_number")) != to_text(proposal.get("reference"))
+    ):
+        raise ReconciliationError("The live bank line changed. Refresh before categorizing.")
+    amount = to_decimal(current.get("amount"))
+    if amount is None or amount == 0:
+        raise ReconciliationError("The bank withdrawal has no valid amount.")
+    return {
+        "date": to_text(current.get("date") or current.get("transaction_date")),
+        "amount": float(abs(amount)),
+        "description": to_text(current.get("description") or current.get("narration")),
+        "reference_number": to_text(current.get("reference_number")),
+    }

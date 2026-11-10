@@ -62,10 +62,10 @@ okf_version: "0.2"
 * [GSTR-3B and Books P&L Comparison](gstr3b-pnl-comparison.md) - Monthly and FY Sales account comparison with filed GSTR-3B turnover.
 * [Vendor-Customer Offset](vendor-customer-offset.md) - GSTIN-safe paired customer/vendor payments through a clearing bank account.
 * [Inter-location Contra Review](inter-location-contra.md) - Detailed account posting audit and review queue for contra pairs across locations.
-* [Local Customer Store](customer-local-store.md) - Four-table Analytics customer sync, local cleanup reconciliation and legacy Books mirror.
+* [Local Customer Store](customer-local-store.md) - Two-table Analytics customer sync, local cleanup reconciliation and legacy Books mirror.
 * [Customer Registration](customer-registration.md) - Paired Books and Creator creation with recovery.
 * [Creator Customer Sync](creator-customer-delete-sync.md) - Books-to-Creator customer creation, update, and deletion reconciliation.
-* [Item Catalog Export](item-catalog.md) - Generic purchase-account-scoped Inventory CSV exports and missing-alias reports.
+* [Item Catalog Export](item-catalog.md) - Inventory CSV exports and the Analytics Accounts and Items SQLite snapshot.
 * [Neoseal Item Audit](neoseal-item-audit.md) - Automated catalog data quality, duplicate/packaging twin detection, nomenclature verification, and item group audit.
 * [Neoseal Stock Count](neoseal-stock-count.md) - Active, inventory-tracked item quantity upserts into the Flat Zoho Sheet tab.
 * [SDK Audit Findings](sdk-audit-findings.md) - Security, performance, and usability review across core transport and service clients.

@@ -1,5 +1,13 @@
 """Public APIs for operations."""
 
+from .bank_transactions import (
+    categorize_bank_transaction,
+    fetch_uncategorized_bank_transactions,
+    find_bank_match_candidate,
+    get_uncategorized_bank_transaction,
+    match_bank_transaction,
+)
+from .creator import require_creator_success, update_and_verify_creator_record
 from .files import (
     download_books_document,
     workdrive_upload_file,
@@ -20,6 +28,13 @@ from .transactions import (
 )
 
 __all__ = [
+    "categorize_bank_transaction",
+    "fetch_uncategorized_bank_transactions",
+    "find_bank_match_candidate",
+    "get_uncategorized_bank_transaction",
+    "match_bank_transaction",
+    "require_creator_success",
+    "update_and_verify_creator_record",
     "download_books_document",
     "workdrive_upload_file",
     "attach_file_to_books_resource",

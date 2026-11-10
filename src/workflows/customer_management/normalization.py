@@ -26,9 +26,11 @@ FINANCIAL_FIELDS = {
     'Place Of Supply', 'Tax Exemption ID', 'GST Treatment', 'GSTIN', 'PAN Number',
     'Taxable', 'Tax ID', 'GST Registered', 'B2B ID',
 }
-BEAT_FIELDS = {
-    'Beat', 'District', 'Branch', 'Jurisdiction', 'Transporter', 'Optical Division',
+EXCLUDED_FIELDS = {
     'Customer Owner ID',
+}
+BEAT_FIELDS = {
+    'Beat', 'District', 'Jurisdiction', 'Transporter',
 }
 CATEGORY_FIELDS = {
     'Status', 'Customer Sub Type', 'Type', 'District', 'Branch', 'Jurisdiction',
@@ -36,7 +38,7 @@ CATEGORY_FIELDS = {
     'Payment Terms Label', 'state',
 }
 FINANCIAL_AMOUNTS = {'Credit Limit', 'Opening Balance', 'Payments Due', 'Accounts Receivable'}
-TABLES = ('Customers', 'Customer Addresses', 'Customer Financials', 'Customer Beat')
+TABLES = ('Customers', 'Customer Addresses')
 
 
 class Correction(TypedDict):
@@ -236,11 +238,11 @@ def _review_links(sources: dict[str, list[dict[str, Any]]], issues: list[ReviewI
             issues.append({'table': 'Customers', 'record_id': cid, 'column': 'Default Address ID',
                            'value': address_id, 'reason': 'Default address missing or belongs to another customer'})
         if str(row.get('GST Treatment', '')).startswith('Registered Business') and not row.get('GSTIN'):
-            issues.append({'table': 'Customer Financials', 'record_id': cid, 'column': 'GSTIN',
+            issues.append({'table': 'Customers', 'record_id': cid, 'column': 'GSTIN',
                            'value': row.get('GSTIN'), 'reason': 'Registered-business customer has no GSTIN'})
         gst, pan = row.get('GSTIN', ''), row.get('PAN Number', '')
         if gst and pan and len(gst) == 15 and gst[2:12].upper() != pan.upper():
-            issues.append({'table': 'Customer Financials', 'record_id': cid, 'column': 'PAN Number',
+            issues.append({'table': 'Customers', 'record_id': cid, 'column': 'PAN Number',
                            'value': pan, 'reason': 'PAN differs from PAN portion of GSTIN'})
         if row.get('Beat'):
             beats[(row.get('Branch', ''), row.get('Jurisdiction', ''))].add(row['Beat'])
@@ -249,7 +251,7 @@ def _review_links(sources: dict[str, list[dict[str, Any]]], issues: list[ReviewI
         for index, name in enumerate(ordered):
             for other in ordered[index + 1:]:
                 if SequenceMatcher(None, name.casefold(), other.casefold()).ratio() >= .90:
-                    issues.append({'table': 'Customer Beat', 'record_id': '', 'column': 'Beat',
+                    issues.append({'table': 'Customers', 'record_id': '', 'column': 'Beat',
                                    'value': [name, other],
                                    'reason': f'Similar beat names in {branch}/{jurisdiction}; explicit mapping required'})
 
@@ -272,21 +274,84 @@ def _insert(db: sqlite3.Connection, table: str, row: dict[str, Any]) -> None:
     db.execute(f'INSERT INTO {_quote(table)} ({columns}) VALUES ({",".join("?" for _ in row)})', values)
 
 
+CUSTOMER_CORE_VIEW_COLUMNS: list[str | tuple[str, str]] = [
+    'Customer Number', 'Display Name', 'Company Name', 'Status', 'Email',
+    'Phone', 'Mobile Phone', 'PhoneModifed', 'Type', ('Status_1', 'Billing Status'),
+    'Branch', 'Optical Division', 'Legal Name', 'Trader Name', 'Customer ID',
+    'Default Address ID', 'Created Time', 'Last Modified Time', 'Salutation',
+    'First Name', 'Last Name',
+]
+ADDRESSES_VIEW_COLUMNS: list[str | tuple[str, str]] = [
+    'Address ID', 'Customer ID', 'Shipping Address Attention', 'Shipping Street',
+    'Shipping City', 'Shipping State', 'Shipping Country', 'Shipping Code',
+    'Billing Address Attention', 'Billing Street', 'Billing City', 'Billing State',
+    'Billing Country', 'Billing Code', 'Created Time', 'Last Modified Time',
+    'Shipping Street 2', 'Billing Street 2', 'Shipping Phone', 'Billing Phone',
+    'Billing Address', 'Shipping Address',
+]
+FINANCIALS_VIEW_COLUMNS: list[str | tuple[str, str]] = [
+    'Customer ID', 'Credit Limit', 'Payment Terms Label', 'PriceList ID',
+    'Place Of Supply', 'Tax Exemption ID', 'GST Treatment', 'GSTIN',
+    'Opening Balance', 'PAN Number', 'Tax ID', 'GST Registered',
+    'Payments Due', 'Accounts Receivable', 'B2B ID',
+]
+def _view_select(db: sqlite3.Connection, table: str, columns: list[str | tuple[str, str]]) -> str:
+    table_cols = {c[1] for c in db.execute(f'PRAGMA table_info({_quote(table)})').fetchall()}
+    parts: list[str] = []
+    for col in columns:
+        if isinstance(col, tuple):
+            source_col, alias = col
+            if source_col in table_cols:
+                parts.append(f'{_quote(source_col)} AS {_quote(alias)}')
+            else:
+                parts.append(f'NULL AS {_quote(alias)}')
+        else:
+            if col in table_cols:
+                parts.append(_quote(col))
+            else:
+                parts.append(f'NULL AS {_quote(col)}')
+    return ', '.join(parts)
+
+
+def create_customer_views(db: sqlite3.Connection) -> None:
+    """Create normalized reporting views on the customer database."""
+    core_select = _view_select(db, 'Customers', CUSTOMER_CORE_VIEW_COLUMNS)
+    addr_select = _view_select(db, 'Customer Addresses', ADDRESSES_VIEW_COLUMNS)
+    fin_select = _view_select(db, 'Customers', FINANCIALS_VIEW_COLUMNS)
+
+    db.executescript(f"""
+        DROP VIEW IF EXISTS "Customer_core";
+        CREATE VIEW "Customer_core" AS SELECT {core_select} FROM "Customers";
+
+        DROP VIEW IF EXISTS "addresses";
+        CREATE VIEW "addresses" AS SELECT {addr_select} FROM "Customer Addresses";
+
+        DROP VIEW IF EXISTS "financials";
+        CREATE VIEW "financials" AS SELECT {fin_select} FROM "Customers";
+
+        DROP VIEW IF EXISTS "beat";
+
+        DROP VIEW IF EXISTS "Electrical Customers";
+        CREATE VIEW "Electrical Customers" AS SELECT * FROM "Customers" WHERE "Branch" = 'Electricals';
+
+        DROP VIEW IF EXISTS "Zeiss Customers";
+        CREATE VIEW "Zeiss Customers" AS SELECT * FROM "Customers" WHERE "Branch" = 'Zeiss';
+    """)
+
+
 def build_normalized_customers(
     source: Path, destination: Path, *, organization_id: str,
 ) -> CustomerNormalizationResult:
-    """Create four related tables and audited local fixes; refuse to overwrite edited stores."""
+    """Create master customer table, address child table, and audited views; refuse to overwrite edited stores."""
     if destination.exists():
         raise FileExistsError(f'Database exists: {destination}; choose a new --db to preserve local edits')
     manifest, sources = _load_sources(source, organization_id)
     customer_columns = manifest['views']['customers']['columns']
     groups = {
-        'Customers': [c for c in customer_columns if c not in FINANCIAL_FIELDS | BEAT_FIELDS],
-        'Customer Financials': ['Customer ID'] + [c for c in customer_columns if c in FINANCIAL_FIELDS],
-        'Customer Beat': ['Customer ID'] + [c for c in customer_columns if c in BEAT_FIELDS],
+        'Customers': [c for c in customer_columns if c not in EXCLUDED_FIELDS],
+        'Customer Addresses': manifest['views']['addresses']['columns'] + ['_source_json'],
     }
     groups['Customers'] += ['Contact Persons', '_source_json', '_source_contact_persons_json']
-    groups['Customer Addresses'] = manifest['views']['addresses']['columns'] + ['_source_json']
     persons: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for person in sources['contact_persons']:
         persons[person['Customer ID']].append(person)
@@ -303,21 +368,20 @@ def build_normalized_customers(
                 _create_table(db, table, groups[table], 'Address ID' if table == 'Customer Addresses' else 'Customer ID')
             for original in sources['customers']:
                 cid = original['Customer ID']
-                for table in ('Customers', 'Customer Financials', 'Customer Beat'):
-                    part = {c: original[c] for c in groups[table] if c in original}
-                    normalized = _normalize_record(part, table, cid, corrections, issues)
-                    if table == 'Customers':
-                        normalized['Contact Persons'] = [
-                            _normalize_record(person, table, cid, corrections, issues,
-                                              prefix=f'Contact Persons[{person["Contact Person ID"]}].')
-                            for person in persons[cid]]
-                        normalized['_source_json'] = original
-                        normalized['_source_contact_persons_json'] = persons[cid]
-                    _insert(db, table, normalized)
+                part = {c: original[c] for c in groups['Customers'] if c in original}
+                normalized = _normalize_record(part, 'Customers', cid, corrections, issues)
+                normalized['Contact Persons'] = [
+                    _normalize_record(person, 'Customers', cid, corrections, issues,
+                                      prefix=f'Contact Persons[{person["Contact Person ID"]}].')
+                    for person in persons[cid]]
+                normalized['_source_json'] = original
+                normalized['_source_contact_persons_json'] = persons[cid]
+                _insert(db, 'Customers', normalized)
             for original in sources['addresses']:
                 normalized = _normalize_record(original, 'Customer Addresses', original['Address ID'], corrections, issues)
                 normalized['_source_json'] = original
                 _insert(db, 'Customer Addresses', normalized)
+            create_customer_views(db)
             _review_links(sources, issues)
             if db.execute('PRAGMA foreign_key_check').fetchall():
                 raise ValueError('Foreign-key validation failed')

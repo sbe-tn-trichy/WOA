@@ -21,7 +21,7 @@ logs/
 output/
 Output/
 workspace_metadata/
-metadata/
+/data/
 
 # Ephemeral scratch scripts
 scripts/

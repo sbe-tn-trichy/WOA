@@ -22,7 +22,8 @@ from workflows.inter_location.payment_updates import plan_customer_payment_moves
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--proposal", type=Path, default=Path("output/inter_location_payment_proposals.json"))
-    parser.add_argument("--prefix", default="SB2526CP-")
+    parser.add_argument("--prefix", default="",
+                        help="Payment series prefix; defaults to expected_number_prefix from proposal")
     parser.add_argument("--financial-year", default="FY 2025-26", choices=["FY 2025-26"])
     parser.add_argument("--last-suffix", type=int, default=None,
                         help="Override the current highest Books suffix; default reads Books")
@@ -47,8 +48,11 @@ def main() -> int:
                  and date(2025, 4, 1) <= datetime.strptime(str(p.get("date", "")), "%d/%m/%Y").date()
                  <= date(2026, 3, 31)] if isinstance(raw_proposals, Sequence) else []
     books = get_books_client()
+    prefix = args.prefix or (str(proposals[0].get("expected_number_prefix") or "") if proposals else "")
+    if not prefix:
+        raise ValueError("Prefix is required: pass --prefix or provide proposals with expected_number_prefix")
     moves = plan_customer_payment_moves(books, proposals,
-                                        prefix=args.prefix, last_suffix=args.last_suffix,
+                                        prefix=prefix, last_suffix=args.last_suffix,
                                         limit=args.batch_size,
                                         excluded_payment_ids=frozenset(args.exclude_payment_id))
     if not moves:

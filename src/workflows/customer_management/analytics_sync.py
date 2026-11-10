@@ -10,10 +10,11 @@ from collections.abc import Mapping
 from typing import Any, TypedDict
 
 from ..analytics_catalog import AnalyticsCatalog
+from ..books_statements.custom_module_store import MODULES
 from ..core.checkpoint import write_atomic_json
 from .normalization import (
     TABLES, _json, _load_sources, _normalize_record, _quote,
-    build_normalized_customers, download_customer_normalization_sources,
+    build_normalized_customers, create_customer_views, download_customer_normalization_sources,
 )
 
 
@@ -57,8 +58,11 @@ def _primary(table: str) -> str:
 
 def _read_tables(db: sqlite3.Connection) -> dict[str, dict[str, dict[str, Any]]]:
     tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    if tables != set(TABLES):
-        raise ValueError('Sync requires the four-table normalization database, not the legacy Books store')
+    customer_tables = set(TABLES)
+    module_tables = {*MODULES, 'metadata', 'module_snapshots'}
+    if tables not in (customer_tables, customer_tables | module_tables,
+                      customer_tables | module_tables | {'module_local_creates'}):
+        raise ValueError('Sync requires the normalization tables with only supported Books module tables')
     return {table: {row[_primary(table)]: dict(row)
                     for row in db.execute(f'SELECT * FROM {_quote(table)}')}
             for table in TABLES}
@@ -374,6 +378,7 @@ def sync_analytics_customers(
         db.execute('UPDATE "Customers" SET _sync_info_json=?', (_json(info),))
         if db.execute('PRAGMA foreign_key_check').fetchall() or db.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
             raise ValueError('Database integrity/foreign-key verification failed; sync rolled back')
+        create_customer_views(db)
         schema = ';\n'.join(r[0] for r in db.execute(
             "SELECT sql FROM sqlite_master WHERE type='table' ORDER BY rowid")) + ';\n'
         db.commit()

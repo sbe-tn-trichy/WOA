@@ -15,7 +15,7 @@ and security sanitizers.
 
 | Section | Target File | Description | Primary Classes / Symbols |
 |---|---|---|---|
-| **Core SDK & Transport Architecture** | [core.md](core.md) | Shared HTTP transport, authentication managers, base resource abstractions, exception hierarchies, security path sanitizers, validators, custom identifiers, and file download utilities. | `SeekableStream`, `TransportError`, `HTTPError`, `RequestOptions` (+59 more) |
+| **Core SDK & Transport Architecture** | [core.md](core.md) | Shared HTTP transport, authentication managers, base resource abstractions, exception hierarchies, security path sanitizers, validators, custom identifiers, and file download utilities. | `SeekableStream`, `TransportError`, `HTTPError`, `RequestOptions` (+60 more) |
 | **Zoho Books API Reference** | [books.md](books.md) | Complete reference for the Zoho Books client, CRUD resources, status and approval mixins, contacts, banking, sales, purchases, GST outward reporting, time tracking, custom fields, and financial statements. | `ZohoBooksAPI`, `BaseResource`, `ActiveInactiveMixin`, `StatusMixin` (+31 more) |
 | **Zoho Inventory API Reference** | [inventory.md](inventory.md) | Complete reference for the Zoho Inventory client, item catalogs, item groups, inventory adjustments, move orders, transfer orders, packages, shipments, picklists, bins, and batches. | `ZohoInventoryAPI`, `BaseResource`, `Items`, `ItemGroups` (+8 more) |
 | **Zoho Analytics API Reference** | [analytics.md](analytics.md) | Zoho Analytics v2 OpenAPI resources, dynamic SQL queries, view exports, and resumable metadata snapshots. | `ZohoAnalyticsAPI`, `Views`, `Queries`, `Metadata` (+2 more) |
@@ -25,7 +25,7 @@ and security sanitizers.
 | **Zoho WorkDrive API Reference** | [wd.md](wd.md) | Zoho WorkDrive client for file and folder management, streaming uploads, recursive folder downloads, and duplicate folder cleanup. | `ZohoWorkdriveAPI`, `BaseResource`, `Files` |
 | **Zoho Sheet API Reference** | [sheet.md](sheet.md) | Zoho Sheet client for workbook, worksheet, and tabular row manipulation. | `ZohoSheetAPI` |
 | **Zoho Cliq API Reference** | [cliq.md](cliq.md) | Zoho Cliq client for broadcasting channel notifications and bot messages. | `ZohoCliqAPI` |
-| **SDK Shared Helper Utilities Reference** | [helpers.md](helpers.md) | Reusable financial helpers: fiscal-year date parsing, sequence numbering, account transactions, GST validation, item filtering, ledger balances, and record normalization. | `BooksBankAccountsResource`, `BooksBankAccountsClient`, `AnalyticsQueriesResource`, `AnalyticsBinClient` (+78 more) |
+| **SDK Shared Helper Utilities Reference** | [helpers.md](helpers.md) | Reusable financial helpers: fiscal-year date parsing, sequence numbering, account transactions, GST validation, item filtering, ledger balances, and record normalization. | `BooksBankAccountsResource`, `BooksBankAccountsClient`, `BooksAccountsAndLocationsClient`, `AnalyticsQueriesResource` (+82 more) |
 | **Google Sheets API v4 SDK Reference** | [google_sheets.md](google_sheets.md) | Google Sheets API v4 client supporting both OAuth token and Service Account credentials with range reading, updating, and formatting. | `HttpRequestProtocol`, `SpreadsheetValuesResourceProtocol`, `SpreadsheetsResourceProtocol`, `GoogleSheetsResourceProtocol` (+6 more) |
 
 ## Quick Start

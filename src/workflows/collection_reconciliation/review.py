@@ -2,154 +2,69 @@
 
 from __future__ import annotations
 
-import hashlib
-from utils.file_utils import json
-import re
 import threading
-from bisect import bisect_left, bisect_right
-from concurrent.futures import ThreadPoolExecutor
-from contextvars import copy_context
-from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
-from decimal import Decimal, InvalidOperation
-from pathlib import Path
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
-from workflows.runtime.exceptions import ReconciliationError
-from ..core.matching import (
-    get_bank_reference,
-    parse_date,
-    to_decimal as _decimal,
-    to_text as _text,
+from helpers import (
+    AmbiguousMatchError,
+    categorize_bank_transaction,
+    fetch_open_invoices,
+    get_uncategorized_bank_transaction,
+    resolve_chart_of_account,
+    resolve_location_by_name,
+    resolve_vendor_by_name,
+    update_and_verify_creator_record,
 )
-from workflows.collection_payments.identifiers import identifier as _identifier, identifiers as _identifiers
-from workflows.collection_payments.payments import customer_payment_payload
-from workflows.collection_payments.types import BankStatementRecord, BankTransferProposal, InvoiceAllocation
-from .bank_transfers import bank_line_identity, transfer_proposals, post_transfer
-from .preview_cache import PreviewCache
-from workflows.collection_payments.allocator import CLOSED_INVOICE_STATUSES as _CLOSED_INVOICE_STATUSES, allocate_invoices_oldest_due_first, fetch_open_invoices
-from workflows.collection_payments.cheques import attach_presented_dates, normalize_cheque_number
+from utils import utc_now_iso
+from utils.file_utils import json
+from workflows.collection_payments.allocator import allocate_invoices_oldest_due_first, attach_invoice_preview
+from workflows.collection_payments.cheques import checkpoint_cheque_presentation
+from workflows.collection_payments.identifiers import identifier as _identifier
+from workflows.collection_payments.payments import (
+    create_customer_payment_and_resolve,
+    match_books_payment_to_bank,
+    review_customer_payment_payload,
+)
+from workflows.collection_payments.transaction_index import (
+    OrderedBankCandidateIndex as _BankCandidateIndex,
+    find_review_bank_transaction_details,
+    require_matching_date_amount,
+)
+from workflows.collection_payments.types import BankTransferProposal
+from workflows.core.checkpoint import write_atomic_json
+from workflows.core.matching import to_text as _text
+from workflows.runtime.exceptions import ReconciliationError
 from .bank_statement import (
     CustomerFinderIndex,
     bank_line_kind,
+    build_bank_statement_views,
+    check_customer_name,
+    collect_review_remitter_tokens,
     extract_remitter_tokens,
-    is_travel_allowance_withdrawal,
+    validate_live_bank_line_for_categorization,
 )
-
-from workflows.core.checkpoint import write_atomic_json
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _cheque_reference_suffixes(value: Any) -> set[str]:
-    """Return the final four digits of each cheque-like number in ``value``.
-
-    Bank narrations commonly include the cheque number alongside clearing dates
-    and other identifiers, so each numeric run is considered independently.
-    """
-    return {
-        digits[-4:]
-        for digits in re.findall(r"\d+", _text(value))
-        if len(digits) >= 4
-    }
-
-
-class _BankCandidateIndex:
-    """Normalize bank dates and amounts once; preserve original candidate order."""
-
-    def __init__(self, rows: Sequence[Mapping[str, Any]]) -> None:
-        self.by_date: dict[Any, dict[Decimal, list[tuple[int, Mapping[str, Any]]]]] = {}
-        for position, row in enumerate(rows):
-            day = parse_date(row.get("date") or row.get("transaction_date"))
-            amount = _decimal(row.get("amount"))
-            if day and amount is not None:
-                self.by_date.setdefault(day, {}).setdefault(abs(amount), []).append((position, row))
-        self.amounts = {day: sorted(values) for day, values in self.by_date.items()}
-
-    def candidates(self, day: Any, amount: Decimal, days: int, tolerance: Decimal) -> list[Mapping[str, Any]]:
-        matches = []
-        for offset in range(-days, days + 1):
-            candidate_day = day + timedelta(days=offset)
-            amounts = self.amounts.get(candidate_day, [])
-            lower = bisect_left(amounts, abs(amount) - tolerance)
-            upper = bisect_right(amounts, abs(amount) + tolerance)
-            for value in amounts[lower:upper]:
-                matches.extend(self.by_date[candidate_day][value])
-        return [row for _, row in sorted(matches, key=lambda item: item[0])]
-
-
-@dataclass(frozen=True)
-class OnlinePaymentReviewConfig:
-    creator_app_link_name: str
-    bank_account_id: str = ""
-    bank_accounts: tuple[tuple[str, str], ...] = ()
-    payment_report_link_name: str = "Online_Payments"
-    payment_reports: tuple[tuple[str, str], ...] = ()
-    cheque_detail_report_link_name: str = "All_Cheque_Details"
-    cheque_detail_form_link_name: str = "Cheque_Details"
-    customer_report_link_name: str = "All_Customers1"
-    creator_checkpoint_report_link_name: str = "All_Payments"
-    creator_books_id_field: str = "Books_Transaction_Id"
-    creator_payment_number_field: str = "PaymentNo"
-    date_tolerance_days: int = 0
-    cheque_date_tolerance_days: int = 7
-    amount_tolerance: Decimal = Decimal("0")
-    analytics_workspace_id: str = ""
-    customer_finder_view_id: str = ""
-    travel_expense_account_name: str = "Employee Travel Expense"
-    travel_expense_account_id: str = ""
-    salary_expense_account_id: str = ""
-    cash_account_id: str = ""
-    analytics_preview_ttl_seconds: float = 300
-    customer_mapping_ttl_seconds: float = 300
-    travel_account_ttl_seconds: float = 300
-    lazy_invoice_previews: bool = True
-    analytics_batch_tokens: int = 35
-    analytics_max_sql_bytes: int = 6000
-    state_path: Path = Path(
-        "output/collection_reconciliation/online_payments_review.json"
-    )
-
-    def __post_init__(self) -> None:
-        for ttl in (self.analytics_preview_ttl_seconds, self.customer_mapping_ttl_seconds,
-                    self.travel_account_ttl_seconds):
-            if not 0 <= ttl < float("inf"):
-                raise ValueError("Cache expiry must be finite and non-negative.")
-        if self.analytics_batch_tokens < 1 or self.analytics_max_sql_bytes < 256:
-            raise ValueError("Analytics batch limits must be positive and SQL budget at least 256 bytes.")
-
-    def configured_banks(self) -> tuple[tuple[str, str], ...]:
-        if self.bank_accounts:
-            return tuple(
-                (str(name).strip(), str(account_id).strip())
-                for name, account_id in self.bank_accounts
-                if str(name).strip() and str(account_id).strip()
-            )
-        if self.bank_account_id:
-            return (("Bank", str(self.bank_account_id)),)
-        raise ValueError("At least one bank account is required.")
-
-    def configured_reports(self) -> tuple[tuple[str, str], ...]:
-        if self.payment_reports:
-            return tuple(
-                (str(payment_type).strip(), str(report_name).strip())
-                for payment_type, report_name in self.payment_reports
-                if str(payment_type).strip() and str(report_name).strip()
-            )
-        return (("Online", self.payment_report_link_name),)
+from .bank_transfers import bank_line_identity, merge_transfer_proposals, post_transfer
+from .preview_cache import PreviewCache
+from .review_fetch import (
+    OnlinePaymentReviewConfig,
+    apply_manual_reference_override,
+    build_historical_finder_queries,
+    build_proposal_entry,
+    fetch_all_creator_payments,
+    fetch_all_uncategorized_bank_transactions,
+    fetch_review_sources,
+    merge_review_entries,
+    preview_customer_finder,
+    query_historical_customer_finder,
+)
 
 
 class OnlinePaymentReviewService:
     """Build and mutate a persistent, explicitly approved payment review queue."""
 
-    def __init__(self, creator_client: Any, books_client: Any, config: OnlinePaymentReviewConfig, analytics_client: Any = None):
-        self.creator = creator_client
-        self.books = books_client
-        self.analytics = analytics_client
-        self.config = config
+    def __init__(self, creator_client: Any, books_client: Any, config: OnlinePaymentReviewConfig, analytics_client: Any = None) -> None:
+        self.creator, self.books, self.analytics, self.config = creator_client, books_client, analytics_client, config
         self._lock = threading.RLock()
         self._history_cache: PreviewCache[list[Mapping[str, Any]]] = PreviewCache()
         self._full_history_cache: PreviewCache[list[Mapping[str, Any]]] = PreviewCache()
@@ -170,217 +85,39 @@ class OnlinePaymentReviewService:
         with self._lock:
             self._cache_hits = {"analytics_tokens": 0, "customer_mapping": 0}
             if force_refresh:
-                self._history_cache.clear()
-                self._full_history_cache.clear()
-                self._customer_cache.clear()
-                self._expense_cache.clear()
+                for cache in (self._history_cache, self._full_history_cache, self._customer_cache, self._expense_cache):
+                    cache.clear()
             previous = self.load()
-            previous_entries = {
-                str(entry.get("id")): entry for entry in previous.get("entries", [])
-            }
-            # Each client stays on one worker; only independent services overlap.
-            with ThreadPoolExecutor(max_workers=2) as executor:
-                ctx_payment = copy_context()
-                ctx_bank = copy_context()
-                payment_read = executor.submit(lambda: ctx_payment.run(self._all_creator_payments))
-                bank_read = executor.submit(lambda: ctx_bank.run(self._all_uncategorized_bank_transactions))
-                payments = payment_read.result()
-                bank_transactions = bank_read.result()
-            customer_key = (id(self.creator), self.config.creator_app_link_name,
-                            self.config.customer_report_link_name)
-            customers = self._customer_cache.get(customer_key)
-            if customers is None:
-                customers = self.creator.get_all_records(
-                    self.config.creator_app_link_name,
-                    self.config.customer_report_link_name,
-                )
-                self._customer_cache.put(customer_key, customers,
-                                         self.config.customer_mapping_ttl_seconds)
-            else:
-                self._cache_hits["customer_mapping"] += 1
-            customer_ids = {
-                _text(row.get("ID")): _text(row.get("Customer_Id"))
-                for row in customers
-                if _text(row.get("ID"))
-            }
-
-            old_transfers = {pair["id"]: pair for pair in previous.get("bank_transfers", [])}
-            reserved_transfer_lines = {
-                bank_line_identity(pair[side])
-                for pair in old_transfers.values() if pair.get("status") not in {"pending", "completed"}
-                for side in ("source", "destination")
-            }
-            bank_transfers = [pair for pair in transfer_proposals(bank_transactions)
-                              if pair["id"] in old_transfers and old_transfers[pair["id"]].get("status") != "pending"
-                              or not any(bank_line_identity(pair[side]) in reserved_transfer_lines
-                                         for side in ("source", "destination"))]
-            for index, pair in enumerate(bank_transfers):
-                old = old_transfers.get(pair["id"])
-                if old and old.get("status") != "pending":
-                    bank_transfers[index] = old
-            current_pair_ids = {pair["id"] for pair in bank_transfers}
-            for pair_id, pair in old_transfers.items():
-                if pair_id not in current_pair_ids and pair.get("status") != "pending":
-                    bank_transfers.append(pair)
-            transfer_lines: dict[tuple[str, str], list[BankTransferProposal]] = {}
-            for pair in bank_transfers:
-                for side in ("source", "destination"):
-                    transfer_lines.setdefault(bank_line_identity(pair[side]), []).append(pair)
-
-            used_transaction_ids = set()
-            raw_entries = []
-            bank_comparisons = []
-            customer_bank_transactions = [tx for tx in bank_transactions if bank_line_identity(tx) not in transfer_lines and bank_line_kind(tx) not in {"cash_deposit", "electricity", "salary", "travel_allowance", "vendor_advance"}]
-            customer_bank_transactions = _BankCandidateIndex(customer_bank_transactions)
-            for payment in payments:
-                # Bank-source comparisons must retain every competing Creator
-                # record, even when the posting queue has reserved this line.
-                bank_comparisons.append(self._proposal(payment, customer_ids, customer_bank_transactions, set()))
-                entry = self._proposal(payment, customer_ids,
-                    customer_bank_transactions, used_transaction_ids)
-                raw_entries.append(entry)
-
-            # Collect remitter tokens for targeted historical lookup
-            all_tokens: set[str] = set()
-            for entry in raw_entries:
-                bank = entry.get("bank")
-                if bank:
-                    all_tokens.update(extract_remitter_tokens(bank.get("description")))
-                for cand in entry.get("ambiguous_candidates", []):
-                    all_tokens.update(extract_remitter_tokens(cand.get("description")))
-                for cand in entry.get("possible_candidates", []):
-                    all_tokens.update(extract_remitter_tokens(cand.get("description")))
-            for tx in bank_transactions:
-                if bank_line_identity(tx) not in transfer_lines and not is_travel_allowance_withdrawal(tx):
-                    all_tokens.update(extract_remitter_tokens(tx.get("description")))
-
-            customer_finder_rows = self._preview_customer_finder(sorted(all_tokens))
-            customer_finder = CustomerFinderIndex(customer_finder_rows)
-
-            invoice_cache: dict[str, list[dict[str, object]]] = {}
-            entries = []
-            for entry in raw_entries:
-                for candidate in entry["ambiguous_candidates"]:
-                    cand_tokens = extract_remitter_tokens(candidate.get("description"))
-                    candidate["suggested_customer_names"] = (
-                        self._suggest_names_for_tokens(cand_tokens, customer_finder_rows)
-                        or customer_finder.suggest(candidate)
-                    )
-                self._check_customer_name(entry, customer_finder_rows)
-                old = previous_entries.get(entry["id"])
-                if old and old.get("push_status") == "pushed":
-                    terminal = dict(old)
-                    terminal["archived"] = False
-                    self._migrate_bank_identity(terminal, previous)
-                    entries.append(terminal)
-                    continue
-                if self.config.lazy_invoice_previews and entry.get("reviewable"):
-                    entry.update(allocation_status="pending_preview", invoice_allocations=[], allocation_error="")
-                else:
-                    self._attach_invoice_preview(entry, invoice_cache)
-                if entry.get("customer_name_valid") is False:
-                    entry["reason"] += " " + entry["customer_name_reason"]
-                if old and old.get("fingerprint") == entry["fingerprint"]:
-                    for key in (
-                        "decision",
-                        "push_status",
-                        "retry_stage",
-                        "books_payment_id",
-                        "books_payment_number",
-                        "decision_at",
-                        "pushed_at",
-                        "error",
-                    ):
-                        if key in old:
-                            entry[key] = old[key]
-                    if old.get("manual_reference_override"):
-                        for key in (
-                            "bank",
-                            "bank_name",
-                            "bank_account_id",
-                            "manual_reference_override",
-                            "reviewable",
-                            "reason",
-                        ):
-                            if key in old:
-                                entry[key] = old[key]
-                entries.append(entry)
-
-            current_ids = {entry["id"] for entry in entries}
-            for old in previous.get("entries", []):
-                if (
-                    _text(old.get("id")) not in current_ids
-                    and old.get("push_status") == "pushed"
-                ):
-                    archived = dict(old)
-                    archived["archived"] = True
-                    self._migrate_bank_identity(archived, previous)
-                    entries.append(archived)
-
-            previous_bank = {
-                _text(row.get("transaction_id")): row
-                for row in previous.get("bank_suggestions", [])
-            }
-            creator_claims: dict[tuple[str, str], list[str]] = {}
-            for comparison in bank_comparisons:
-                candidates = ([{**comparison["bank"], "bank_account_id": comparison["bank_account_id"]}]
-                              if comparison.get("bank") else [])
-                candidates += comparison["ambiguous_candidates"] + comparison["possible_candidates"]
-                keys = {(candidate.get("bank_account_id", ""), candidate["transaction_id"])
-                        for candidate in candidates}
-                for key in keys:
-                    creator_claims.setdefault(key, []).append(comparison["id"])
-            bank_suggestions = []
-            bank_records: list[BankStatementRecord] = []
-            for transaction in bank_transactions:
-                transaction_id = _text(transaction.get("transaction_id") or transaction.get("id"))
-                if not transaction_id:
-                    continue
-                displayed = self._display_bank(transaction)
-                displayed.update({
-                    "bank_name": _text(transaction.get("_review_bank_name")),
-                    "bank_account_id": _text(transaction.get("_review_bank_account_id")),
-                    "kind": bank_line_kind(transaction),
-                    "customer_suggestions": customer_finder.suggest(transaction) if bank_line_kind(transaction) not in {"travel_allowance", "electricity", "salary", "cash_deposit", "vendor_advance"} else [],
-                    "expense_account_name": (self.config.travel_expense_account_name if bank_line_kind(transaction) == "travel_allowance" else "Electricity" if bank_line_kind(transaction) == "electricity" else "Salary" if bank_line_kind(transaction) == "salary" else ""),
-                    "transfer_account_name": "Cash-SBE" if bank_line_kind(transaction) == "cash_deposit" else "",
-                    "vendor_name": "Polycab" if bank_line_kind(transaction) == "vendor_advance" else "",
-                    "location_name": "Sri Bharath Electricals" if bank_line_kind(transaction) == "vendor_advance" else "",
-                    "categorization_status": "pending",
-                })
-                if bank_line_identity(transaction) in transfer_lines:
-                    pairs = transfer_lines[bank_line_identity(transaction)]
-                    if all(pair["status"] == "completed" for pair in pairs):
-                        continue
-                    displayed.update(kind="bank_transfer", customer_suggestions=[],
-                                     transfer_ids=[pair["id"] for pair in pairs])
-                if previous_bank.get(transaction_id, {}).get("categorization_status") == "categorized":
-                    continue
-                creator_candidates = creator_claims.get((displayed["bank_account_id"], transaction_id), [])
-                bank_records.append({**displayed, "creator_entry_ids": creator_candidates})
-                if transaction_id not in used_transaction_ids:
-                    bank_suggestions.append(displayed)
-
-            # Keep interrupted operations accessible even after one feed line is matched.
-            visible_ids = {bank_line_identity(row) for row in bank_records}
-            for pair in bank_transfers:
-                if pair["status"] not in {"pending", "completed"} and bank_line_identity(pair["source"]) not in visible_ids:
-                    bank_records.append({**pair["source"], "kind": "bank_transfer",
-                                         "transfer_ids": [pair["id"]], "creator_entry_ids": [],
-                                         "categorization_status": "pending", "recovery_checkpoint": True})
-                    visible_ids.add(bank_line_identity(pair["source"]))
-
+            payments, bank_transactions, customer_ids = fetch_review_sources(
+                self._all_creator_payments, self._all_uncategorized_bank_transactions,
+                self.creator, self.config, self._customer_cache, self._cache_hits,
+            )
+            bank_transfers, transfer_lines = merge_transfer_proposals(bank_transactions, previous.get("bank_transfers", []))
+            used_ids: set[str] = set()
+            excluded = {"cash_deposit", "electricity", "salary", "travel_allowance", "vendor_advance"}
+            bank_index = _BankCandidateIndex([
+                tx for tx in bank_transactions
+                if bank_line_identity(tx) not in transfer_lines and bank_line_kind(tx) not in excluded
+            ])
+            bank_comparisons = [self._proposal(p, customer_ids, bank_index, set()) for p in payments]
+            raw_entries = [self._proposal(p, customer_ids, bank_index, used_ids) for p in payments]
+            tokens = collect_review_remitter_tokens(raw_entries, bank_transactions, transfer_lines)
+            finder_rows = self._preview_customer_finder(tokens)
+            finder = CustomerFinderIndex(finder_rows)
+            entries = merge_review_entries(
+                raw_entries, previous, finder, finder_rows, self.books, self.config, self._check_customer_name,
+            )
+            bank_suggestions, bank_records = build_bank_statement_views(
+                bank_transactions, bank_comparisons, bank_transfers, transfer_lines,
+                previous, finder, used_ids,
+                travel_expense_account_name=self.config.travel_expense_account_name,
+                cash_account_name=self.config.cash_account_name,
+                vendor_advance_vendor_name=self.config.vendor_advance_vendor_name,
+                vendor_advance_location_name=self.config.vendor_advance_location_name,
+            )
             batch = {
-                "version": 2,
-                "reports": [
-                    {"payment_type": payment_type, "report": report_name}
-                    for payment_type, report_name in self.config.configured_reports()
-                ],
-                "bank_accounts": [
-                    {"name": name, "account_id": account_id}
-                    for name, account_id in self.config.configured_banks()
-                ],
-                "refreshed_at": _now(),
+                **self._empty_batch(),
+                "refreshed_at": utc_now_iso(),
                 "preview_cache_hits": dict(self._cache_hits),
                 "entries": entries,
                 "bank_suggestions": bank_suggestions,
@@ -394,8 +131,7 @@ class OnlinePaymentReviewService:
         """Apply an explicitly confirmed pair as one Books transfer."""
         with self._lock:
             batch = self.load()
-            proposal = next((pair for pair in batch.get("bank_transfers", [])
-                             if pair["id"] == transfer_proposal_id), None)
+            proposal = next((pair for pair in batch.get("bank_transfers", []) if pair["id"] == transfer_proposal_id), None)
             if proposal is None:
                 raise ReconciliationError("No bank transfer proposal exists. Refresh the queue.")
             if proposal["status"] == "completed":
@@ -422,7 +158,7 @@ class OnlinePaymentReviewService:
         with self._lock:
             batch, entry = self._entry(entry_id)
             if entry.get("push_status") != "pushed":
-                self._attach_invoice_preview(entry, {})
+                attach_invoice_preview(self.books, entry, {})
                 self._save(batch)
             return entry
 
@@ -448,137 +184,98 @@ class OnlinePaymentReviewService:
         """Categorize one reviewed TA withdrawal after validating live Books state."""
         return self.categorize_bank_line(transaction_id, expected_kind="travel_allowance")
 
-    def categorize_bank_line(self, transaction_id: str, *, expected_kind: str = "",
-                             _current_rows: Mapping[tuple[str, str], Mapping[str, Any]] | None = None,
-                             _vendor_metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    def categorize_bank_line(
+        self, transaction_id: str, *, expected_kind: str = "",
+        _current_rows: Mapping[tuple[str, str], Mapping[str, Any]] | None = None,
+        _vendor_metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Apply a reviewed expense, cash transfer, or vendor advance classification."""
         with self._lock:
             batch = self.load()
-            proposal = next(
-                (row for row in batch.get("bank_suggestions", []) if _text(row.get("transaction_id")) == transaction_id),
-                None,
-            )
+            proposal = next((row for row in batch.get("bank_suggestions", []) if _text(row.get("transaction_id")) == transaction_id), None)
             if not proposal or proposal.get("kind") not in {"travel_allowance", "electricity", "salary", "cash_deposit", "vendor_advance"} or (expected_kind and proposal.get("kind") != expected_kind):
                 raise ReconciliationError("No matching categorization proposal exists for this bank line.")
             kind = proposal["kind"]
             if proposal.get("categorization_status") == "categorized":
                 return proposal
             account_id = _text(proposal.get("bank_account_id"))
-            current = (self._current_bank_transaction(transaction_id, account_id)
-                       if _current_rows is None else _current_rows.get((account_id, transaction_id)))
+            current = self._current_bank_transaction(transaction_id, account_id) if _current_rows is None else _current_rows.get((account_id, transaction_id))
             if current is None:
                 raise ReconciliationError("The proposed bank transaction is no longer uncategorized. Refresh the queue.")
-            if bank_line_kind(current) != kind:
-                raise ReconciliationError("The live bank line classification changed. Refresh before categorizing.")
-            if (
-                parse_date(current.get("date") or current.get("transaction_date")) != parse_date(proposal.get("date"))
-                or _decimal(current.get("amount")) != _decimal(proposal.get("amount"))
-                or _text(current.get("description") or current.get("narration")) != _text(proposal.get("description"))
-                or _text(current.get("reference_number")) != _text(proposal.get("reference"))
-            ):
-                raise ReconciliationError("The live bank line changed. Refresh before categorizing.")
+            base_payload = validate_live_bank_line_for_categorization(current, proposal, kind)
             if kind == "vendor_advance":
-                return self._categorize_polycab_advance(batch, proposal, current, account_id, _vendor_metadata)
-            configured_id = ("" if kind == "electricity" else self.config.cash_account_id if kind == "cash_deposit" else self.config.salary_expense_account_id if kind == "salary" else self.config.travel_expense_account_id)
-            account_name = ("Electricity" if kind == "electricity" else "Cash-SBE" if kind == "cash_deposit" else "Salary" if kind == "salary" else self.config.travel_expense_account_name)
+                return self._categorize_vendor_advance(batch, proposal, account_id, base_payload, _vendor_metadata)
+            configured_id = ("" if kind == "electricity" else self.config.cash_account_id if kind == "cash_deposit"
+                             else self.config.salary_expense_account_id if kind == "salary" else self.config.travel_expense_account_id)
+            account_name = ("Electricity" if kind == "electricity" else self.config.cash_account_name if kind == "cash_deposit"
+                            else "Salary" if kind == "salary" else self.config.travel_expense_account_name)
             if kind not in {"travel_allowance", "electricity"} and not configured_id:
                 raise ReconciliationError(f"Configure the {account_name} account ID first.")
-            expense_key = (id(self.books), configured_id, account_name)
-            expense_account_id = self._expense_cache.get(expense_key)
-            if expense_account_id is None:
-                if configured_id:
-                    response = self.books.chart_of_accounts.get(configured_id)
-                    account = response.get("chart_of_account") if isinstance(response, Mapping) else None
-                    accounts = [account] if isinstance(account, Mapping) else []
-                else:
-                    accounts = self.books.chart_of_accounts.list_all()
-                matching_accounts = [
-                    row for row in accounts
-                    if (_text(row.get("account_id")) == configured_id
-                        if configured_id else
-                        _text(row.get("account_name")).casefold() == account_name.casefold())
-                    and _text(row.get("account_id"))
-                    and _text(row.get("account_type")).casefold() in ({"cash"} if kind == "cash_deposit" else {"expense", "other_expense"})
-                    and row.get("is_active") is not False
-                ]
-                if len(matching_accounts) != 1:
-                    raise ReconciliationError(f"A unique active {account_name} account was not found in Books.")
-                expense_account_id = _text(matching_accounts[0]["account_id"])
-                self._expense_cache.put(expense_key, expense_account_id,
-                                        self.config.travel_account_ttl_seconds)
-            amount = _decimal(current.get("amount"))
-            if amount is None or amount == 0:
-                raise ReconciliationError("The bank withdrawal has no valid amount.")
-            payload = {
-                "account_id": expense_account_id,
-                "paid_through_account_id": account_id,
-                "date": _text(current.get("date") or current.get("transaction_date")),
-                "amount": float(abs(amount)),
-                "description": _text(current.get("description") or current.get("narration")),
-                "reference_number": _text(current.get("reference_number")),
-            }
+            target_account_id = self._resolve_categorize_account(kind, configured_id, account_name)
+            if kind == "cash_deposit" and target_account_id == account_id:
+                raise ReconciliationError("Cash source and destination bank must differ.")
+            payload = (
+                {**base_payload, "from_account_id": target_account_id, "to_account_id": account_id, "transaction_type": "transfer_fund"}
+                if kind == "cash_deposit"
+                else {**base_payload, "account_id": target_account_id, "paid_through_account_id": account_id}
+            )
             try:
-                if kind == "cash_deposit":
-                    if expense_account_id == account_id:
-                        raise ReconciliationError("Cash source and destination bank must differ.")
-                    payload.pop("account_id")
-                    payload.pop("paid_through_account_id")
-                    payload.update(from_account_id=expense_account_id, to_account_id=account_id, transaction_type="transfer_fund")
-                    response = self.books.bank_transactions.categorize(transaction_id, payload)
-                else:
-                    response = self.books.bank_transactions.categorize_as_expense(transaction_id, payload)
-            except Exception:
+                categorize_bank_transaction(self.books, transaction_id, kind="transfer_fund" if kind == "cash_deposit" else "expense", payload=payload)
+            except Exception as exc:
                 self._expense_cache.clear()
+                if isinstance(exc, ValueError):
+                    raise ReconciliationError("Books rejected the categorization.") from exc
                 raise
-            if not isinstance(response, Mapping) or _text(response.get("code")) != "0":
-                self._expense_cache.clear()
-                raise ReconciliationError("Books rejected the categorization.")
             proposal["categorization_status"] = "categorized"
-            proposal["source_account_id" if kind == "cash_deposit" else "expense_account_id"] = expense_account_id
+            proposal["source_account_id" if kind == "cash_deposit" else "expense_account_id"] = target_account_id
             self._save(batch)
             return proposal
 
-    def _categorize_polycab_advance(
-        self, batch: dict[str, Any], proposal: dict[str, Any],
-        current: Mapping[str, Any], bank_account_id: str,
-        metadata: dict[str, Any] | None = None,
+    def _resolve_categorize_account(self, kind: str, configured_id: str, account_name: str) -> str:
+        expense_key = (id(self.books), configured_id, account_name)
+        cached = self._expense_cache.get(expense_key)
+        if cached is not None:
+            return cached
+        try:
+            account = resolve_chart_of_account(
+                self.books, account_id=configured_id, account_name="" if configured_id else account_name,
+                account_types={"cash"} if kind == "cash_deposit" else {"expense", "other_expense"},
+            )
+        except AmbiguousMatchError as exc:
+            raise ReconciliationError(f"A unique active {account_name} account was not found in Books.") from exc
+        if not account:
+            raise ReconciliationError(f"A unique active {account_name} account was not found in Books.")
+        target_id = _text(account["account_id"])
+        self._expense_cache.put(expense_key, target_id, self.config.travel_account_ttl_seconds)
+        return target_id
+
+    def _categorize_vendor_advance(
+        self, batch: dict[str, Any], proposal: dict[str, Any], bank_account_id: str,
+        base_payload: Mapping[str, object], metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         metadata = metadata if metadata is not None else {}
         if not metadata:
-            vendors = self.books.contacts.list_all(params={"contact_type": "vendor", "search_text": "Polycab"})
-            matches = [row for row in vendors
-                       if _text(row.get("contact_name")).casefold() in {"polycab", "polycab india limited"}
-                       and _text(row.get("contact_type")).casefold() == "vendor"
-                       and _text(row.get("status")).casefold() == "active"
-                       and _text(row.get("contact_id"))]
-            if len(matches) != 1:
-                raise ReconciliationError("A unique active Polycab vendor was not found in Books.")
-            locations = self.books.locations.list_all()
-            matches_locations = [row for row in locations
-                                 if _text(row.get("location_name")).casefold() == "sri bharath electricals"
-                                 and row.get("is_active") is not False
-                                 and _text(row.get("status")).casefold() != "inactive"
-                                 and _text(row.get("location_id"))]
-            if len(matches_locations) != 1:
-                raise ReconciliationError("A unique active Sri Bharath Electricals branch was not found in Books.")
-            metadata.update(vendor_id=_text(matches[0]["contact_id"]),
-                            location_id=_text(matches_locations[0]["location_id"]))
-        amount = _decimal(current.get("amount"))
-        if amount is None or amount == 0:
-            raise ReconciliationError("The bank withdrawal has no valid amount.")
-        payload = {
-            "vendor_id": metadata["vendor_id"],
-            "location_id": metadata["location_id"],
-            "paid_through_account_id": bank_account_id,
-            "payment_mode": "Bank Transfer", "bills": [],
-            "date": _text(current.get("date") or current.get("transaction_date")),
-            "amount": float(abs(amount)),
-            "description": _text(current.get("description") or current.get("narration")),
-            "reference_number": _text(current.get("reference_number")),
-        }
-        response = self.books.bank_transactions.categorize_as_vendor_payment(proposal["transaction_id"], payload)
-        if not isinstance(response, Mapping) or _text(response.get("code")) != "0":
-            raise ReconciliationError("Books rejected the vendor advance categorization.")
+            target_vendor = (self.config.vendor_advance_vendor_name or "Polycab").strip()
+            target_location = (self.config.vendor_advance_location_name or "Sri Bharath Electricals").strip()
+            try:
+                vendor = resolve_vendor_by_name(self.books, target_vendor, aliases=(f"{target_vendor} india limited",), deduplicate=False)
+            except AmbiguousMatchError:
+                vendor = None
+            if not vendor:
+                raise ReconciliationError(f"A unique active {target_vendor} vendor was not found in Books.")
+            try:
+                location = resolve_location_by_name(self.books, target_location)
+            except AmbiguousMatchError:
+                location = None
+            if not location:
+                raise ReconciliationError(f"A unique active {target_location} branch was not found in Books.")
+            metadata.update(vendor_id=_text(vendor["contact_id"]), location_id=_text(location["location_id"]))
+        payload = {**base_payload, "vendor_id": metadata["vendor_id"], "location_id": metadata["location_id"],
+                   "paid_through_account_id": bank_account_id, "payment_mode": "Bank Transfer", "bills": []}
+        try:
+            categorize_bank_transaction(self.books, proposal["transaction_id"], kind="vendor_payment", payload=payload)
+        except ValueError as exc:
+            raise ReconciliationError("Books rejected the vendor advance categorization.") from exc
         proposal.update(categorization_status="categorized", vendor_id=payload["vendor_id"], location_id=payload["location_id"])
         self._save(batch)
         return proposal
@@ -587,27 +284,14 @@ class OnlinePaymentReviewService:
         with self._lock:
             batch, entry = self._entry(entry_id)
             if entry.get("push_status") == "pushed" or entry.get("books_payment_id"):
-                raise ReconciliationError(
-                    "An entry with a Books payment checkpoint cannot be rejected."
-                )
-            entry.update(
-                {
-                    "decision": "rejected",
-                    "decision_at": _now(),
-                    "error": "",
-                }
-            )
+                raise ReconciliationError("An entry with a Books payment checkpoint cannot be rejected.")
+            entry.update({"decision": "rejected", "decision_at": utc_now_iso(), "error": ""})
             self._save(batch)
             return entry
 
     def accept_and_push(
-        self,
-        entry_id: str,
-        current_bank_by_id: Mapping[str, Mapping[str, Any]] | None = None,
-        *,
-        selected_bank_transaction_id: str = "",
-        allow_reference_override: bool = False,
-        allow_customer_name_override: bool = False,
+        self, entry_id: str, current_bank_by_id: Mapping[str, Mapping[str, Any]] | None = None,
+        *, selected_bank_transaction_id: str = "", allow_reference_override: bool = False, allow_customer_name_override: bool = False,
     ) -> dict[str, Any]:
         """Push one approved proposal to Books, then checkpoint it in Creator."""
         with self._lock:
@@ -615,151 +299,52 @@ class OnlinePaymentReviewService:
             if entry.get("push_status") == "pushed":
                 return entry
             if not entry.get("bank") and selected_bank_transaction_id:
-                if not allow_reference_override:
-                    raise ReconciliationError(
-                        "Explicit confirmation of the reference mismatch is required."
-                    )
-                possible = next(
-                    (
-                        row
-                        for row in entry.get("possible_candidates", [])
-                        if _text(row.get("transaction_id"))
-                        == _text(selected_bank_transaction_id)
-                    ),
-                    None,
-                )
-                if not possible:
-                    raise ReconciliationError(
-                        "The selected bank transaction is not a possible match for this payment."
-                    )
-                if not _text(entry.get("creator", {}).get("books_customer_id")):
-                    raise ReconciliationError(
-                        "The Creator customer has no Zoho Books Customer_Id."
-                    )
-                entry.update(
-                    {
-                        "bank": {
-                            key: value
-                            for key, value in possible.items()
-                            if key not in {"bank_name", "bank_account_id"}
-                        },
-                        "bank_name": _text(possible.get("bank_name")),
-                        "bank_account_id": _text(possible.get("bank_account_id")),
-                        "manual_reference_override": True,
-                        "reviewable": True,
-                        "reason": "Manually selected date-and-amount match; reference differs",
-                    }
-                )
+                apply_manual_reference_override(entry, selected_bank_transaction_id, allow_reference_override)
                 self._save(batch)
             if not entry.get("bank"):
                 raise ReconciliationError("This entry has no unique bank match to accept.")
             if not entry.get("reviewable"):
-                raise ReconciliationError(
-                    entry.get("customer_name_reason") if entry.get("customer_name_valid") is False else
-                    entry.get("allocation_error")
-                    or "This entry has no invoice allocation to accept."
-                )
-            live_tokens = extract_remitter_tokens(entry["bank"].get("description"))
-            self._check_customer_name(entry, self._query_historical_customer_finder(live_tokens))
+                raise ReconciliationError(entry.get("customer_name_reason") if entry.get("customer_name_valid") is False else entry.get("allocation_error") or "This entry has no invoice allocation to accept.")
+            self._check_customer_name(entry, self._query_historical_customer_finder(extract_remitter_tokens(entry["bank"].get("description"))))
             if entry.get("customer_name_valid") is False:
                 self._save(batch)
                 if not allow_customer_name_override:
-                    raise ReconciliationError(
-                        entry["customer_name_reason"]
-                        + " Explicit confirmation of the Creator customer is required."
-                    )
-                entry["manual_customer_name_override"] = {
-                    "confirmed_at": _now(),
-                    "customer_name": entry["creator"]["customer_name"],
-                    "historical_customer_names": entry["historical_customer_names"],
-                }
-            entry.update(
-                {
-                    "decision": "accepted",
-                    "decision_at": entry.get("decision_at") or _now(),
-                    "error": "",
-                }
-            )
+                    raise ReconciliationError(entry["customer_name_reason"] + " Explicit confirmation of the Creator customer is required.")
+                entry["manual_customer_name_override"] = {"confirmed_at": utc_now_iso(), "customer_name": entry["creator"]["customer_name"], "historical_customer_names": entry["historical_customer_names"]}
+            entry.update({"decision": "accepted", "decision_at": entry.get("decision_at") or utc_now_iso(), "error": ""})
             self._save(batch)
-
             try:
                 self._push_entry(batch, entry, current_bank_by_id=current_bank_by_id)
             except Exception as exc:
                 stage = _text(entry.get("push_status"))
-                if stage in {
-                    "payment_created",
-                    "match_requested",
-                    "bank_matched",
-                    "creator_updated",
-                }:
+                if stage in {"payment_created", "match_requested", "bank_matched", "creator_updated"}:
                     entry["retry_stage"] = stage
-                entry["push_status"] = "failed"
-                entry["error"] = str(exc)
+                entry.update({"push_status": "failed", "error": str(exc)})
                 self._save(batch)
                 raise
             return entry
 
-    def accept_many(
-        self,
-        entry_ids: Sequence[str],
-        selected_bank_transaction_ids: Mapping[str, str] | None = None,
-        *,
-        allow_reference_override: bool = False,
-    ) -> dict[str, Any]:
+    def accept_many(self, entry_ids: Sequence[str], selected_bank_transaction_ids: Mapping[str, str] | None = None, *, allow_reference_override: bool = False) -> dict[str, Any]:
         """Push selected entries sequentially using one current bank snapshot."""
         selected = list(dict.fromkeys(_text(entry_id) for entry_id in entry_ids if _text(entry_id)))
         if not selected:
             raise ReconciliationError("Select at least one payment to accept.")
         if len(selected) > 200:
             raise ReconciliationError("At most 200 payments can be accepted at once.")
-
-        current_rows = self._all_uncategorized_bank_transactions()
-        current_bank_by_id = {
-            _text(row.get("transaction_id") or row.get("id")): row
-            for row in current_rows
-            if _text(row.get("transaction_id") or row.get("id"))
-        }
-        pushed: list[dict[str, Any]] = []
-        failed: list[dict[str, Any]] = []
-        selected_bank_transaction_ids = selected_bank_transaction_ids or {}
+        current_bank_by_id = {_text(r.get("transaction_id") or r.get("id")): r for r in self._all_uncategorized_bank_transactions() if _text(r.get("transaction_id") or r.get("id"))}
+        pushed, failed = [], []
+        selected_ids = selected_bank_transaction_ids or {}
         for entry_id in selected:
             try:
-                entry = self.accept_and_push(
-                    entry_id,
-                    current_bank_by_id=current_bank_by_id,
-                    selected_bank_transaction_id=_text(
-                        selected_bank_transaction_ids.get(entry_id)
-                    ),
-                    allow_reference_override=allow_reference_override,
-                )
-                pushed.append(
-                    {
-                        "id": entry_id,
-                        "books_payment_id": entry.get("books_payment_id", ""),
-                        "push_status": entry.get("push_status", ""),
-                    }
-                )
+                entry = self.accept_and_push(entry_id, current_bank_by_id=current_bank_by_id, selected_bank_transaction_id=_text(selected_ids.get(entry_id)), allow_reference_override=allow_reference_override)
+                pushed.append({"id": entry_id, "books_payment_id": entry.get("books_payment_id", ""), "push_status": entry.get("push_status", "")})
             except Exception as exc:
                 failed.append({"id": entry_id, "error": str(exc)})
-        return {
-            "selected": len(selected),
-            "pushed": pushed,
-            "failed": failed,
-        }
+        return {"selected": len(selected), "pushed": pushed, "failed": failed}
 
-    def _push_entry(
-        self,
-        batch: dict[str, Any],
-        entry: dict[str, Any],
-        current_bank_by_id: Mapping[str, Mapping[str, Any]] | None = None,
-    ) -> None:
-        stage = _text(
-            entry.get("retry_stage")
-            if entry.get("push_status") == "failed"
-            else entry.get("push_status")
-        )
-        bank_id = _text(entry["bank"].get("transaction_id"))
-        bank_account_id = _text(entry.get("bank_account_id"))
+    def _push_entry(self, batch: dict[str, Any], entry: dict[str, Any], current_bank_by_id: Mapping[str, Mapping[str, Any]] | None = None) -> None:
+        stage = _text(entry.get("retry_stage") if entry.get("push_status") == "failed" else entry.get("push_status"))
+        bank_id, bank_account_id = _text(entry["bank"].get("transaction_id")), _text(entry.get("bank_account_id"))
         if not bank_id:
             raise ReconciliationError("The proposed bank transaction has no ID.")
         if not bank_account_id:
@@ -768,924 +353,136 @@ class OnlinePaymentReviewService:
             raise ReconciliationError("The Creator customer has no Zoho Books Customer_Id.")
 
         if stage not in ("bank_matched", "creator_updated"):
-            if current_bank_by_id is None:
-                current = self._current_bank_transaction(bank_id, bank_account_id)
-            else:
-                current = current_bank_by_id.get(bank_id)
-                if not current:
-                    raise ReconciliationError(
-                        "The proposed bank transaction is no longer uncategorized. Refresh the queue."
-                    )
+            current = self._current_bank_transaction(bank_id, bank_account_id) if current_bank_by_id is None else current_bank_by_id.get(bank_id)
+            if not current:
+                raise ReconciliationError("The proposed bank transaction is no longer uncategorized. Refresh the queue.")
             if entry.get("manual_reference_override"):
                 self._require_same_date_amount(entry, current)
             else:
-                self._require_same_match(entry, current)
+                matched, reason = self._find_transaction(entry["creator"], [current], set())
+                if _text((matched or {}).get("transaction_id") or (matched or {}).get("id")) != bank_id:
+                    raise ReconciliationError(f"The live bank transaction no longer matches this payment: {reason}.")
 
-        books_payment_id = _text(entry.get("books_payment_id"))
-        books_payment_number = _text(entry.get("books_payment_number"))
+        books_payment_id, books_payment_number = _text(entry.get("books_payment_id")), _text(entry.get("books_payment_number"))
         if not books_payment_id:
-            allocations, unallocated = self._invoice_allocations(
-                entry["creator"]["books_customer_id"],
-                entry["creator"]["amount"],
+            allocations, unallocated = allocate_invoices_oldest_due_first(
+                entry["creator"]["amount"], fetch_open_invoices(self.books, entry["creator"]["books_customer_id"]),
             )
             if not allocations:
-                raise ReconciliationError(
-                    "No open customer invoices are available. Payment creation was blocked "
-                    "to prevent the full amount becoming unused credit."
-                )
-            entry.update(
-                {
-                    "invoice_allocations": allocations,
-                    "unallocated_amount": float(unallocated),
-                    "allocation_status": (
-                        "fully_allocated" if unallocated == 0 else "partially_allocated"
-                    ),
-                    "allocation_error": "",
-                    "allocation_refreshed_at": _now(),
-                }
-            )
+                raise ReconciliationError("No open customer invoices are available. Payment creation was blocked to prevent the full amount becoming unused credit.")
+            entry.update({"invoice_allocations": allocations, "unallocated_amount": float(unallocated),
+                          "allocation_status": "fully_allocated" if unallocated == 0 else "partially_allocated",
+                          "allocation_error": "", "allocation_refreshed_at": utc_now_iso()})
             self._save(batch)
-            response = self.books.customer_payments.create(
-                self._customer_payment_payload(entry, allocations)
-            )
-            books_payment_id = _identifier(
-                response,
-                ("payment_id", "customer_payment_id", "transaction_id"),
-            ) or ""
-            if not books_payment_id:
-                raise ReconciliationError(
-                    "Books created a customer payment but returned no payment ID."
-                )
-            books_payment_number = _identifier(response, ("payment_number",)) or ""
-            entry.update(
-                {
-                    "books_payment_id": books_payment_id,
-                    "books_payment_number": books_payment_number,
-                    "push_status": "payment_created",
-                }
-            )
+            books_payment_id, books_payment_number = create_customer_payment_and_resolve(self.books, self._customer_payment_payload(entry, allocations))
+            entry.update({"books_payment_id": books_payment_id, "books_payment_number": books_payment_number, "push_status": "payment_created"})
             entry.pop("retry_stage", None)
             stage = "payment_created"
             self._save(batch)
 
         if not books_payment_number:
-            payment_response = self.books.customer_payments.get(books_payment_id)
-            books_payment_number = _identifier(
-                payment_response,
-                ("payment_number",),
-            ) or ""
+            books_payment_number = _identifier(self.books.customer_payments.get(books_payment_id), ("payment_number",)) or ""
             if not books_payment_number:
-                raise ReconciliationError(
-                    "Books returned no payment number for the created customer payment. "
-                    "The existing payment will be reused on retry."
-                )
+                raise ReconciliationError("Books returned no payment number for the created customer payment. The existing payment will be reused on retry.")
             entry["books_payment_number"] = books_payment_number
             self._save(batch)
 
         if stage not in ("bank_matched", "creator_updated"):
-            matches = self.books.bank_transactions.get_matches(bank_id)
-            rows = matches.get("matching_transactions", []) if isinstance(matches, dict) else []
-            candidate = next(
-                (
-                    row
-                    for row in rows
-                    if isinstance(row, dict)
-                    and _text(row.get("transaction_id")) == books_payment_id
-                ),
-                None,
-            )
-            if not candidate:
-                # Books can expose the invoice-application ID rather than the
-                # parent payment ID for a single-invoice customer payment.
-                payment_response = self.books.customer_payments.get(books_payment_id)
-                application_ids = _identifiers(
-                    payment_response,
-                    ("invoice_payment_id",),
-                )
-                candidate = next(
-                    (
-                        row
-                        for row in rows
-                        if isinstance(row, dict)
-                        and _text(row.get("transaction_id")) in application_ids
-                    ),
-                    None,
-                )
-            if not candidate:
-                raise ReconciliationError(
-                    "The created Books customer payment is not a bank match candidate."
-                )
-            match_transaction_id = _text(candidate.get("transaction_id"))
-            transaction_type = _text(candidate.get("transaction_type"))
-            if not transaction_type:
-                raise ReconciliationError("The Books match candidate has no transaction_type.")
             entry["push_status"] = "match_requested"
             self._save(batch)
-            self.books.bank_transactions.match(
-                bank_id,
-                [
-                    {
-                        "transaction_id": match_transaction_id,
-                        "transaction_type": transaction_type,
-                    }
-                ],
-            )
+            match_books_payment_to_bank(self.books, bank_id, books_payment_id)
             entry["push_status"] = "bank_matched"
             entry.pop("retry_stage", None)
             stage = "bank_matched"
             self._save(batch)
 
         if stage != "creator_updated":
-            self._checkpoint_creator(
-                entry,
-                books_payment_id,
-                books_payment_number,
-            )
+            self._checkpoint_creator(entry, books_payment_id, books_payment_number)
             entry["push_status"] = "creator_updated"
             entry.pop("retry_stage", None)
             self._save(batch)
 
-        entry.update({"push_status": "pushed", "pushed_at": _now(), "error": ""})
+        entry.update({"push_status": "pushed", "pushed_at": utc_now_iso(), "error": ""})
         entry.pop("retry_stage", None)
         self._save(batch)
 
-    def _checkpoint_creator(
-        self,
-        entry: Mapping[str, Any],
-        books_payment_id: str,
-        books_payment_number: str,
-    ) -> None:
-        """Write and verify the Books payment checkpoint in Creator."""
+    def _checkpoint_creator(self, entry: Mapping[str, Any], books_payment_id: str, books_payment_number: str) -> None:
         if _text(entry.get("payment_type")).casefold() == "cheque":
             self._checkpoint_cheque_presentation(entry)
-        record_id = _text(entry.get("id"))
-        report_name = self.config.creator_checkpoint_report_link_name
-        response = self.creator.update_records(
-            self.config.creator_app_link_name,
-            report_name,
-            {
-                "data": {
-                    self.config.creator_books_id_field: books_payment_id,
-                    self.config.creator_payment_number_field: books_payment_number,
-                }
-            },
-            record_id=record_id,
-        )
-        self._require_creator_update_success(response)
-
-        readback = self.creator.get_records(
-            self.config.creator_app_link_name,
-            report_name,
-            params={
-                "criteria": f"ID == {record_id}",
-                "field_config": "all",
-            },
-        )
-        rows = readback.get("data", []) if isinstance(readback, Mapping) else []
-        record = next(
-            (
-                row
-                for row in rows
-                if isinstance(row, Mapping) and _text(row.get("ID")) == record_id
-            ),
-            None,
-        )
-        actual = _text(record.get(self.config.creator_books_id_field)) if record else ""
-        actual_number = (
-            _text(record.get(self.config.creator_payment_number_field)) if record else ""
-        )
-        if actual != books_payment_id or actual_number != books_payment_number:
-            raise ReconciliationError(
-                "Creator checkpoint verification failed: Books_Transaction_Id and Payment# "
-                "were not both saved. The existing Books payment will be reused on retry."
+        try:
+            update_and_verify_creator_record(
+                self.creator, self.config.creator_app_link_name, self.config.creator_checkpoint_report_link_name,
+                _text(entry.get("id")), {self.config.creator_books_id_field: books_payment_id, self.config.creator_payment_number_field: books_payment_number},
             )
+        except ValueError as exc:
+            raise ReconciliationError(
+                "Creator checkpoint verification failed: Books_Transaction_Id and Payment# were not both saved. The existing Books payment will be reused on retry."
+                if "read-back" in str(exc) else str(exc)
+            ) from exc
 
     def _checkpoint_cheque_presentation(self, entry: Mapping[str, Any]) -> None:
-        """Save the bank clearing date after matching, reusing a detail on retry."""
-        record_id = _text(entry["id"])
-        bank_date = parse_date(entry["bank"].get("date"))
-        if not bank_date:
-            raise ReconciliationError("The cheque bank line has no valid clearing date.")
-
-        def matching_details() -> list[Mapping[str, Any]]:
-            rows = self.creator.get_all_records(self.config.creator_app_link_name, self.config.cheque_detail_report_link_name, field_config="all")
-            return [row for row in rows if isinstance(row, Mapping) and isinstance(row.get("Payment_ID"), Mapping) and _text(row["Payment_ID"].get("ID")) == record_id]
-
-        details = matching_details()
-        if len(details) > 1:
-            raise ReconciliationError("Multiple Creator cheque details refer to this payment; presentation checkpoint is blocked.")
-        payload = {"Payment_ID": record_id, "Cheque_Number": entry["creator"]["reference"], "Presented_Date": bank_date.strftime("%d-%b-%Y")}
-        if details:
-            detail = details[0]
-            if normalize_cheque_number(detail.get("Cheque_Number")) != normalize_cheque_number(entry["creator"]["reference"]):
-                raise ReconciliationError("Creator cheque detail number conflicts with this payment.")
-            if parse_date(detail.get("Presented_Date")) == bank_date:
-                return
-            response = self.creator.update_records(self.config.creator_app_link_name, self.config.cheque_detail_report_link_name, {"data": payload}, record_id=_text(detail.get("ID")))
-        else:
-            response = self.creator.add_records(self.config.creator_app_link_name, self.config.cheque_detail_form_link_name, {"data": payload})
-        self._require_creator_update_success(response)
-        verified = matching_details()
-        if len(verified) != 1 or parse_date(verified[0].get("Presented_Date")) != bank_date or normalize_cheque_number(verified[0].get("Cheque_Number")) != normalize_cheque_number(entry["creator"]["reference"]):
-            raise ReconciliationError("Creator presented-date verification failed. The existing Books payment will be reused on retry.")
-
-    @staticmethod
-    def _require_creator_update_success(response: Any) -> None:
-        if not isinstance(response, Mapping):
-            raise ReconciliationError("Creator returned an invalid update response.")
-        payloads: list[Mapping[str, Any]] = [response]
-        data = response.get("data")
-        if isinstance(data, Mapping):
-            payloads.append(data)
-        elif isinstance(data, list):
-            payloads.extend(row for row in data if isinstance(row, Mapping))
-        for payload in payloads:
-            code = payload.get("code")
-            if code is not None and _text(code) not in {"0", "3000"}:
-                message = _text(payload.get("message") or payload.get("description"))
-                raise ReconciliationError(
-                    f"Creator rejected the checkpoint update (code={code})"
-                    + (f": {message}" if message else ".")
-                )
+        checkpoint_cheque_presentation(
+            self.creator, app_link_name=self.config.creator_app_link_name,
+            detail_report_link_name=self.config.cheque_detail_report_link_name,
+            detail_form_link_name=self.config.cheque_detail_form_link_name, entry=entry,
+        )
 
     def _preview_customer_finder(self, tokens: Sequence[str]) -> list[Mapping[str, Any]]:
-        scope = (id(self.analytics), self.config.analytics_workspace_id,
-                 self.config.customer_finder_view_id)
-        unique_tokens = sorted({t.strip() for t in tokens if t and len(t.strip()) >= 3})
-        if not unique_tokens:
-            return []
-        full_rows = self._full_history_cache.get(scope)
-        if full_rows is not None:
-            self._cache_hits["analytics_tokens"] += len(unique_tokens)
-            return full_rows
-        rows: list[Mapping[str, Any]] = []
-        missing = []
-        for token in unique_tokens:
-            cached = self._history_cache.get((*scope, token))
-            if cached is None:
-                missing.append(token)
-            else:
-                self._cache_hits["analytics_tokens"] += 1
-                rows.extend(cached)
-        if missing:
-            fresh = self._query_historical_customer_finder(missing)
-            if self._history_was_full_export:
-                self._full_history_cache.put(scope, fresh,
-                                             self.config.analytics_preview_ttl_seconds)
-                return fresh
-            rows.extend(fresh)
-            for token in missing:
-                matched = [row for row in fresh if token.casefold() in
-                           _text(row.get("Description")).casefold()]
-                self._history_cache.put((*scope, token), matched,
-                                        self.config.analytics_preview_ttl_seconds)
-        # One historical row may match several cached tokens.
-        unique_rows = {}
-        for row in rows:
-            key = (_text(row.get("Customer Name")), _text(row.get("Description")))
-            unique_rows[key] = row
-        return list(unique_rows.values())
+        return preview_customer_finder(
+            self.analytics, self.config, tokens, self._history_cache, self._full_history_cache,
+            self._cache_hits, self._query_historical_customer_finder, lambda: self._history_was_full_export,
+        )
 
     def _historical_queries(self, tokens: Sequence[str]) -> list[str]:
-        prefix = ('SELECT "Customer Name", "Description" FROM "Payment Customer Finder" '
-                  'WHERE "Customer Name" IS NOT NULL AND "Customer Name" != \'\' AND (')
-        queries: list[str] = []
-        clauses: list[str] = []
-        for token in tokens:
-            safe = token.replace("'", "''")
-            clause = f'"Description" LIKE \'%{safe}%\''
-            candidate = prefix + " OR ".join([*clauses, clause]) + ")"
-            if clauses and (len(clauses) >= self.config.analytics_batch_tokens or
-                            len(candidate.encode("utf-8")) > self.config.analytics_max_sql_bytes):
-                queries.append(prefix + " OR ".join(clauses) + ")")
-                clauses = []
-            if len((prefix + clause + ")").encode("utf-8")) > self.config.analytics_max_sql_bytes:
-                raise ReconciliationError("A remitter token exceeds the Analytics SQL budget.")
-            clauses.append(clause)
-        if clauses:
-            queries.append(prefix + " OR ".join(clauses) + ")")
-        return queries
+        return build_historical_finder_queries(self.config, tokens)
 
-    def _query_historical_customer_finder(
-        self, tokens: Sequence[str]
-    ) -> list[Mapping[str, Any]]:
-        self._history_was_full_export = False
-        if not self.config.customer_finder_view_id or not tokens:
-            return []
-        if not self.analytics or not self.config.analytics_workspace_id:
-            raise ReconciliationError("Analytics customer-name validation is not configured.")
+    def _query_historical_customer_finder(self, tokens: Sequence[str]) -> list[Mapping[str, Any]]:
+        rows, used_export = query_historical_customer_finder(self.analytics, self.config, tokens)
+        self._history_was_full_export = used_export
+        return list(rows)
 
-        unique_tokens = sorted({t.strip() for t in tokens if t and len(t.strip()) >= 3})
-        if not unique_tokens:
-            return []
+    def _check_customer_name(self, entry: dict[str, Any], historical_rows: Sequence[Mapping[str, Any]]) -> None:
+        check_customer_name(entry, historical_rows, customer_finder_view_id=self.config.customer_finder_view_id)
 
-        # If queries.execute is available, run targeted SQL
-        if hasattr(self.analytics, "queries") and callable(getattr(self.analytics.queries, "execute", None)):
-            queries = self._historical_queries(unique_tokens)
-            try:
-                all_rows: list[Mapping[str, Any]] = []
-                for sql in queries:
-                    rows = self.analytics.queries.execute(
-                        self.config.analytics_workspace_id,
-                        sql,
-                    )
-                    if not isinstance(rows, list) or not all(isinstance(row, Mapping) for row in rows):
-                        raise ReconciliationError("Analytics returned an invalid query result.")
-                    all_rows.extend(rows)
-                return all_rows
-            except Exception:
-                if not hasattr(self.analytics, "views"):
-                    raise
+    def _proposal(self, payment: Mapping[str, Any], customer_ids: Mapping[str, str], bank_transactions: Sequence[Mapping[str, Any]] | _BankCandidateIndex, used_transaction_ids: set[str]) -> dict[str, Any]:
+        return build_proposal_entry(payment, customer_ids, bank_transactions, used_transaction_ids, self.config, self._find_transaction_details)
 
-        # Fallback to views.export_all (e.g. mock views in tests or when SQL is unavailable)
-        if hasattr(self.analytics, "views") and callable(getattr(self.analytics.views, "export_all", None)):
-            rows = self.analytics.views.export_all(
-                self.config.analytics_workspace_id,
-                self.config.customer_finder_view_id,
-                max_attempts=60,
-            )
-            if not isinstance(rows, list) or not all(isinstance(row, Mapping) for row in rows):
-                raise ReconciliationError("Analytics returned an invalid export result.")
-            self._history_was_full_export = True
-            return rows
-
-        raise ReconciliationError("Analytics has no supported historical lookup API.")
-
-    def _customer_finder_rows(self) -> list[Mapping[str, Any]]:
-        """Fallback for callers requesting all rows."""
-        return self._query_historical_customer_finder(["UPI", "NEFT", "IMPS", "CHQ"])
-
-    @staticmethod
-    def _suggest_names_for_tokens(
-        tokens: Sequence[str], historical_rows: Sequence[Mapping[str, Any]]
-    ) -> list[str]:
-        if not tokens or not historical_rows:
-            return []
-        tokens_lower = [t.casefold() for t in tokens if t]
-        names = {
-            _text(row.get("Customer Name")).strip()
-            for row in historical_rows
-            if isinstance(row, Mapping) and _text(row.get("Customer Name"))
-            and any(t in _text(row.get("Description")).casefold() for t in tokens_lower)
-        }
-        return sorted((n for n in names if n), key=str.casefold)
-
-    def _check_customer_name(
-        self, entry: dict[str, Any], historical_rows: Sequence[Mapping[str, Any]]
-    ) -> None:
-        """Verify Creator customer name against historical Analytics remitter records."""
-        if not self.config.customer_finder_view_id or not entry.get("bank"):
-            return
-
-        bank_desc = entry["bank"].get("description")
-        tokens = extract_remitter_tokens(bank_desc)
-        if not tokens:
-            entry["customer_name_valid"] = None
-            entry["customer_name_reason"] = "No remitter identifiers in bank narration for Analytics lookup."
-            entry["historical_customer_names"] = []
-            return
-
-        tokens_lower = [t.casefold() for t in tokens if t]
-        matching_rows = [
-            row for row in historical_rows
-            if isinstance(row, Mapping) and _text(row.get("Customer Name"))
-            and any(t in _text(row.get("Description")).casefold() for t in tokens_lower)
-        ]
-
-        if not matching_rows:
-            entry["customer_name_valid"] = None
-            entry["customer_name_reason"] = "No historical customer match found in Analytics."
-            entry["historical_customer_names"] = []
-            return
-
-        historical_names = sorted(
-            {
-                _text(row.get("Customer Name")).strip()
-                for row in matching_rows
-                if _text(row.get("Customer Name")).strip()
-            },
-            key=str.casefold,
-        )
-        entry["historical_customer_names"] = historical_names
-
-        if len(historical_names) > 1:
-            entry["customer_name_valid"] = None
-            entry["customer_name_reason"] = (
-                "Note: Analytics history matches multiple customers; "
-                "customer identity is inconclusive. Review may proceed. Matches: "
-                + ", ".join(historical_names)
-            )
-            return
-
-        expected = " ".join(_text(entry["creator"].get("customer_name")).split()).casefold()
-
-        def _matches_expected(name: str) -> bool:
-            clean_name = " ".join(name.split()).casefold()
-            return (
-                clean_name == expected
-                or expected.startswith(clean_name + " ")
-                or clean_name.startswith(expected + " ")
-                or clean_name.split(" - ")[0] == expected.split(" - ")[0]
-            )
-
-        has_match = any(_matches_expected(n) for n in historical_names)
-        if has_match:
-            entry["customer_name_valid"] = True
-            entry["customer_name_reason"] = "Customer name confirmed by Analytics history."
-        else:
-            other_names = ", ".join(historical_names)
-            entry["customer_name_valid"] = False
-            entry["customer_name_reason"] = (
-                f"Conflict: Analytics historical records for this remitter belong to "
-                f"'{other_names}', not '{entry['creator'].get('customer_name')}'."
-            )
-
-    def _proposal(
-        self,
-        payment: Mapping[str, Any],
-        customer_ids: Mapping[str, str],
-        bank_transactions: Sequence[Mapping[str, Any]] | _BankCandidateIndex,
-        used_transaction_ids: set,
-    ) -> dict[str, Any]:
-        creator_id = _text(payment.get("ID"))
-        raw_cust = payment.get("Customer_Name")
-        lookup: Mapping[str, Any] = raw_cust if isinstance(raw_cust, Mapping) else {}
-        creator_customer_id = _text(lookup.get("ID"))
-        normalized = {
-            "date": _text(
-                payment.get("_review_presented_date")
-                if _text(payment.get("_review_payment_type")).casefold() == "cheque"
-                else payment.get("Payment_Date")
-            ),
-            "date_source": _text(payment.get("_review_date_source")) or "payment_date",
-            "amount": _text(payment.get("Payment_Amount")),
-            "reference": _text(payment.get("Reference")),
-            "payment_id": _text(payment.get("Payment_ID")),
-            "customer_name": _text(lookup.get("zc_display_value") or lookup.get("Name")),
-            "creator_customer_id": creator_customer_id,
-            "books_customer_id": customer_ids.get(creator_customer_id, ""),
-            "payment_type": _text(payment.get("_review_payment_type")) or "Online",
-            "date_tolerance_days": (
-                self.config.cheque_date_tolerance_days
-                if _text(payment.get("_review_payment_type")).casefold() == "cheque"
-                else self.config.date_tolerance_days
-            ),
-        }
-        date_error = _text(payment.get("_review_presented_date_error"))
-        if date_error:
-            candidate, reason, candidates, possible_candidates = (
-                None,
-                date_error,
-                [],
-                [],
-            )
-        else:
-            candidate, reason, candidates, possible_candidates = (
-                self._find_transaction_details(
-                    normalized,
-                    bank_transactions,
-                    used_transaction_ids,
-                )
-            )
-        bank = self._display_bank(candidate) if candidate else None
-
-        def display_candidates(
-            rows: Sequence[Mapping[str, Any]],
-        ) -> list[dict[str, Any]]:
-            displayed_rows = []
-            for row in rows:
-                displayed = self._display_bank(row)
-                displayed.update(
-                    {
-                        "bank_name": _text(row.get("_review_bank_name")),
-                        "bank_account_id": _text(
-                            row.get("_review_bank_account_id")
-                        ),
-                    }
-                )
-                displayed_rows.append(displayed)
-            return displayed_rows
-
-        ambiguous_candidates = (
-            display_candidates(candidates) if len(candidates) > 1 else []
-        )
-        displayed_possible_candidates = display_candidates(possible_candidates)
-        if bank:
-            used_transaction_ids.add(bank["transaction_id"])
-        fingerprint_payload = {
-            "creator": normalized,
-            "bank_transaction_id": bank.get("transaction_id") if bank else None,
-            "ambiguous_transaction_ids": [
-                row["transaction_id"] for row in ambiguous_candidates
-            ],
-            "possible_transaction_ids": [
-                row["transaction_id"] for row in displayed_possible_candidates
-            ],
-            "reason": reason,
-        }
-        fingerprint = hashlib.sha256(
-            json.dumps(fingerprint_payload, sort_keys=True).encode("utf-8")
-        ).hexdigest()
-        return {
-            "id": creator_id,
-            "fingerprint": fingerprint,
-            "creator": normalized,
-            "payment_type": _text(payment.get("_review_payment_type")) or "Online",
-            "source_report": _text(payment.get("_review_report_link_name"))
-            or self.config.payment_report_link_name,
-            "bank": bank,
-            "bank_name": _text((candidate or {}).get("_review_bank_name")),
-            "bank_account_id": _text(
-                (candidate or {}).get("_review_bank_account_id")
-            ),
-            "ambiguous_candidates": ambiguous_candidates,
-            "possible_candidates": displayed_possible_candidates,
-            "reason": reason,
-            "reviewable": bool(bank and normalized["books_customer_id"]),
-            "decision": "pending",
-            "push_status": "not_started",
-            "books_payment_id": "",
-            "books_payment_number": "",
-            "error": "",
-        }
-
-    def _find_transaction(
-        self,
-        payment: Mapping[str, Any],
-        transactions: Sequence[Mapping[str, Any]],
-        used_transaction_ids: set,
-    ) -> tuple[Mapping[str, Any] | None, str]:
-        candidate, reason, _, _ = self._find_transaction_details(
-            payment,
-            transactions,
-            used_transaction_ids,
-        )
+    def _find_transaction(self, payment: Mapping[str, Any], transactions: Sequence[Mapping[str, Any]], used_transaction_ids: set[str]) -> tuple[Mapping[str, Any] | None, str]:
+        candidate, reason, _, _ = self._find_transaction_details(payment, transactions, used_transaction_ids)
         return candidate, reason
 
-    def _find_transaction_details(
-        self,
-        payment: Mapping[str, Any],
-        transactions: Sequence[Mapping[str, Any]] | _BankCandidateIndex,
-        used_transaction_ids: set,
-    ) -> tuple[
-        Mapping[str, Any] | None,
-        str,
-        list[Mapping[str, Any]],
-        list[Mapping[str, Any]],
-    ]:
-        payment_date = parse_date(payment.get("date"))
-        amount = _decimal(payment.get("amount"))
-        reference = _text(payment.get("reference")).casefold()
-        if not payment_date or amount is None:
-            return None, "Invalid payment date or amount", [], []
+    def _find_transaction_details(self, payment: Mapping[str, Any], transactions: Sequence[Mapping[str, Any]] | _BankCandidateIndex, used_transaction_ids: set[str]) -> tuple[Mapping[str, Any] | None, str, list[Mapping[str, Any]], list[Mapping[str, Any]]]:
+        return find_review_bank_transaction_details(payment, transactions, used_transaction_ids, default_date_tolerance_days=self.config.date_tolerance_days, amount_tolerance=self.config.amount_tolerance)
 
-        candidates = []
-        date_amount_candidates = []
-        if isinstance(transactions, _BankCandidateIndex):
-            transactions = transactions.candidates(payment_date, amount,
-                int(payment.get("date_tolerance_days", self.config.date_tolerance_days)),
-                Decimal(str(self.config.amount_tolerance)))
-        for transaction in transactions:
-            transaction_id = _text(
-                transaction.get("transaction_id") or transaction.get("id")
-            )
-            if not transaction_id or transaction_id in used_transaction_ids:
-                continue
-            transaction_date = parse_date(
-                transaction.get("date") or transaction.get("transaction_date")
-            )
-            transaction_amount = _decimal(transaction.get("amount"))
-            if not transaction_date or transaction_amount is None:
-                continue
-            date_tolerance_days = int(
-                payment.get("date_tolerance_days", self.config.date_tolerance_days)
-            )
-            if payment.get("date_source") == "cheque_date" and transaction_date < payment_date:
-                continue
-            if abs((transaction_date - payment_date).days) > date_tolerance_days:
-                continue
-            if abs(abs(transaction_amount) - abs(amount)) > Decimal(
-                str(self.config.amount_tolerance)
-            ):
-                continue
-            date_amount_candidates.append(transaction)
-            if not reference:
-                continue
-            account_id = _text(transaction.get("_review_bank_account_id"))
-            bank_reference = _text(
-                get_bank_reference(transaction, account_id)
-            ).casefold()
-            narration = _text(
-                transaction.get("description") or transaction.get("narration")
-            ).casefold()
-            if _text(payment.get("payment_type")).casefold() == "cheque":
-                cheque_suffixes = _cheque_reference_suffixes(reference)
-                bank_suffixes = (
-                    _cheque_reference_suffixes(bank_reference)
-                    | _cheque_reference_suffixes(narration)
-                )
-                matched = bool(cheque_suffixes & bank_suffixes)
-            else:
-                matched = reference == bank_reference or reference in narration
-            if matched:
-                candidates.append(transaction)
-
-        if not reference:
-            return None, "Missing reference number", [], date_amount_candidates
-        if len(candidates) == 1:
-            return (
-                candidates[0],
-                "Unique date, amount, and reference match",
-                candidates,
-                [],
-            )
-        if len(candidates) > 1:
-            return None, "Multiple bank transactions match", candidates, []
-        return None, "No bank transaction matched", [], date_amount_candidates
-
-    def _current_bank_transaction(
-        self, bank_id: str, bank_account_id: str
-    ) -> Mapping[str, Any]:
-        rows = self.books.bank_transactions.list_all(
-            params={
-                "account_id": bank_account_id,
-                "filter_by": "Status.Uncategorized",
-            }
-        )
-        current = next(
-            (
-                row
-                for row in rows
-                if _text(row.get("transaction_id") or row.get("id")) == bank_id
-            ),
-            None,
-        )
+    def _current_bank_transaction(self, bank_id: str, bank_account_id: str) -> Mapping[str, Any]:
+        current = get_uncategorized_bank_transaction(self.books, bank_id, bank_account_id)
         if not current:
-            raise ReconciliationError(
-                "The proposed bank transaction is no longer uncategorized. Refresh the queue."
-            )
-        annotated = dict(current)
-        annotated["_review_bank_account_id"] = bank_account_id
-        annotated["_review_bank_name"] = next(
-            (
-                name
-                for name, account_id in self.config.configured_banks()
-                if account_id == bank_account_id
-            ),
-            "Bank",
-        )
-        return annotated
+            raise ReconciliationError("The proposed bank transaction is no longer uncategorized. Refresh the queue.")
+        bank_name = next((name for name, aid in self.config.configured_banks() if aid == bank_account_id), "Bank")
+        return {**current, "_review_bank_account_id": bank_account_id, "_review_bank_name": bank_name}
 
-    def _require_same_match(self, entry: Mapping[str, Any], transaction: Mapping[str, Any]) -> None:
-        current, reason = self._find_transaction(entry["creator"], [transaction], set())
-        current_id = _text((current or {}).get("transaction_id") or (current or {}).get("id"))
-        if current_id != _text(entry["bank"].get("transaction_id")):
-            raise ReconciliationError(
-                f"The live bank transaction no longer matches this payment: {reason}."
-            )
+    def _require_same_date_amount(self, entry: Mapping[str, Any], transaction: Mapping[str, Any]) -> None:
+        require_matching_date_amount(entry, transaction, default_date_tolerance_days=self.config.date_tolerance_days, amount_tolerance=self.config.amount_tolerance)
 
-    def _require_same_date_amount(
-        self,
-        entry: Mapping[str, Any],
-        transaction: Mapping[str, Any],
-    ) -> None:
-        """Revalidate a manually selected reference-mismatch candidate."""
-        creator = entry["creator"]
-        payment_date = parse_date(creator.get("date"))
-        transaction_date = parse_date(
-            transaction.get("date") or transaction.get("transaction_date")
-        )
-        payment_amount = _decimal(creator.get("amount"))
-        transaction_amount = _decimal(transaction.get("amount"))
-        tolerance_days = int(
-            creator.get("date_tolerance_days", self.config.date_tolerance_days)
-        )
-        if (
-            not payment_date
-            or not transaction_date
-            or payment_amount is None
-            or transaction_amount is None
-            or (creator.get("date_source") == "cheque_date" and transaction_date < payment_date)
-            or abs((transaction_date - payment_date).days) > tolerance_days
-            or abs(abs(transaction_amount) - abs(payment_amount))
-            > Decimal(str(self.config.amount_tolerance))
-        ):
-            raise ReconciliationError(
-                "The selected bank transaction no longer matches the payment date and amount."
-            )
+    def _customer_payment_payload(self, entry: Mapping[str, Any], allocations: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+        return review_customer_payment_payload(entry, allocations)
 
-    def _customer_payment_payload(
-        self,
-        entry: Mapping[str, Any],
-        allocations: Sequence[Mapping[str, Any]],
-    ) -> dict[str, Any]:
-        creator = entry["creator"]
-        payment_date = parse_date(entry["bank"].get("date") if _text(entry.get("payment_type")).casefold() == "cheque" else creator.get("date"))
-        amount = _decimal(creator.get("amount"))
-        return customer_payment_payload(
-            customer_id=creator["books_customer_id"],
-            payment_mode=(
-                "check" if _text(entry.get("payment_type")).casefold() == "cheque"
-                else "banktransfer"
-            ),
-            payment_date=payment_date,
-            amount=amount,
-            reference_number=creator["reference"],
-            description=entry["bank"].get("description") or "Creator reconciliation",
-            account_id=entry["bank_account_id"],
-            creator_record_id=entry["id"],
-            creator_payment_id=creator.get("payment_id") or None,
-            invoices=allocations,
-        )
+    def _all_creator_payments(self) -> list[dict[str, Any]]:
+        return fetch_all_creator_payments(self.creator, self.config)
 
-    def _open_invoices(self, books_customer_id: str) -> list[dict[str, object]]:
-        return fetch_open_invoices(self.books, books_customer_id)
-
-    def _invoice_allocations(
-        self,
-        books_customer_id: str,
-        payment_amount: Any,
-        invoices: Sequence[Mapping[str, Any]] | None = None,
-    ) -> tuple[list[InvoiceAllocation], Decimal]:
-        open_invoices = list(invoices) if invoices is not None else self._open_invoices(books_customer_id)
-        return allocate_invoices_oldest_due_first(payment_amount, open_invoices)
-
-    def _attach_invoice_preview(
-        self,
-        entry: dict[str, Any],
-        invoice_cache: dict[str, list[dict[str, object]]],
-    ) -> None:
-        customer_id = _text(entry.get("creator", {}).get("books_customer_id"))
-        if not entry.get("bank") or not customer_id:
-            entry.update(
-                {
-                    "invoice_allocations": [],
-                    "unallocated_amount": float(
-                        abs(_decimal(entry.get("creator", {}).get("amount")) or Decimal("0"))
-                    ),
-                    "allocation_status": "unavailable",
-                    "allocation_error": (
-                        "Creator customer has no Zoho Books Customer_Id."
-                        if entry.get("bank") and not customer_id
-                        else ""
-                    ),
-                }
-            )
-            entry["reviewable"] = False
-            return
-        try:
-            if customer_id not in invoice_cache:
-                invoice_cache[customer_id] = self._open_invoices(customer_id)
-            allocations, unallocated = self._invoice_allocations(
-                customer_id,
-                entry["creator"]["amount"],
-                invoice_cache[customer_id],
-            )
-        except Exception as exc:
-            entry.update(
-                {
-                    "invoice_allocations": [],
-                    "unallocated_amount": 0,
-                    "allocation_status": "unavailable",
-                    "allocation_error": f"Could not load open invoices: {exc}",
-                    "reviewable": False,
-                }
-            )
-            return
-        entry.update(
-            {
-                "invoice_allocations": allocations,
-                "unallocated_amount": float(unallocated),
-                "allocation_status": (
-                    "fully_allocated"
-                    if unallocated == 0
-                    else "partially_allocated"
-                    if allocations
-                    else "no_open_invoices"
-                ),
-                "allocation_error": (
-                    "No open customer invoices are available; push is blocked to prevent "
-                    "unused credit."
-                    if not allocations
-                    else ""
-                ),
-                "reviewable": bool(allocations),
-            }
-        )
-
-    def _display_bank(self, transaction: Mapping[str, Any]) -> dict[str, Any]:
-        account_id = _text(transaction.get("_review_bank_account_id"))
-        return {
-            "transaction_id": _text(transaction.get("transaction_id") or transaction.get("id")),
-            "transaction_number": _text(transaction.get("transaction_number") or transaction.get("transaction_no")),
-            "date": _text(transaction.get("date") or transaction.get("transaction_date")),
-            "amount": _text(transaction.get("amount")),
-            "reference": _text(
-                get_bank_reference(transaction, account_id)
-            ),
-            "description": _text(
-                transaction.get("description") or transaction.get("narration")
-            ),
-        }
+    def _all_uncategorized_bank_transactions(self) -> list[dict[str, Any]]:
+        return fetch_all_uncategorized_bank_transactions(self.books, self.config)
 
     def _entry(self, entry_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
         batch = self.load()
-        entry = next(
-            (row for row in batch.get("entries", []) if _text(row.get("id")) == _text(entry_id)),
-            None,
-        )
+        entry = next((row for row in batch.get("entries", []) if _text(row.get("id")) == _text(entry_id)), None)
         if not entry:
             raise ReconciliationError(f"Review entry {entry_id} was not found.")
         return batch, entry
 
     def _empty_batch(self) -> dict[str, Any]:
-        return {
-            "version": 2,
-            "reports": [
-                {"payment_type": payment_type, "report": report_name}
-                for payment_type, report_name in self.config.configured_reports()
-            ],
-            "bank_accounts": [
-                {"name": name, "account_id": account_id}
-                for name, account_id in self.config.configured_banks()
-            ],
-            "refreshed_at": None,
-            "entries": [],
-        }
-
-    def _all_creator_payments(self) -> list[dict[str, Any]]:
-        rows: list[dict[str, Any]] = []
-        has_cheques = False
-        for payment_type, report_name in self.config.configured_reports():
-            payments = self.creator.get_all_records(
-                self.config.creator_app_link_name,
-                report_name,
-                criteria=f'({self.config.creator_books_id_field} == null || {self.config.creator_books_id_field} == "")',
-            )
-            for payment in payments:
-                if _text(payment.get(self.config.creator_books_id_field)):
-                    continue
-                annotated = dict(payment)
-                annotated["_review_payment_type"] = payment_type
-                annotated["_review_report_link_name"] = report_name
-                rows.append(annotated)
-            has_cheques = has_cheques or (payment_type.casefold() == "cheque" and any(
-                not _text(payment.get(self.config.creator_books_id_field)) for payment in payments))
-        if has_cheques:
-            cheque_details = self.creator.get_all_records(
-                self.config.creator_app_link_name,
-                self.config.cheque_detail_report_link_name,
-            )
-            self._attach_presented_dates(rows, cheque_details)
-        return rows
-
-    @staticmethod
-    def _cheque_number(value: Any) -> str:
-        return normalize_cheque_number(value)
-
-    def _attach_presented_dates(
-        self,
-        payments: Sequence[dict[str, Any]],
-        cheque_details: Sequence[Mapping[str, Any]],
-    ) -> None:
-        attach_presented_dates(payments, cheque_details)
-
-    def _all_uncategorized_bank_transactions(self) -> list[dict[str, Any]]:
-        rows: list[dict[str, Any]] = []
-        for bank_name, account_id in self.config.configured_banks():
-            transactions = self.books.bank_transactions.list_all(
-                params={
-                    "account_id": account_id,
-                    "filter_by": "Status.Uncategorized",
-                }
-            )
-            for transaction in transactions:
-                annotated = dict(transaction)
-                annotated["_review_bank_name"] = bank_name
-                annotated["_review_bank_account_id"] = account_id
-                rows.append(annotated)
-        return rows
-
-    def _migrate_bank_identity(
-        self, entry: dict[str, Any], previous_batch: Mapping[str, Any]
-    ) -> None:
-        entry.setdefault("payment_type", "Online")
-        entry.setdefault("source_report", self.config.payment_report_link_name)
-        if entry.get("bank_account_id"):
-            return
-        previous_account_id = _text(previous_batch.get("bank_account_id"))
-        if not previous_account_id:
-            return
-        name = next(
-            (
-                bank_name
-                for bank_name, account_id in self.config.configured_banks()
-                if account_id == previous_account_id
-            ),
-            "Bank",
-        )
-        entry["bank_account_id"] = previous_account_id
-        entry["bank_name"] = name
+        return {"version": 2, "reports": [{"payment_type": pt, "report": r} for pt, r in self.config.configured_reports()],
+                "bank_accounts": [{"name": n, "account_id": aid} for n, aid in self.config.configured_banks()], "refreshed_at": None, "entries": []}
 
     def _save(self, batch: Mapping[str, Any]) -> None:
         statuses = {row["transaction_id"]: row.get("categorization_status", "pending") for row in batch.get("bank_suggestions", [])}

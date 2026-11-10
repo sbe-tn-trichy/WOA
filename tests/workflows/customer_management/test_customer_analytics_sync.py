@@ -68,9 +68,9 @@ def test_create_repeat_updates_and_backup(tmp_path):
     changed[0]['Customer Name'] = 'New name'
     changed[0]['Credit Limit'] = '456.00'
     second = sync(path, source(tmp_path, 'second', customers=changed))
-    assert second.updated['Customers'] == 1 and second.updated['Customer Financials'] == 1
+    assert second.updated['Customers'] == 1
     assert read(path)['Customer Name'] == 'New name'
-    assert read(path, 'Customer Financials')['Credit Limit'] == '456.00'
+    assert read(path)['Credit Limit'] == '456.00'
 
 
 def test_local_edits_survive_and_conflicts_persist_until_convergence(tmp_path):
@@ -89,6 +89,30 @@ def test_local_edits_survive_and_conflicts_persist_until_convergence(tmp_path):
     edit(path, 'UPDATE Customers SET Phone=? WHERE "Customer ID"=?', ('8888888888', '1'))
     assert sync(path, changed_export).conflicts == 0
     assert json.loads(read(path)['_sync_conflicts_json']) == []
+
+
+def test_refresh_preserves_books_module_tables(tmp_path):
+    from workflows.books_statements.custom_module_store import download_books_custom_modules
+
+    export = source(tmp_path, 'first')
+    path = tmp_path / 'customers.db'
+    sync(path, export)
+    books = SimpleNamespace(
+        organization_id='org',
+        request=lambda *args, **kwargs: {
+            'module_records': [], 'page_context': {'has_more_page': False},
+        },
+    )
+    download_books_custom_modules(books, database=path)
+    with sqlite3.connect(path) as db:
+        before = db.execute('SELECT * FROM metadata ORDER BY key').fetchall()
+    result = sync(path, export)
+    assert result.counts['Customers'] == 2
+    for database in (path, result.backup):
+        with sqlite3.connect(database) as db:
+            assert db.execute('SELECT * FROM metadata ORDER BY key').fetchall() == before
+            for table in ('sales_persons', 'beats', 'module_snapshots'):
+                assert db.execute(f'SELECT COUNT(*) FROM {table}').fetchone() == (0,)
 
 
 def test_secondary_contacts_merge_by_identity_and_field(tmp_path):
@@ -129,7 +153,7 @@ def test_direct_identity_edits_fail_without_overwrite(tmp_path, operation):
     path = tmp_path / 'customers.db'
     sync(path, export)
     if operation == 'delete':
-        edit(path, 'DELETE FROM "Customer Beat" WHERE "Customer ID"=\'2\'')
+        edit(path, 'DELETE FROM "Customers" WHERE "Customer ID"=\'2\'')
     elif operation == 'identity':
         edit(path, 'UPDATE "Customer Addresses" SET "Address ID"=\'11\'')
     elif operation == 'owner':
@@ -159,9 +183,9 @@ def test_upgrade_original_snapshot_preserves_existing_cleanup_edits(tmp_path):
     export = source(tmp_path, 'first')
     path = tmp_path / 'customers.db'
     build_normalized_customers(export, path, organization_id='org')
-    edit(path, 'UPDATE "Customer Beat" SET Beat=\'Reviewed beat\' WHERE "Customer ID"=\'1\'')
+    edit(path, 'UPDATE Customers SET Beat=\'Reviewed beat\' WHERE "Customer ID"=\'1\'')
     result = sync(path, export)
-    assert read(path, 'Customer Beat')['Beat'] == 'Reviewed beat'
+    assert read(path)['Beat'] == 'Reviewed beat'
     assert result.preserved_local_fields == 1 and result.backup.is_file()
     assert json.loads(read(path)['_sync_info_json'])['organization_id'] == 'org'
 
@@ -201,7 +225,7 @@ def test_added_column_and_customer_are_synced(tmp_path):
         customer['New Attribute'] = 'new'
     customers.append({**customers[0], 'Customer ID': '3'})
     result = sync(path, source(tmp_path, 'second', customers=customers))
-    assert result.added['Customers'] == 1 and result.added['Customer Beat'] == 1
+    assert result.added['Customers'] == 1
     assert read(path, rid='3')['New Attribute'] == 'new'
     assert sync(path, source(tmp_path, 'third', customers=customers)).conflicts == 0
 

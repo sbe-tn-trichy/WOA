@@ -5,8 +5,8 @@ type: workflow
 # Unearned Revenue Review
 
 Run `.venv/bin/python apps/find_unearned_revenue.py` for a read-only Analytics
-review of account `1094368000000000617`. Override `--account-id`, `--workspace-id`,
-`--catalog-dir` or `--output` as needed. The catalog defaults to
+review of the unearned revenue account (configured via `UNEARNED_REVENUE_ACCOUNT_ID`).
+Override `--account-id`, `--workspace-id`, `--catalog-dir` or `--output` as needed. The catalog defaults to
 `workspace_metadata/<workspace-id>`; the report defaults to
 `output/unearned_revenue.json`. An explicit absolute output path is supported.
 

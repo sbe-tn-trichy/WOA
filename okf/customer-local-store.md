@@ -10,7 +10,7 @@ description: Local Books customer SQLite mirror, modification-time reconciliatio
 writes to Books. The default database is `output/customer_cleanup/customers.sqlite3`.
 Organization identity is pinned in database metadata; another organization is rejected.
 
-## Four-table normalization workspace
+## Master-child normalization workspace
 
 Use `apps/sync_analytics_customers.py` for repeatable local uniformity cleanup from the
 three Analytics Books tables: Customers, Customer Addresses and Customer Contact
@@ -18,22 +18,32 @@ Persons. `workflows.customer_management.analytics_sync` owns synchronization and
 `workflows.customer_management.normalization` owns source export/normalization. Both use
 `AnalyticsCatalog` cached metadata, and never refreshes metadata or writes to Zoho.
 It creates `output/customer_cleanup/normalized_customers.sqlite3` separately from
-the older Books reconciliation store described below. Exactly four tables are used:
+the older Books reconciliation store described below. Two physical tables and five
+reporting views are used:
 
+### Physical Tables
 | Table | Ownership |
 |---|---|
-| Customers | Customer identity, names, communication, type, audit fields and remaining attributes; all contact persons in a structured JSON array. |
-| Customer Addresses | Every source address record, including distinct billing and shipping fields and address audit fields. |
-| Customer Financials | Limits, terms, currency, opening/outstanding amounts, price list, payment settings and tax registration. |
-| Customer Beat | Beat, branch, district, jurisdiction, transporter, optical division and customer owner. |
+| Customers | Master customer table storing all 1:1 attributes: identity, names, communication, branch, optical division, financial parameters (credit limit, payment terms, GSTIN, PAN, balances), beat/route attributes (beat, district, jurisdiction, transporter), audit fields, and contact persons in a structured JSON array. |
+| Customer Addresses | Child table for 1:N address records, including distinct billing and shipping fields and address audit fields. |
 
-The tables link by exact string Customer ID; addresses additionally have an exact
-string Address ID. Do not flatten secondary contact persons into the customer's
-top-level phone/email. `Status` and `Status_1`, names/display names, and billing/
-shipping fields retain distinct meanings. Original source rows are retained in
-`_source_json` columns; original contact persons in `_source_contact_persons_json`.
-Unknown future customer fields remain in Customers. Financial values retain their
-source representation without floating-point coercion.
+### Reporting Views
+- `Customer_core`: Identity, contact, branch, and status fields (with `Status_1` aliased as `Billing Status`).
+- `financials`: Credit limits, terms, price lists, and tax registration attributes.
+- `addresses`: Flattened view of billing and shipping address fields.
+- `Electrical Customers`: `SELECT * FROM Customers WHERE Branch = 'Electricals'`.
+- `Zeiss Customers`: `SELECT * FROM Customers WHERE Branch = 'Zeiss'`.
+
+The Branch views include all columns and all customer statuses and are recreated during sync.
+
+The former `beat` view is removed to avoid confusion with the Books `beats` table;
+customer route fields remain in `Customers`. View generation also removes the old view.
+
+The address child table links by exact string Customer ID and is keyed by Address ID.
+Do not flatten secondary contact persons into the customer's top-level phone/email.
+`Status` and `Status_1`, names/display names, and billing/shipping fields retain distinct meanings.
+Original source rows are retained in `_source_json` columns; original contact persons in `_source_contact_persons_json`.
+Unknown future customer fields remain in Customers. Financial values retain their source representation without floating-point coercion.
 
 ```sh
 .venv/Scripts/python.exe apps/sync_analytics_customers.py
@@ -45,6 +55,14 @@ Separate Analytics COUNT queries verify export completeness. The command also ap
 as **Analytics customer sync** in the project dashboard (workflow ID
 `customer_analytics_sync`). `--db`, `--workspace-id` and `--catalog-dir` select the
 target database and cached Analytics workspace. Metadata is never refreshed implicitly.
+
+When using the local `data/analytics/` directory for the catalog and customer
+database, run from the repository root:
+
+```sh
+.venv/bin/python apps/customers/sync_analytics_customers.py --catalog-dir data/analytics --db data/analytics/customers.sqlite
+```
+
 Offline replay requires a completed manifest pinning organization, view schemas,
 row counts, capture time and last successful metadata sync. Partial exports, duplicate
 IDs, invalid IDs, schema mismatches and orphan records fail rather than dropping data.
@@ -61,7 +79,9 @@ and marked for review instead of being deleted from SQLite.
 `_baseline_json`, `_sync_conflicts_json` and `_present_in_analytics` track each row;
 Customers additionally stores `_sync_info_json` with pinned organization/workspace,
 the last successful data/metadata sync times, source/report paths and row counts.
-These technical columns keep the database at exactly four tables. Do not edit sync
+The Analytics sync manages the two customer tables and accepts the optional
+Books custom-module tables described below. Refresh those modules with the
+separate downloader. Do not edit sync
 metadata, IDs, ownership, or insert/delete rows directly. Row/identity changes, ownership
 changes and source schema removals fail with an actionable error rather than overwriting
 work. Ordinary cleanup values may be edited directly, including the `Contact Persons`
@@ -164,13 +184,16 @@ must select valid writable fields rather than sending the whole record unchanged
 ## Related custom modules
 
 `apps/download_books_custom_modules.py` downloads Books Sales Person (`cm_user`)
-and Beat (`cm_beat`) into `output/books_custom_modules/modules.sqlite3`, in tables
-`sales_persons` and `beats`. This database is separate from the customer database.
+and Beat (`cm_beat`) into tables `sales_persons` and `beats`. Pass
+`--database` to put both tables in an existing customer SQLite database.
+Confirm that the customer database and the configured Books client belong to
+the same organization before the first module download into that database.
+The default destination is `output/books_custom_modules/modules.sqlite3`.
 The command uses 200-row pages and `Status.All`; no Books writes are performed.
 API module names were confirmed using Books `GET /settings/modules`.
 
 ```sh
-.venv/bin/python apps/download_books_custom_modules.py
+.venv/bin/python apps/tools/download_books_custom_modules.py --database data/analytics/customers.sqlite
 ```
 
 Columns retain exact JSON field names. Nested values remain JSON in their columns;

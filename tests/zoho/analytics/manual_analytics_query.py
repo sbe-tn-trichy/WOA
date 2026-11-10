@@ -27,17 +27,23 @@ def run_query() -> list[dict[str, Any]]:
         "TOKEN_URL", "http://localhost:3000/server/new/tokens"
     )
     access_token = HttpTokenProvider(token_url).get_token("analytics")
-    organization_id = os.environ.get(
-        "ZOHO_ANALYTICS_ORGANIZATION_ID", "60018545708"
+    organization_id = (
+        os.environ.get("ZOHO_ANALYTICS_ORGANIZATION_ID")
+        or str(config.get("analytics_org_id") or config.get("org_id") or "")
     )
-    workspace_id = os.environ.get(
-        "ZOHO_ANALYTICS_WORKSPACE_ID", "264324000000002043"
+    if not organization_id:
+        raise ValueError("ZOHO_ANALYTICS_ORGANIZATION_ID or config analytics_org_id is required")
+    workspace_id = (
+        os.environ.get("ZOHO_ANALYTICS_WORKSPACE_ID")
+        or str(config.get("analytics_workspace_id") or "")
     )
+    if not workspace_id:
+        raise ValueError("ZOHO_ANALYTICS_WORKSPACE_ID or config analytics_workspace_id is required")
     sql_query = os.environ.get(
         "ZOHO_ANALYTICS_SQL_QUERY",
         'SELECT * FROM "Payment Customer Finder" LIMIT 5',
     )
-    domain = os.environ.get("ZOHO_ANALYTICS_DOMAIN") or config.get("domain", "com")
+    domain = os.environ.get("ZOHO_ANALYTICS_DOMAIN") or str(config.get("domain") or "in")
     poll_interval = float(os.environ.get("ZOHO_ANALYTICS_POLL_INTERVAL", "2"))
     max_attempts = int(os.environ.get("ZOHO_ANALYTICS_MAX_ATTEMPTS", "30"))
 

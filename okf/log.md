@@ -1,6 +1,33 @@
 # Knowledge Change Log
 
+## 2026-11-10
+
+- Recorded the verified [Books import empty-cell limitation](zoho-books.md#import-file-uploads) and minimal bulk-update alternative. See the [project entry](../CHANGELOG.md#apply-reviewed-customer-phone-cleanup-in-books).
+
+- Documented the two [Branch-filtered customer views](customer-local-store.md#reporting-views) and sync persistence. See the [project entry](../CHANGELOG.md#add-branch-filtered-customer-views).
+
+- Documented all three supported [Books import duplicate settings](zoho-books.md#import-file-uploads). See the [project entry](../CHANGELOG.md#support-all-books-import-duplicate-settings).
+
+- Recorded live OAuth [Books import confirmation](zoho-books.md#import-file-uploads), the single organization query parameter requirement, and contact read-back verification. See the [project entry](../CHANGELOG.md#confirm-the-reviewed-electricals-branch-import-through-oauth).
+
+- Documented explicit [Books import confirmation](zoho-books.md#import-file-uploads), mutation intent and live verification limits. See the [project entry](../CHANGELOG.md#add-explicit-books-import-confirmation).
+
+- Documented [Books import staging uploads](zoho-books.md#import-file-uploads), OAuth verification, mapping checks and the UTF-8 BOM limitation. See the [project entry](../CHANGELOG.md#add-books-sdk-import-file-upload).
+
+- Documented the new `utils.general_utils` primitives, generic `helpers` operations/resolvers, and the fetch/review separation in [package architecture](architecture.md#layer-boundaries) and [bank statement categorization](collection-reconciliation.md#request-efficiency). See the [project entry](../CHANGELOG.md#generify-collection-review-into-utilities-helpers-and-fetch-flow).
+
+- Documented how [customer sync coexists with Books custom-module tables](customer-local-store.md#master-child-normalization-workspace). See the [project entry](../CHANGELOG.md#refresh-customers-alongside-books-custom-modules).
+
+- Removed the confusing customer `beat` view from the [local customer store](customer-local-store.md). See the [project entry](../CHANGELOG.md#remove-confusing-customer-beat-view).
+
+- Documented how to download [Books custom modules into the customer database](customer-local-store.md#related-custom-modules). See the [project entry](../CHANGELOG.md#download-books-custom-modules-into-the-customer-database).
+
 ## 2026-11-09
+
+- Documented the [Accounts and Items SQLite snapshot](item-catalog.md#accounts-and-items-sqlite-snapshot). See the [project entry](../CHANGELOG.md#add-analytics-accounts-and-items-sqlite-snapshot).
+- Documented how to store the customer download alongside the cached catalog under `data/analytics/`. See the [project entry](../CHANGELOG.md#move-local-analytics-data-and-download-customers).
+
+- Remediated hardcoded organization IDs, account numbers, and branch prefixes across inter-location workflows, apps, and sample mappings, parameterizing clearing accounts, prefixes, and sample configuration. See the [project entry](../CHANGELOG.md#remediate-hardcoded-organization-identifiers-and-strings-chk-hc1-to-chk-hc7).
 
 - Documented the optional imports required by the CI type-check job and the use of test fixture IDs for tenant-scoped workflows. See the [project entry](../CHANGELOG.md#repair-cross-platform-ci-checks).
 
@@ -236,9 +263,9 @@
 
 - Removed the [local Metabase container and image](metabase-local.md), preserving its settings volume and source SQLite files.
 
-- Added [repeatable Analytics customer sync](customer-local-store.md#four-table-normalization-workspace), a dedicated CLI/dashboard entry, complete-export checks, atomic four-table reconciliation, recovery backups and persistent local-edit conflicts.
+- Added [repeatable Analytics customer sync](customer-local-store.md#master-child-normalization-workspace), a dedicated CLI/dashboard entry, complete-export checks, atomic two-table reconciliation, recovery backups and persistent local-edit conflicts.
 
-- Added the [four-table customer normalization workspace](customer-local-store.md#four-table-normalization-workspace), preserving all three Analytics exports, contact persons, original values and local correction reports with strict identity/link checks.
+- Added the [customer normalization workspace](customer-local-store.md#master-child-normalization-workspace), preserving all three Analytics exports, contact persons, original values and local correction reports with strict identity/link checks.
 
 - Documented the [local Metabase installation](metabase-local.md), loopback-only UI, persistent application settings and existing SQLite mounts.
 

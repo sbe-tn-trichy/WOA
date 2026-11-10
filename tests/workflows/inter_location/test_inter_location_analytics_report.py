@@ -5,8 +5,8 @@ from zoho.analytics.resources import Views
 
 
 def test_query_scopes_account_period_and_different_locations():
-    sql = build_inter_location_query("1094368000002033114")
-    assert sql.count('"Account ID" = 1094368000002033114') == 4
+    sql = build_inter_location_query("998877665544332211")
+    assert sql.count('"Account ID" = 998877665544332211') == 4
     assert 'CP."Location ID" <> VP."Location ID"' in sql
     assert 'CP."Location ID" <> JI."Location ID"' in sql
     assert sql.count("'2025-04-01'") == 2
@@ -30,7 +30,7 @@ def test_create_query_table_posts_config():
 
 
 def test_document_query_uses_source_document_locations():
-    sql = build_inter_location_document_query("1094368000002033114")
+    sql = build_inter_location_document_query("998877665544332211")
     assert 'IP."Invoice ID" = I."Invoice ID"' in sql
     assert 'PM."Bill ID" = B."Bill ID"' in sql
     assert 'I."Location ID" AS "Invoice Location ID"' in sql

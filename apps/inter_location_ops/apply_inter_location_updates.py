@@ -21,6 +21,8 @@ from workflows.runtime.config import Config
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--account-id", default=Config.INTER_LOCATION_CLEARING_ACCOUNT_ID,
+                        help="Clearing account ID")
     parser.add_argument("--proposal", type=Path, default=Path("output/inter_location_location_proposals.json"))
     parser.add_argument("--audit", type=Path, default=Path("output/inter_location_location_apply_audit.json"))
     parser.add_argument("--apply", action="store_true")
@@ -41,7 +43,7 @@ def main() -> int:
     preflight_errors = []
     for index, proposal in enumerate(proposals, 1):
         try:
-            item = verify_proposed_pair(books, proposal)
+            item = verify_proposed_pair(books, proposal, clearing_account_id=args.account_id)
             verified.append(item)
             print(f"Preflight {index}/{len(proposals)}: {item['payment_id']} -> {item['to_location_id']}", flush=True)
         except Exception as exc:
@@ -58,7 +60,7 @@ def main() -> int:
         raise ValueError(f"Preflight failed for {len(preflight_errors)} of {len(proposals)} proposed moves; no updates applied")
     for index, item in enumerate(verified, 1):
         try:
-            result = apply_verified_move(books, item)
+            result = apply_verified_move(books, item, clearing_account_id=args.account_id)
             audit["results"].append(result)
             print(f"Applied {index}/{len(verified)}: {result['payment_id']} ({result['status']})", flush=True)
         except Exception as exc:

@@ -7,7 +7,187 @@ available; never invent a commit or claim checks that were not run.
 This file keeps the current year's entries; older years are archived under
 `changelog/YYYY.md` and linked here when created. Check rollover with each change.
 
+## 2026-11-10
+
+### Report exact column diffs on Analytics items schema mismatch
+
+- **Why:** `sync_analytics_items` raised a generic `ValueError` when the live Zoho Analytics export differed from cached metadata, forcing manual inspection to find which columns changed.
+- **What:** Updated `src/workflows/item_catalog/analytics_snapshot.py` to include sorted `missing` and `extra` column lists and `last_successful_metadata_sync_at` in the schema-mismatch error message, plus added a regression test in `tests/workflows/item_catalog_export/test_analytics_snapshot.py`.
+- **Verification:** `tests/workflows/item_catalog_export/test_analytics_snapshot.py` passed 5 tests, `ty check` passed, and `apps/generate_api_reference.py --check` passed; `apps/analyze_project.py --verify` reported 0 inspection errors and 1 unrelated missing-anchor diagnostic (`okf/log.md:5`); refreshed `data/analytics/metadata.sqlite` (`2026-11-10T14:21:49Z`) and synced `data/analytics/items.sqlite` (268 Accounts rows, 51,010 Items rows, 64 columns, integrity `ok`) on macOS arm64. Annual rollover checked (2026).
+
+### Apply nine reviewed local Phone corrections
+
+- **Why:** Resolve the user's selected Phone review cases with explicit replacement or blank values.
+- **What:** Saved a SQLite backup and change ledger, corrected three Phone values using the agreed country-code format and cleared six selected Phone values. Left the remaining review cases unchanged.
+- **Verification:** Full customer-row comparison verified only the nine requested Phone fields changed; SQLite integrity was `ok`. No Books writes or permanent code changes. Annual rollover checked (2026); macOS only.
+
+### Clean reviewed local customer Phone values
+
+- **Why:** Apply the user's explicit duplicate-removal and phone-formatting rules while preserving uncertain numbers for review.
+- **What:** Backed up SQLite, cleared 1,011 Phone values matching Mobile after normalization, and formatted 151 remaining valid Phone values with the Indian country-code separator. Retained 13 uncertain Phone values unchanged and saved a change ledger.
+- **Verification:** Transactional comparison verified customer identities and every field except the intended Phone edits unchanged; SQLite integrity was `ok`. No Books changes or permanent code change. Annual rollover checked (2026); macOS only.
+
+### Add Branch-filtered customer views
+
+- **Why:** Provide separate Electricals and Zeiss customer views in the local database.
+- **What:** Created `Electrical Customers` and `Zeiss Customers` using `SELECT *` with exact Branch filters, including all statuses. Added the views to normalization so future syncs recreate them, and updated the owning documentation.
+- **Verification:** All 31 normalization/sync tests passed on macOS. Local read-back verified exact filtered rows and all 61 customer columns: 969 Electricals and 194 Zeiss rows; SQLite integrity was `ok`. No cloud changes. Annual rollover checked (2026).
+
+### Apply six reviewed customer Branch assignments
+
+- **Why:** Apply the user's explicit Branch assignments to six active customers.
+- **What:** Validated organization and active Branch options, retained live snapshots and a request checkpoint, sent minimal Books bulk custom-field updates, and synchronized only the six local Branch values with a SQLite backup.
+- **Verification:** Books returned code 0; individual read-back verified all six requested values, unchanged display names and unrelated custom fields. Local transaction succeeded and SQLite integrity was `ok`. No permanent code change or unit tests required. macOS only; annual rollover checked (2026).
+
+### Support all Books import duplicate settings
+
+- **Why:** Accept the additional Books import option supplied by the user.
+- **What:** Added `create_new` alongside `overwrite` and `skip` in the typed upload API and validation, documented the choices, and tested exact forwarding for all three settings.
+- **Verification:** All 30 mocked import tests passed on macOS. No live upload or confirmation performed; `skip` and `create_new` remain unverified live. Annual rollover checked (2026); no archival needed.
+
+### Confirm the reviewed Electricals Branch import through OAuth
+
+- **Why:** Execute the explicitly authorized SDK upload confirmation and verify the saved Branch updates.
+- **What:** Fixed confirmation to send organization_id once in the query: Books rejected the original query-plus-form duplication with code 12. Confirmed the staged import with OAuth, retained before/after snapshots and request checkpoints, and documented the verified contract.
+- **Verification:** Books returned code 0: all 13 contacts updated, zero created/skipped, no errors. Fresh read-back verified Electricals on all 13 with unchanged display names and unrelated custom fields. All 823 Books tests passed, including 28 import tests; targeted Ruff and ty passed. macOS only. Annual rollover checked (2026); no older-year entries require archival.
+
+### Add explicit Books import confirmation
+
+- **Why:** Support the supplied second-step import confirmation request after staging a CSV.
+- **What:** Added `books.imports.confirm(import_id, is_new_flow=False)` using an organization-pinned form-encoded PUT, strict import-ID/flow validation and explicit mutation classification. Documented that confirmation changes live records and requires saved-record verification. No live confirmation attempted: the supplied example ID differs from the SDK-staged upload ID.
+- **Verification:** All 823 Books tests passed; targeted Ruff and ty passed on macOS. Mocked tests cover request encoding, invalid IDs/options/organization and error propagation. Confirmation OAuth support remains unverified. Annual rollover checked (2026); no older-year entries require archival.
+
+### Add Books SDK import file upload
+
+- **Why:** Stage the prepared customer Branch CSV through the SDK instead of replaying browser-session credentials.
+- **What:** Added `books.imports.upload_file` with typed explicit import options, nonempty CSV validation, organization-pinned multipart fields, public custom-resource export and automatic file closure. Added mocked routing/error tests and owning API documentation. Removed the generated customer CSV's BOM after live Books left Customer Number unmapped; the corrected upload mapped all three requested columns. No import commit was sent.
+- **Verification:** OAuth upload returned code 0 and an import ID, with Customer Number, Display Name and CF.Branch mappings checked. Full suite: 4,148 tests and 4 subtests passed; Ruff and targeted ty passed on macOS. Windows and import execution remain unverified. Annual rollover checked (2026); no older-year entries require archival.
+
+### Stage Electricals Branch for thirteen selected customers
+
+- **Why:** Set the explicitly selected active customers to Electricals and prepare their Books Branch updates for review.
+- **What:** Updated only those 13 local Branch values, retained a SQLite backup, and prepared minimal Books custom-field payloads with live snapshots and modification baselines. Verified Branch is `cf_b_name` (index 6) and Electricals is an active allowed option. No Books writes performed.
+- **Verification:** All 13 live contacts are active customers with blank Branch and ready plans. Local transaction checks showed only the selected Branch fields changed; reopened SQLite confirmed assignments, unchanged other tables and integrity `ok`. Read-only preparation succeeded after a transient timeout. macOS only; no permanent code change or unit tests needed. Annual rollover checked (2026).
+
+### Generify collection review into utilities, helpers, and fetch flow
+
+- **Why:** Reduce `src/workflows/collection_reconciliation/review.py` from 1,700 lines to 400–500 lines, promote reusable Creator/Books/Analytics/utility primitives out of the workflow, and separate the fetch flow from the review/mutation flow.
+- **What:**
+  - Added `numeric_affixes(value, length=4, is_prefix=False)` and `utc_now_iso()` to `utils.general_utils` (re-exported from `utils`).
+  - Extracted `helpers.operations.creator` (`require_creator_success`, `update_and_verify_creator_record`), `helpers.operations.bank_transactions` (uncategorized fetch/get, match lookup/apply, categorization), `helpers.reports.analytics` (`build_batched_like_queries`, `query_or_export_analytics_rows`), and `resolve_chart_of_account`, `resolve_location_by_name`, `resolve_vendor_by_name` in `helpers`.
+  - Consolidated cheque presentation checkpointing, invoice allocation previews, payment create/match helpers, and ordered bank candidate indexing in `workflows.collection_payments`, and moved bank-statement view/name-validation helpers into `bank_statement.py` and transfer-proposal merging into `bank_transfers.py`.
+  - Split the concurrent fetch, caching, and proposal-building flow into `src/workflows/collection_reconciliation/review_fetch.py` (466 lines), keeping `OnlinePaymentReviewService` and queue/push mutations in `review.py` (492 lines) with backward-compatible re-exports and regenerating `docs/api/`.
+- **Verification:** `ty check` passed with 0 diagnostics; `apps/analyze_project.py --verify` and `apps/generate_api_reference.py --check` passed with 0 errors; targeted suites (`tests/workflows/collection_reconciliation`, `tests/contracts/performance`, `tests/helpers`, `tests/utils/general_utils`) passed 304 tests and 2 subtests on macOS arm64. Full default suite ran after final edits (only pre-existing sandbox loopback socket `PermissionError`s in `test_http_transport.py` and `test_finding_regressions.py`). Annual rollover checked (2026); no older-year entries require archival.
+
+### Allocate customer beats for active customers only
+
+- **Why:** Apply the requested 20 km billing-pincode allocation only to active customers, retaining overlapping matches for review.
+- **What:** Updated 95 unambiguous active-customer Beat values locally; 45 already matched. Excluded all 1,025 inactive customers and restricted overlap reviews to 363 active customers across 70 pincodes. Coordinate/pincode issues and overlaps remain unchanged; retained a SQLite backup and change report. No cloud writes.
+- **Verification:** Reopened SQLite and verified all 95 assignments, identical inactive rows and other tables, and integrity `ok`. Transaction checks confirmed only Beat changed on active rows. Generated reports checked against current status. Cached Analytics metadata last synced 2026-11-09T07:19:15Z; no metadata refresh. macOS only; no code changes or unit tests needed. Annual rollover checked (2026); no older-year entries require archival.
+
+### Refresh customers alongside Books custom modules
+
+- **Why:** The customer sync rejected its target after Sales Person and Beat were downloaded into the same database.
+- **What:** Accept the complete Books module table set, including optional local beat staging, while preserving those tables during customer reconciliation and backup. Refetched both sources and regenerated the local beat allocation report.
+- **Verification:** 25 focused tests passed on macOS. Live read-back verified 2,030 local customers, including one retained for review, 7 sales persons, 27 beats, and SQLite integrity and foreign keys. Annual rollover checked (2026).
+
+### Remove confusing customer beat view
+
+- **Why:** The customer routing view `beat` was easily confused with the Books `beats` reference table.
+- **What:** Removed the local SQLite view and stopped view generation from recreating it; route fields remain in Customers. Updated owning documentation and view assertions.
+- **Verification:** Read-back confirms six tables and three views, with only `beat` removed; SQLite integrity is `ok`. All 30 normalization/sync tests passed on macOS. Annual rollover checked (2026); no older-year entries require archival.
+
+### Download Books custom modules into the customer database
+
+- **Why:** Keep the sales-person and beat reference records alongside the local Analytics customer data.
+- **What:** Downloaded `cm_user` and `cm_beat` into `sales_persons` and `beats` in `data/analytics/customers.sqlite` using the existing downloader.
+- **Verification:** Matched the database owner to the configured Books organization. Verified 7 sales-person rows, 27 beat rows, matching raw snapshots, 2,029 customer rows, and SQLite integrity on macOS. Annual rollover checked (2026).
+
 ## 2026-11-09
+
+### Add SG Item Names local view
+
+- **Why:** Review active SG inventory item names in SKU order.
+- **What:** Created `SG Item Names` in the local Items SQLite snapshot with the fan view’s eight columns, filtered to the uniquely resolved Polycab SG Stock account (`1094368000051535662`).
+- **Verification:** Verified eight columns, 35 rows matching the source filter, ascending SKU order, and SQLite integrity (`ok`) on macOS. Annual rollover checked (2026).
+
+### Add Ledvance Item Names local view
+
+- **Why:** Review active Ledvance inventory item names in SKU order.
+- **What:** Created `Ledvance Item Names` in the local Items SQLite snapshot with the fan view’s eight columns, filtered to the uniquely resolved Ledvance Stock account (`1094368000045336631`).
+- **Verification:** Verified eight columns, 146 rows matching the source filter, ascending SKU order, and SQLite integrity (`ok`) on macOS. Annual rollover checked (2026).
+
+### Capitalize Neoseal Item Names view
+
+- **Why:** Use the requested capitalization for the local view name.
+- **What:** Renamed `neoseal Item Names` to `Neoseal Item Names` in `items.sqlite`.
+- **Verification:** Transactional replacement verified the exact stored name and preserved all 98 rows and their order. Annual rollover checked (2026).
+
+### Add Neoseal Item Names local view
+
+- **Why:** Review active Neoseal inventory item names in SKU order.
+- **What:** Created `neoseal Item Names` in the local Items SQLite snapshot with the same eight columns as the fan view, filtered to the uniquely resolved Neoseal Stock account (`1094368000034919849`).
+- **Verification:** Read back all eight columns and 98 rows, verified SKU ordering, and checked SQLite integrity (`ok`) on macOS. Annual rollover checked (2026).
+
+### Sort Fan Item Names by SKU
+
+- **Why:** Review fan item names in SKU order.
+- **What:** Updated the local `items.sqlite` view `Fan Item Names` with `ORDER BY SKU ASC`.
+- **Verification:** Transactional replacement preserved all 305 rows and eight columns; checked ascending query results and SQLite integrity (`ok`) on macOS. Annual rollover checked (2026).
+
+### Add Fan Item Names local view
+
+- **Why:** Review active inventory-tracked fan item names and descriptive fields together.
+- **What:** Created `Fan Item Names` in the local Items SQLite snapshot, filtered to Inventory Item, Active status and the uniquely resolved Polycab Fan Stock account. Removed Sales Description and Purchase Description on request, leaving eight columns.
+- **Verification:** Verified the exact eight-column order and 305 rows after transactional view replacement; initial SQLite integrity checking passed on macOS / workspace CPython 3.14.10. Annual rollover checked (2026).
+
+### Add the local Item Account Analysis view
+
+- **Why:** Query item names, account assignments, and status together in the local Analytics snapshot.
+- **What:** Created the six-column `Item Account Analysis` view over `Items` in the local SQLite snapshot. Inventory Account is returned only when Product Type is Inventory Item; other items return NULL to distinguish inventory tracking from account assignment.
+- **Verification:** Confirmed column order and 51,007 rows in the live local file. Rehearsed the refresh transaction in memory and verified the view reads the replacement table. Verified the conditional account against the supplied tracked and untracked examples after a transactional view replacement; SQLite integrity check passed. Annual rollover checked (2026).
+
+### Add Analytics Accounts and Items SQLite snapshot
+
+- **Why:** Make the Analytics account and item masters available together for local queries and repeatable refreshes.
+- **What:** Added a callable workflow and CLI that resolve the two Books replica views through the cached Analytics catalog, verify the export counts, and refresh `Accounts` and `Items` together in `data/analytics/items.sqlite`.
+- **Verification:** macOS arm64 / CPython 3.14.10. Live download and SQLite read-back confirmed 268 Accounts and 51,007 Items, and `PRAGMA integrity_check` returned `ok`. The cached metadata was last synced at 2026-11-09 07:19:15 UTC. Full suite passed (4,123 tests and four subtests), as did Ruff, ty, and offline project verification. Annual rollover checked (2026).
+
+### Migrate customer store to master-child architecture with reporting views
+
+- **Why:** Adopt an ergonomic master-child architecture for local customer analytics (1 Master `Customers` table for all 1:1 attributes + 1 Child `Customer Addresses` table for 1:N address records) with 4 focused reporting views, eliminating artificial 1:1 table fragmentation and cross-table joins while supporting direct, zero-join tabular queries in Python and Polars.
+- **What:**
+  - Updated `src/workflows/customer_management/normalization.py` and `analytics_sync.py` to use two physical tables (`TABLES = ('Customers', 'Customer Addresses')`).
+  - Consolidated all 1:1 financial attributes (credit limit, payment terms, GSTIN, PAN, balances) and route attributes (district, jurisdiction, transporter, beat, branch, optical division) into the physical `Customers` master table, excluding `Customer Owner ID`.
+  - Configured automatic reporting view generation creating `Customer_core` (21 columns), `financials` (15 columns), and `beat` (5 columns) querying `Customers` directly, and `addresses` (22 columns) querying `Customer Addresses`.
+  - Updated concept documentation in `okf/customer-local-store.md` and repaired inbound entry links in `okf/log.md`.
+  - Re-synchronized [`data/analytics/customers.sqlite`](file:///Users/vak/Documents/workspace/WOA/data/analytics/customers.sqlite) from the preserved source snapshot.
+- **Verification:** Verified `Customers` master table contains 61 columns and 2,029 rows; `Customer Addresses` contains 30 columns and 3,219 rows; verified all 4 views (`Customer_core`: 21 cols, `financials`: 15 cols, `beat`: 5 cols, `addresses`: 22 cols) select directly without joins; verified Polars integration (`pl.read_database`); all 89 customer management tests passed; `ty check` passed with 0 diagnostics; `apps/analyze_project.py` passed with 0 diagnostics; `PRAGMA integrity_check` returned `ok`; annual rollover checked (2026).
+
+### Install Polars in workspace virtual environment
+
+- **Why:** Provide the Polars DataFrame library in `.venv` upon user request for high-performance tabular data manipulation.
+- **What:** Installed `polars==2.1.0` and `polars-runtime-32==2.1.0` in the workspace virtual environment using `uv`.
+- **Verification:** Verified `import polars as pl` succeeds with version `2.1.0` in `.venv/bin/python` (CPython 3.14.10 on macOS arm64); verified `uv pip check --python .venv` reports all 90 packages compatible with 0 dependency conflicts; annual rollover checked (2026).
+
+### Move local Analytics data and download customers
+
+- **Why:** Keep the Analytics catalog and downloaded customer data together in a Git-ignored workspace directory.
+- **What:** Renamed the local `metadata/` directory to `data/`, updated the ignore rule, and downloaded the normalized Analytics customer database to `data/analytics/customers.sqlite`.
+- **Verification:** The read-only Analytics sync downloaded 2,029 customers and 3,219 addresses. Both SQLite files passed integrity checks, and Git ignored both paths. Used cached metadata last synced at 2026-11-09 07:19:15 UTC. Annual rollover checked (2026).
+
+### Remediate hardcoded organization identifiers and strings (CHK-HC.1 to CHK-HC.7)
+
+- **Why:** Prevent leakage and coupling to organization-specific entity IDs, view IDs, table IDs, clearing accounts, workspace IDs, and branch prefixes across workflows, apps, tests, examples, and documentation.
+- **What:**
+  - `CHK-HC.1` (Inter-location workflows): Replaced module-level constant `ACCOUNT_ID = "1094368000002033114"` in `src/workflows/inter_location/apply_updates.py` with `Config.INTER_LOCATION_CLEARING_ACCOUNT_ID` and added `clearing_account_id` parameter; parameterized `account_id` default in `sync_inter_location_contra_query_table` (`analytics_report.py`); removed hardcoded `_OBSERVED_PAYMENT_PREFIXES` dictionary in `payment_proposals.py` and sourced prefixes from `Config.LOCATION_PAYMENT_PREFIXES` with explicit parameter override; updated unit tests to use synthetic clearing account and location IDs.
+  - `CHK-HC.2` (Analytics test runner): Removed hardcoded fallback defaults `"60018545708"` and `"264324000000002043"` in `tests/zoho/analytics/manual_analytics_query.py`, reading from environment or config profiles and raising explicit errors when unset.
+  - `CHK-HC.3` (CLI Apps): Removed hardcoded branch prefixes (`"SBE2627CP-"`, `"SBE2526CP-"`, `"SB2526CP-"`) from default arguments in `apps/payments/renumber_sbe2627_payments.py`, `apps/inter_location_ops/move_inter_location_customer_payments.py`, and `apps/vendor_payments/show_fy2526_payment_proposals.py`, resolving prefixes dynamically from proposals or requiring explicit CLI flags.
+  - `CHK-HC.4` (Example configurations): Sanitized real Google Sheet tab `gid` integers (`1177861729`, `41480615`, `1447215420`) to generic integers `0, 1, 2, 3` in `config/statement-schedules.example.yaml`.
+  - `CHK-HC.5` (Example mappings): Replaced production Google Spreadsheet IDs, URLs, location IDs, partner personal names, and account IDs with standard placeholders in `examples/financial_statement_fy2425.mapping.json` and `examples/it_balance_sheet_fy2425.mapping.json`.
+  - `CHK-HC.6` (Documentation & API references): Replaced production workspace ID `264324000000002043` in `INDEX.md` code snippet and replaced hardcoded IDs in `okf/` concepts (`analytics-metadata.md`, `bank-statement-check.md`, `collection-reconciliation.md`, `configuration.md`, `unearned-revenue.md`) with configuration references.
+  - `CHK-HC.7` (Reconciliation workflows): Added configurable `cash_account_name`, `vendor_advance_vendor_name`, and `vendor_advance_location_name` fields to `OnlinePaymentReviewConfig` and wired them through `apps/bank_collections/payment_review.py` and `src/workflows/collection_reconciliation/review.py`.
+- **Verification:** On macOS arm64 / CPython 3.14.10: `.venv/bin/python -m ty check` passed with 0 diagnostics across full scope; `pytest tests/workflows/inter_location/ tests/apps/inter_location_ops/ tests/contracts/architecture/ tests/workflows/statement_schedules/ tests/workflows/financial_statement_comparison/ tests/workflows/collection_reconciliation/ tests/workflows/vendor_ledger_reconciliation/` passed (416 tests passed); `apps/analyze_project.py --verify` and `apps/generate_api_reference.py --check` passed with 0 issues; annual rollover checked (2026); no live API mutations.
 
 ### Repair cross-platform CI checks
 
