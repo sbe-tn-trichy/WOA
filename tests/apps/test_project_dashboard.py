@@ -16,6 +16,26 @@ from apps.dashboard import (
 )
 
 
+@pytest.mark.parametrize("entrypoint", [
+    ("apps/dashboard.py",),
+    ("-m", "apps.dashboard"),
+    ("apps/bank_collections/payment_review.py",),
+    ("-m", "apps.bank_collections.payment_review"),
+])
+def test_dashboard_and_review_entrypoints_start(entrypoint):
+    root = Path(__file__).resolve().parents[2]
+    result = subprocess.run(
+        [sys.executable, *entrypoint, "--help"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "--port" in result.stdout
+
+
 def test_runner_executes_allowlisted_workflow(tmp_path: Path):
     spec = WorkflowSpec(
         number=9,
@@ -54,6 +74,19 @@ def test_registry_exposes_only_safe_default_commands():
     runnable_commands = [command for command in commands if command]
     assert all("--execute" not in command for command in runnable_commands)
     assert all("--allow-batch" not in command for command in runnable_commands)
+
+
+def test_registry_commands_resolve_to_existing_scripts():
+    root = Path(__file__).resolve().parents[2]
+    for spec in WORKFLOWS:
+        if spec.command is not None:
+            assert (root / spec.command[1]).is_file(), spec.name
+
+
+def test_homepage_opener_uses_repository_root():
+    root = Path(__file__).resolve().parents[2]
+    assert open_homepage.PROJECT_ROOT == root
+    assert (open_homepage.PROJECT_ROOT / "apps/dashboard.py").is_file()
 
 
 def test_registry_catalogues_every_domain_workflow():

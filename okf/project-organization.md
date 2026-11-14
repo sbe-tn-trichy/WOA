@@ -67,7 +67,7 @@ remain together. The [SDK index](../INDEX.md#directory-layout) shows the directo
 | Pure workflow conversions, matching, metrics and persistence | `workflows.core` |
 | Collection payment records and allocation | `workflows.collection_payments` |
 | Collection review/orchestration | `workflows.collection_reconciliation` |
-| Creator payment links/backfill/OCR | `workflows.creator_payments` |
+| Creator payment links/backfill/OCR and selected cash transfers | `workflows.creator_payments`, with checkpointed posting in `cash_transfers` |
 | Customer payment inspection and unused balances | `workflows.customer_payments` |
 | Bank statement checks and bill operations | `workflows.bank_statements`, `workflows.purchasing` |
 | Developer tools | `apps.tools` |

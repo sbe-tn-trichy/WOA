@@ -1,5 +1,17 @@
 # Knowledge Change Log
 
+## 2026-11-11
+
+- Corrected [cash-transfer receipt mapping and deposit creation](creator-cash-transfers.md): cash references belong in Receipt Number, while associated deposits require a source header without a header amount. See the [project entry](../CHANGELOG.md#correct-cash-receipt-fields-and-deposit-source-validation).
+
+- Updated [Creator cash transfers](creator-cash-transfers.md#oldest-outstanding-invoice-first) to allocate by oldest invoice date, preserve prior applications and reconcile uncertain updates. See the [project entry](../CHANGELOG.md#apply-creator-cash-payments-to-oldest-outstanding-invoices).
+
+- Added the [Creator cash-transfer API workflow](creator-cash-transfers.md), explicit location and selection contracts, payment associations and recovery limits. See the [project entry](../CHANGELOG.md#add-explicit-creator-cash-transfer-posting).
+
+- Corrected the [Windmill exact-version package directory](development-runbook.md#windmill-read-only-checks) after a successful draft preflight. See the [project entry](../CHANGELOG.md#install-woa-in-the-exact-version-windmill-cache).
+
+- Documented [Windmill runtime provisioning and connection scope](development-runbook.md#windmill-read-only-checks), snapshot updates and preflight limits. See the [project entry](../CHANGELOG.md#repair-windmill-runtime-and-connection-for-read-only-checks).
+
 ## 2026-11-10
 
 - Recorded the verified [Books import empty-cell limitation](zoho-books.md#import-file-uploads) and minimal bulk-update alternative. See the [project entry](../CHANGELOG.md#apply-reviewed-customer-phone-cleanup-in-books).

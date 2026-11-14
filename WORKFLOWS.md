@@ -70,6 +70,8 @@ Bank Statement Categorization includes Creator collection matching, Analytics-as
 
 ## Creator synchronization
 
+Creator cash-transfer posting: [cash_transfers](src/workflows/creator_payments/cash_transfers/), run with [post_creator_cash_transfer.py](apps/payments/post_creator_cash_transfer.py) for an explicit transfer and Books location. Preview by default; `--apply` posts payments, their associated deposit and Creator links. See the [contract](okf/creator-cash-transfers.md).
+
 | Workflow | Module | Primary entry point | Operation | Contract |
 |---|---|---|---|---|
 | Books-to-Creator customer creation and updates | [creator_customer_sync](src/workflows/creator_customer_sync/) | [sync_creator_customers.py](apps/customers/sync_creator_customers.py) | Preview / write | [Contract](okf/creator-customer-delete-sync.md) |

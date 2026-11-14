@@ -22,7 +22,7 @@ if __package__:
     from . import _bootstrap
 else:
     import importlib
-    importlib.import_module("_bootstrap")
+    _bootstrap = importlib.import_module("_bootstrap")
 
 from utils.file_utils import json
 from workflows.runtime.config import Config
@@ -83,7 +83,7 @@ WORKFLOWS = (
         6,
         "Neoseal item audit",
         "Check the Neoseal catalog for naming, duplicate, grouping, and price-list issues.",
-        (sys.executable, "apps/neoseal/audit_neoseal_items.py"),
+        (sys.executable, "apps/neoseal_items/audit_neoseal_items.py"),
         "Inventory",
         workflow="neoseal_audit",
     ),
@@ -91,7 +91,7 @@ WORKFLOWS = (
         7,
         "Neoseal naming plan",
         "Preview approved naming and SKU corrections without changing Books.",
-        (sys.executable, "apps/neoseal/apply_neoseal_name_updates.py", "--dry-run"),
+        (sys.executable, "apps/neoseal_items/apply_neoseal_name_updates.py", "--dry-run"),
         "Inventory",
         safety="Dry run",
         workflow="neoseal_audit",
@@ -175,7 +175,7 @@ WORKFLOWS = (
         16,
         "Neoseal stock count",
         "Upsert active, inventory-tracked NeoSeal items in the Flat stock sheet.",
-        (sys.executable, "apps/neoseal/neoseal_stock_count.py"),
+        (sys.executable, "apps/neoseal_items/neoseal_stock_count.py"),
         "Inventory",
         workflow="neoseal_stock_count",
     ),

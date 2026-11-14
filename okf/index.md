@@ -65,6 +65,7 @@ okf_version: "0.2"
 * [Local Customer Store](customer-local-store.md) - Two-table Analytics customer sync, local cleanup reconciliation and legacy Books mirror.
 * [Customer Registration](customer-registration.md) - Paired Books and Creator creation with recovery.
 * [Creator Customer Sync](creator-customer-delete-sync.md) - Books-to-Creator customer creation, update, and deletion reconciliation.
+* [Creator Cash Transfers](creator-cash-transfers.md) - Explicit payment posting into Undeposited Funds and associated deposits with recovery checkpoints.
 * [Item Catalog Export](item-catalog.md) - Inventory CSV exports and the Analytics Accounts and Items SQLite snapshot.
 * [Neoseal Item Audit](neoseal-item-audit.md) - Automated catalog data quality, duplicate/packaging twin detection, nomenclature verification, and item group audit.
 * [Neoseal Stock Count](neoseal-stock-count.md) - Active, inventory-tracked item quantity upserts into the Flat Zoho Sheet tab.
@@ -82,5 +83,5 @@ okf_version: "0.2"
 
 * [Local Metabase](metabase-local.md) - App, image and settings volume removed.
 
-* [Development Runbook](development-runbook.md) - Local virtual environment setup, default parallel pytest execution and serial debugging, and safe workflow development guidelines.
+* [Development Runbook](development-runbook.md) - Local virtual environments, Windmill read-only workers, parallel pytest execution and safe workflow development.
 * [Project Operations Dashboard](project-dashboard.md) - Loopback-only numbered launcher for common safe-default workflows.

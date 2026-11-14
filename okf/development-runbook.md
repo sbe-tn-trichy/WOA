@@ -81,6 +81,42 @@ symlink integration test skips when Windows reports missing symlink privilege
 symlink-capable host, such as Windows with Developer Mode or appropriate
 privileges, to execute its assertions.
 
+## Windmill read-only checks
+
+Windmill adapters call the existing duplicate-payment, Neoseal audit and GSTR-1
+workflow APIs. Keep business rules in WOA; return structured results and rendered
+Markdown to the job rather than relying on temporary worker files. A completed
+job does not mean its business checks passed: inspect `complete` and `passed`.
+Preflight mode checks runtime imports and connection availability without
+contacting Zoho; it does not establish token-broker or API connectivity.
+
+Pin each adapter with `#py: ==3.14.10`. Provision the reviewed WOA source snapshot
+and its declared dependencies with uv and `constraints.txt` into Windmill's
+version-specific persistent cache at
+`/tmp/windmill/cache/python_3_14_10/global-site-packages` for the exact
+`#py: ==3.14.10` annotation. The major/minor-only `python_3_14` directory
+does not supply packages to these exact-version jobs. The worker dependency-cache
+volume must persist across container recreation. Provisioning is a separate,
+explicit operation: repository edits do not update the installed snapshot.
+Do not copy the Mac or Windows `.venv`, local configuration, tokens or credentials
+into the worker. Keep the Windmill SDK dependency pinned, including overlapping
+packages such as certifi and idna at the application constraint versions.
+See [Windmill dependency management](https://www.windmill.dev/docs/advanced/dependencies_in_python).
+
+The `c_woa` resource holds `token_url`, `org_id`, `domain`,
+`analytics_org_id`, `analytics_workspace_id` and
+`neoseal_purchase_account_id`. Populate it from the intended deployment's
+[configuration](configuration.md), never from tenant defaults. OAuth tokens are
+fetched at runtime through the existing authentication factories. For a local
+broker reached from Docker, use the verified Docker host gateway instead of
+container `localhost`; preserve the configured scheme, port and endpoint.
+The Neoseal adapter uses the resource's purchase account unless explicitly
+overridden. Its report states when no price-list comparison was supplied.
+
+Keep script previews separate from deployment and scheduling. Test every changed
+draft, verify live read-only access before claiming the checks work, and retain
+the existing explicit mutation and recovery contracts for any future write flows.
+
 ## Machine configuration and recovery state
 
 - Copy `config/config.example.yaml` to ignored `config/config.yaml` and adapt the

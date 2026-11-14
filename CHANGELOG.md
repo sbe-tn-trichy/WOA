@@ -7,7 +7,81 @@ available; never invent a commit or claim checks that were not run.
 This file keeps the current year's entries; older years are archived under
 `changelog/YYYY.md` and linked here when created. Check rollover with each change.
 
+## 2026-11-11
+
+### Correct cash receipt fields and deposit source validation
+
+- **Why:** Cash receipt identifiers belong in Books Receipt Number, and associated-deposit creation rejected requests missing the source header.
+- **What:** Mapped Creator cash references to `cf_receipt_number`, preserved unrelated Reference # values, and read candidate details when list responses omit custom fields. Existing receipt mismatches stop for review. Added the deposit source header while continuing to omit its amount to prevent double counting; updated the owning runbook.
+- **Verification:** Pending final live deposit verification and checks. Existing payment receipt correction read back with financial identity and invoice applications preserved. Annual rollover checked (2026); no archival needed.
+
+### Apply Creator cash payments to oldest outstanding invoices
+
+- **Why:** The user selected oldest-outstanding-first allocation for cash-transfer customer payments instead of leaving their full amounts unused.
+- **What:** Added invoice-date-first planning within customer/location scope, shared-customer balance reservations, creation-time applications and checkpointed updates of existing unused credit. Preserves prior applications and payment identity; reports any residual unused credit and verifies affected invoice balances and existing deposit associations. Updated the owning runbook.
+- **Verification:** Live allocation of both selected payments completed with zero unused balances; exact applications and invoice balances were read back, and the same deposit amount and payment associations remained verified. macOS / CPython 3.14.10: full suite passed (4,264 tests and four subtests); 29 focused tests passed after final identity checks. Ty, focused Ruff, API-reference, offline project verification and whitespace checks passed. Windows unverified; annual rollover checked (2026), no archival needed.
+
+### Add explicit Creator cash-transfer posting
+
+- **Why:** Post only user-selected cash transfers through APIs, confirming linked customer payments into Undeposited Funds before recording their associated deposit.
+- **What:** Added a dry-run-first WOA workflow and CLI with mandatory transfer/location IDs, scoped account and total checks, existing-record reconciliation, atomic recovery checkpoints, local execution locking and Creator read-back. Documented API payload and report-transition behavior; automatic triggers and blueprint transitions are excluded.
+- **Verification:** macOS / CPython 3.14.10: 4,254 tests and four subtests passed; ty, focused Ruff, API-reference and offline project verification passed. Live posting verified both payments and the final deposit associations and amount; corrected the initial duplicate header-amount line in the same deposit and retained correction/read-back evidence locally. Creator payment links, settled balances and transfer status verified; checkpoint completed and a later read-only rerun reused the same native IDs. No host environment changes; Windows unverified. Annual rollover checked (2026), no archival needed.
+
+### Create the requested Creator customer with verified lookups
+
+- **Why:** Sync one existing Books customer into Creator with the user-selected jurisdiction, beat and supplied phone after blank-phone validation failed.
+- **What:** Rechecked customer identity and absence in Creator, checkpointed creation through the existing registration workflow using the existing Books identity, and retained live verification locally. No Books customer was created or changed.
+- **Verification:** Creator returned a new record ID; targeted read-back verified identity and phone, and an exact record/beat/jurisdiction filter verified both saved lookups. No permanent code change or unit tests. macOS only; annual rollover checked (2026), no archival needed.
+
+### Verify app bootstraps and repair moved launcher paths
+
+- **Why:** Check other app flows for the direct-script `_bootstrap` failure and prevent related startup regressions after app moves.
+- **What:** Added isolated startup probes for all 62 bootstrapped app entry points, rejecting network and subprocess activity. No further unbound bootstrap references remained. Fixed three dashboard commands pointing to the retired Neoseal folder and the automatic opener's repository root; added launcher-path regression checks and restarted the dashboard.
+- **Verification:** macOS / workspace CPython 3.14.10: full suite passed (4,234 tests and four subtests); Ruff undefined-name scan and diff whitespace checks passed. Dashboard state returned HTTP 200 with all three corrected Neoseal paths. No live financial workflows executed; Windows unverified. Annual rollover checked (2026); no archival needed.
+
+### Restore bank statement review startup from the dashboard
+
+- **Why:** Bank Statement Categorization still failed with an unbound `_bootstrap` in its own entry point after the launcher startup was repaired.
+- **What:** Bound the direct-script bootstrap import in `payment_review.py` and extended subprocess startup coverage to its script and module invocation paths.
+- **Verification:** macOS / workspace CPython 3.14.10: 45 dashboard and bank-collection app tests passed; full suite passed (4,170 tests and four subtests). Both review entry points reach `--help` without loading live records. Dashboard logs confirmed the original failure; live financial refresh was not run. Annual rollover checked (2026); no archival needed.
+
+### Repair Windmill runtime and connection for read-only checks
+
+- **Why:** The three preview scripts lacked the required Python runtime, WOA installation and connection; the user also requested CLI operation.
+- **What:** Provisioned worker CPython 3.14.10 and constrained WOA workflow dependencies in persistent caches, configured the approved Test connection resource and automatic resource selection, and pinned adapter dependencies. Installed the local Windmill CLI, authenticated Test, initialized an ignored CLI checkout and pulled its personal scope. Scripts remain drafts; nothing scheduled. Documented worker operation and preflight limits.
+- **Verification:** All three remote preflights and the CLI duplicate-payment preflight returned ready with Python 3.14.10. Seven mocked adapter checks passed on macOS. All three live CLI previews failed token retrieval: the broker deliberately rejects the Docker host name under its localhost-only guard. No live business-check success is claimed; no financial mutations or broker changes. Worker Linux arm64 and host macOS checked; annual rollover checked (2026), no archival needed.
+
+### Install WOA in the exact-version Windmill cache
+
+- **Why:** The duplicate-payment draft still could not import WOA after the Python and connection setup; exact-version jobs use a different package directory from major/minor-only jobs.
+- **What:** Installed a source snapshot and constrained workflow dependencies with uv into the persistent `python_3_14_10/global-site-packages` worker cache. Corrected the owning runbook. No host environment changes, script deployment or scheduling.
+- **Verification:** Test workspace duplicate-payment draft returned Python 3.14.10, `ready: true`, no problems and `zoho_contacted: false` (run `01a1c90d-c4f9-beb6-b6ae-f0277a0c450b`). Live API access and container-recreation behavior were not tested. Annual rollover checked (2026); no older-year entries require archival.
+
+### Restore direct dashboard startup
+
+- **Why:** Running `apps/dashboard.py` failed because the direct-script bootstrap import did not bind the module used to resolve the project root.
+- **What:** Bound the imported bootstrap module and added subprocess regression coverage for direct-script and module entry points.
+- **Verification:** macOS / workspace CPython 3.14.10: 29 dashboard tests passed; full suite passed (4,168 tests and four subtests). Started the dashboard on loopback port 8750 and verified HTTP 200. Windows unverified. Annual rollover checked (2026); no older-year entries require archival.
+
+### Preview three read-only WOA checks in Windmill
+
+- **Why:** Let the user inspect duplicate-payment, Neoseal item-audit and GST checks in Windmill before adopting scheduled operation.
+- **What:** Created three personal script drafts in the user-selected Test workspace. Adapters call existing WOA workflow APIs, return structured results and Markdown reports, require explicit connection scope, and default to a runtime-only preflight. Nothing deployed or scheduled.
+- **Verification:** All three Windmill preflight tests executed and correctly reported not ready: worker Python 3.13.18 differs from required 3.14.10, WOA is not installed, and no connection was supplied. No Zoho calls or financial mutations; live adapter paths remain unverified. Annual rollover checked (2026); no older-year entries require archival. Local change is history only; no project tests run.
+
 ## 2026-11-10
+
+### Finish the seventeen pending blank Phone updates
+
+- **Why:** Complete only the pending Phone clearings after the user reported populated values already updated.
+- **What:** Fetched fresh snapshots for the 17 blank-target customers, checkpointed a minimal primary-contact-person bulk update, and saved individual read-back records. No populated Phone targets were submitted.
+- **Verification:** All 17 Phone fields verified blank in fresh Books detail reads; Mobile, names, statuses, custom fields and all contact-person details except the requested Phone values were unchanged. No contact persons removed. Operational execution only; no permanent code changes or unit tests. Annual rollover checked (2026); macOS only.
+
+### Apply reviewed customer Phone cleanup in Books
+
+- **Why:** Apply the final four local corrections and prepare the reviewed Phone cleanup for Books.
+- **What:** Saved local backups and ledgers, corrected four remaining cases, and generated a 1,175-customer CSV. Documented verified import and top-level bulk empty-Phone limitations and primary-contact-person clearing. Retained batch checkpoints, person snapshots and unrelated custom-field differences. Terminated the update process on user stop; prepared a read-only live reconciliation to export pending customers with the requested ID/name/Phone headers.
+- **Verification:** Full CSV read-back verified 1,175 unique customer IDs. After stopping, fresh read-only Books reconciliation found 1,032 planned Phone values already correct and exported only 143 pending customers (17 blanks, 126 populated values), with unique IDs and exact requested headers verified. No populated-value import was run by this task. No permanent code changes or unit tests; macOS only. Annual rollover checked (2026).
 
 ### Report exact column diffs on Analytics items schema mismatch
 

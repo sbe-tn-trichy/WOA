@@ -17,7 +17,7 @@ if __package__:
     from . import _bootstrap
 else:
     import importlib
-    importlib.import_module("_bootstrap")
+    _bootstrap = importlib.import_module("_bootstrap")
 
 from utils.file_utils import json
 from workflows.collection_reconciliation import (

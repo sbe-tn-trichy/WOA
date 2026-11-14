@@ -16,7 +16,7 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DASHBOARD_URL = "http://127.0.0.1:8750"
 HEALTH_URL = f"{DASHBOARD_URL}/api/state"
 

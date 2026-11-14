@@ -25,6 +25,38 @@ ALIASES = {
 ROOT = Path(__file__).resolve().parents[3]
 
 
+@pytest.mark.parametrize(
+    "entry",
+    sorted(
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "apps").rglob("*.py")
+        if path.name not in {"__init__.py", "_bootstrap.py"}
+        and "_bootstrap" in path.read_text(encoding="utf-8")
+    ),
+)
+def test_app_direct_import_startup(entry: str) -> None:
+    # Use the direct-script import branch without invoking the workflow's main.
+    # Reject network/process activity so this check cannot run live operations.
+    probe = "\n".join([
+        "import pathlib, runpy, sys",
+        "def offline(event, args):",
+        "    if event in {'socket.connect', 'socket.bind', 'subprocess.Popen', 'os.system'}:",
+        "        raise RuntimeError('Unexpected startup activity: ' + event)",
+        "sys.addaudithook(offline)",
+        "path = pathlib.Path(sys.argv[1]).resolve()",
+        "sys.path.insert(0, str(path.parent))",
+        "runpy.run_path(str(path), run_name='__startup_probe__')",
+    ])
+    result = subprocess.run(
+        [sys.executable, "-c", probe, entry],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.parametrize("legacy, canonical", sorted(ALIASES.items()))
 def test_moved_modules_preserve_identity(legacy: str, canonical: str) -> None:
     old_module = importlib.import_module(legacy)
